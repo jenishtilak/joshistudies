@@ -218,6 +218,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .btn-retry{width:100%;padding:14px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:var(--radius);cursor:pointer;margin-bottom:10px;font-family:inherit}
 .btn-back-lessons{width:100%;padding:12px;background:transparent;color:var(--muted);font-size:14px;font-weight:600;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:inherit}
 
+/* ── WELCOME / PASSCODE SCREEN ── */
+.welcome-screen{
+  position:fixed;inset:0;z-index:2000;
+  background:var(--navy);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;
+  transition:opacity .4s ease;
+}
+.welcome-screen.fade-out{opacity:0;pointer-events:none}
+.welcome-screen.gone{display:none}
+.wl-icon{font-size:56px;margin-bottom:16px;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.wl-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:.3px;margin-bottom:6px}
+.wl-sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:40px;line-height:1.5}
+.wl-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;padding:28px 24px;width:100%;max-width:360px}
+.wl-card-title{font-size:13px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:rgba(255,255,255,.45);margin-bottom:16px}
+.wl-input-wrap{position:relative;margin-bottom:12px}
+.wl-input{
+  width:100%;padding:14px 48px 14px 18px;
+  background:rgba(255,255,255,.08);
+  border:1.5px solid rgba(255,255,255,.15);
+  border-radius:12px;font-size:18px;font-family:inherit;
+  color:#fff;letter-spacing:3px;text-align:center;outline:none;
+  transition:border-color .2s;
+}
+.wl-input::placeholder{letter-spacing:1px;font-size:14px;color:rgba(255,255,255,.3)}
+.wl-input:focus{border-color:var(--gold)}
+.wl-input.error{border-color:var(--red);animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.wl-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;
+  font-size:18px;padding:4px;line-height:1}
+.wl-toggle:hover{color:rgba(255,255,255,.8)}
+.wl-error{font-size:12px;color:var(--red);min-height:18px;margin-bottom:10px;font-weight:600}
+.wl-btn{
+  width:100%;padding:14px;background:var(--gold);color:var(--navy);
+  font-size:15px;font-weight:800;border:none;border-radius:12px;
+  cursor:pointer;font-family:inherit;letter-spacing:.4px;
+  transition:opacity .2s,transform .1s;
+}
+.wl-btn:hover{opacity:.9}
+.wl-btn:active{transform:scale(.98)}
+.wl-footer{font-size:11px;color:rgba(255,255,255,.25);margin-top:28px}
+
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
@@ -277,6 +323,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 </style>
 </head>
 <body>
+
+<!-- ══ WELCOME / PASSCODE SCREEN ══ -->
+<div class="welcome-screen" id="welcomeScreen">
+  <div class="wl-icon">📚</div>
+  <div class="wl-title">Study Buddy</div>
+  <div class="wl-sub">Class 9 · Social Science<br>Your personal exam prep companion</div>
+  <div class="wl-card">
+    <div class="wl-card-title">🔒 Enter Passcode</div>
+    <div class="wl-input-wrap">
+      <input class="wl-input" type="password" id="passcodeInput"
+        placeholder="Enter passcode"
+        maxlength="20"
+        onkeydown="if(event.key==='Enter') checkPasscode()"
+        oninput="document.getElementById('wlError').textContent=''">
+      <button class="wl-toggle" onclick="togglePasscodeVisibility()" id="wlToggle" title="Show/hide">👁</button>
+    </div>
+    <div class="wl-error" id="wlError"></div>
+    <button class="wl-btn" onclick="checkPasscode()">Unlock →</button>
+  </div>
+  <div class="wl-footer">Authorised users only</div>
+</div>
 <div class="app-wrap">
 
 <!-- SIDEBAR -->
@@ -1424,6 +1491,40 @@ function scrollToLessons(){
   // On mobile, scroll the lesson grid into view smoothly
   const el=document.getElementById("lessonGrid");
   if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+// ═══════════════════════════════════════════════════════
+//  PASSCODE GATE
+// ═══════════════════════════════════════════════════════
+const PASSCODE = "9865280639";
+
+function checkPasscode(){
+  const val = document.getElementById("passcodeInput").value.trim();
+  if(val === PASSCODE){
+    const ws = document.getElementById("welcomeScreen");
+    ws.classList.add("fade-out");
+    setTimeout(()=>ws.classList.add("gone"), 420);
+  } else {
+    const inp = document.getElementById("passcodeInput");
+    const err = document.getElementById("wlError");
+    err.textContent = "Incorrect passcode. Please try again.";
+    inp.classList.add("error");
+    inp.value = "";
+    setTimeout(()=>inp.classList.remove("error"), 400);
+    inp.focus();
+  }
+}
+
+function togglePasscodeVisibility(){
+  const inp = document.getElementById("passcodeInput");
+  const btn = document.getElementById("wlToggle");
+  if(inp.type === "password"){
+    inp.type = "text";
+    btn.textContent = "🙈";
+  } else {
+    inp.type = "password";
+    btn.textContent = "👁";
+  }
 }
 
 init();
