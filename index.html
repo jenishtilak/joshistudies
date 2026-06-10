@@ -137,8 +137,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 /* distinguish layout */
 .q-text.distinguish{font-size:15px}
-.distinguish-labels{display:flex;gap:10px;margin-top:10px}
-.dist-label{flex:1;background:var(--parchment);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--muted);text-align:center}
+.dist-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 12px 0}
+.dist-input-col{display:flex;flex-direction:column;gap:6px}
+.dist-input-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--navy);padding:6px 10px;background:var(--parchment);border-radius:8px 8px 0 0;border:1.5px solid var(--border);border-bottom:none;text-align:center}
+.dist-textarea{width:100%;min-height:130px;padding:12px;font-size:14px;font-family:inherit;border:1.5px solid var(--border);border-radius:0 0 8px 8px;outline:none;resize:vertical;color:var(--text);background:#fff;line-height:1.7;box-sizing:border-box}
+.dist-textarea:focus{border-color:var(--navy)}
+.dist-textarea:disabled{background:var(--parchment);color:var(--muted);cursor:not-allowed;opacity:.6}
+/* distinguish model answer table */
+.dist-table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:10px;overflow:hidden;border:1.5px solid var(--green)}
+.dist-table th{background:var(--navy);color:#fff;padding:9px 12px;font-size:12px;font-weight:700;text-align:left;width:50%}
+.dist-table td{padding:9px 12px;font-size:13px;line-height:1.75;vertical-align:top;border-top:1px solid var(--border)}
+.dist-table tr:nth-child(odd) td{background:var(--green-light)}
+.dist-table tr:nth-child(even) td{background:#fff}
+.dist-table td:first-child{border-right:1.5px solid var(--border)}
+/* your answer two-box result */
+.dist-your-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.dist-your-box{background:var(--parchment);border-radius:8px;padding:10px 12px}
+.dist-your-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px}
+/* distinguish peek */
+.dist-peek-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dist-peek-box{background:rgba(255,255,255,.5);border-radius:6px;padding:8px}
+.dist-peek-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:4px}
 
 /* fill in the blank */
 .blank-input{border:none;border-bottom:2px solid var(--navy);background:transparent;font-size:16px;font-weight:600;color:var(--navy);padding:2px 6px;min-width:120px;outline:none;font-family:inherit}
@@ -165,6 +184,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 /* answer textarea */
 .answer-area{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
 .answer-textarea{width:100%;min-height:130px;padding:16px;font-size:15px;font-family:inherit;border:none;outline:none;resize:none;color:var(--text);background:transparent;line-height:1.6}
+.answer-textarea:disabled{background:var(--parchment);color:var(--muted);cursor:not-allowed;opacity:.6}
 .answer-actions{display:flex;border-top:1px solid var(--border)}
 .btn-check{flex:1;padding:13px;background:var(--navy);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;letter-spacing:.4px;transition:background .2s;font-family:inherit}
 .btn-check:disabled{opacity:.5;cursor:default}
@@ -266,6 +286,69 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ── QUESTION NAVIGATION BAR ── */
+.q-nav-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:101px;z-index:7}
+.q-nav-bar::-webkit-scrollbar{display:none}
+@media(min-width:820px){.q-nav-bar{top:57px}}
+.q-nav-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:var(--parchment);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
+.q-nav-dot.current{border-color:var(--navy);background:var(--navy);color:#fff}
+.q-nav-dot.answered-good{border-color:var(--green);background:var(--green-light);color:var(--green)}
+.q-nav-dot.answered-mid{border-color:#e8a020;background:var(--gold-light);color:#b8860b}
+.q-nav-dot.answered-poor{border-color:var(--red);background:var(--red-light);color:var(--red)}
+.q-nav-dot.skipped{border-color:var(--muted);background:#fff;color:var(--muted);opacity:.6}
+.q-nav-prev,.q-nav-next{padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;color:var(--navy);transition:all .15s;font-family:inherit}
+.q-nav-prev:disabled,.q-nav-next:disabled{opacity:.35;cursor:default}
+.q-nav-prev:not(:disabled):hover,.q-nav-next:not(:disabled):hover{border-color:var(--navy);background:var(--parchment)}
+
+/* ── MODEL ANSWER PEEK (study mode) ── */
+.btn-peek{width:100%;padding:11px;background:transparent;color:var(--sage);font-size:13px;font-weight:600;border:1.5px dashed var(--sage);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-peek:hover{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.peek-panel{background:var(--green-light);border-left:3px solid var(--green);border-radius:0 var(--radius) var(--radius) 0;padding:12px;margin-bottom:10px;display:none}
+.peek-panel.visible{display:block}
+.peek-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:6px}
+.peek-text{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-line}
+
+/* ── ANSWER DIFF BLOCKS — stacked, same formatting ── */
+.diff-answer-block{font-size:14px;line-height:1.9;padding:12px 14px;border-radius:8px;background:var(--parchment);word-break:break-word}
+.diff-answer-block.model{background:var(--green-light);border-left:3px solid var(--green);border-radius:0 8px 8px 0}
+
+/* ── TEACHER MARK CIRCLE ── */
+.teacher-mark-wrap{display:flex;flex-direction:column;align-items:center;margin:10px 0 20px}
+.teacher-mark{
+  position:relative;width:110px;height:110px;border-radius:50%;
+  border:4px solid var(--red);background:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 2px 16px rgba(224,92,92,.3);transform:rotate(-4deg);
+  font-family:'Georgia',serif;
+}
+.teacher-mark.great{border-color:var(--green);box-shadow:0 2px 16px rgba(76,175,130,.3)}
+.teacher-mark.good {border-color:#e8a020;box-shadow:0 2px 16px rgba(232,184,75,.3)}
+.teacher-mark .tm-score{font-size:26px;font-weight:900;line-height:1;color:var(--red)}
+.teacher-mark.great .tm-score{color:var(--green)}
+.teacher-mark.good  .tm-score{color:#b8860b}
+.teacher-mark .tm-sep{width:55%;border-top:2px solid var(--border);margin:3px 0}
+.teacher-mark .tm-denom{font-size:13px;font-weight:700;color:var(--muted)}
+.teacher-mark .tm-tick{position:absolute;top:-16px;right:-12px;font-size:30px;transform:rotate(8deg);line-height:1}
+.teacher-motivation{font-size:14px;font-weight:600;color:var(--navy);margin-top:14px;text-align:center;max-width:270px;line-height:1.6;font-style:italic}
+/* Paper version */
+.paper-mark-wrap{display:flex;flex-direction:column;align-items:center;margin:20px 0 8px}
+.paper-teacher-mark{
+  position:relative;width:120px;height:120px;border-radius:50%;
+  border:4.5px solid var(--red);background:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 3px 20px rgba(224,92,92,.35);transform:rotate(-3deg);
+  font-family:'Georgia',serif;
+}
+.paper-teacher-mark.great{border-color:var(--green);box-shadow:0 3px 20px rgba(76,175,130,.35)}
+.paper-teacher-mark.good {border-color:#e8a020;box-shadow:0 3px 20px rgba(232,184,75,.35)}
+.paper-teacher-mark .ptm-score{font-size:30px;font-weight:900;line-height:1;color:var(--red)}
+.paper-teacher-mark.great .ptm-score{color:var(--green)}
+.paper-teacher-mark.good  .ptm-score{color:#b8860b}
+.paper-teacher-mark .ptm-sep{width:55%;border-top:2px solid var(--border);margin:3px 0}
+.paper-teacher-mark .ptm-denom{font-size:14px;font-weight:700;color:var(--muted)}
+.paper-teacher-mark .ptm-tick{position:absolute;top:-16px;right:-12px;font-size:32px;transform:rotate(8deg);line-height:1}
+.paper-motivation{font-size:14px;font-weight:600;color:var(--navy);margin-top:14px;text-align:center;max-width:300px;line-height:1.6;font-style:italic}
 
 /* ── MODE PICKER MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -396,6 +479,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
     <div class="qtype-tabs" id="qtypeTabs"></div>
   </div>
 
+  <!-- Question navigation bar -->
+  <div class="q-nav-bar" id="qNavBar" style="display:none"></div>
+
   <div class="quiz-body" id="quizBody">
     <!-- question + answer rendered here dynamically -->
   </div>
@@ -404,8 +490,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="summary-screen" id="summaryScreen">
     <div class="summary-trophy"   id="summaryTrophy">🏆</div>
     <div class="summary-title">Section Complete!</div>
-    <div class="summary-score"    id="summaryScore"></div>
-    <div class="summary-subtitle" id="summarySubtitle"></div>
+    <div class="teacher-mark-wrap">
+      <div class="teacher-mark" id="teacherMark">
+        <span class="tm-tick" id="teacherTick"></span>
+        <div class="tm-score" id="teacherScore"></div>
+        <div class="tm-sep"></div>
+        <div class="tm-denom">100</div>
+      </div>
+      <div class="teacher-motivation" id="teacherMotivation"></div>
+    </div>
     <div class="summary-stats">
       <div class="stat-box"><div class="stat-num green" id="statCorrect">0</div><div class="stat-label">Correct</div></div>
       <div class="stat-box"><div class="stat-num amber" id="statPartial">0</div><div class="stat-label">Partial</div></div>
@@ -420,7 +513,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
     <div class="paper-header">
       <div class="paper-title" id="paperTitle">Answer Paper</div>
       <div class="paper-meta"  id="paperMeta"></div>
-      <div class="paper-score-ring" id="paperScoreRing"></div>
+      <div class="paper-mark-wrap">
+        <div class="paper-teacher-mark" id="paperTeacherMark">
+          <span class="ptm-tick" id="paperTeacherTick"></span>
+          <div class="ptm-score" id="paperTeacherScore"></div>
+          <div class="ptm-sep"></div>
+          <div class="ptm-denom">100</div>
+        </div>
+        <div class="paper-motivation" id="paperMotivation"></div>
+      </div>
     </div>
     <div id="paperQuestions"></div>
     <div class="paper-actions">
@@ -457,35 +558,299 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 //  QUESTION TYPE CONSTANTS
 // ═══════════════════════════════════════════════════════
 const QTYPES = [
-  { id:"mcq",         label:"Choose Correct",     icon:"🔘" },
-  { id:"fill",        label:"Fill in the Blanks", icon:"✏️"  },
-  { id:"match",       label:"Match the Following",icon:"🔗"  },
-  { id:"brief",       label:"Answer in Brief",    icon:"📝"  },
-  { id:"distinguish", label:"Distinguish Between",icon:"⚖️"  },
-  { id:"paragraph",   label:"Write in Paragraph", icon:"📄"  },
+  { id:"mcq",         label:"Choose Correct",          icon:"🔘" },
+  { id:"fill",        label:"Fill in the Blanks",       icon:"✏️"  },
+  { id:"match",       label:"Match the Following",      icon:"🔗"  },
+  { id:"brief",       label:"Answer in Brief",          icon:"📝"  },
+  { id:"truefalse",   label:"True or False",            icon:"✅"  },
+  { id:"reasons",     label:"Give Reasons",             icon:"💡"  },
+  { id:"distinguish", label:"Distinguish Between",      icon:"⚖️"  },
+  { id:"paragraph",   label:"Answer in Paragraph/Detail", icon:"📄" },
 ];
 
 // ═══════════════════════════════════════════════════════
 //  DATA
 // ═══════════════════════════════════════════════════════
 const DATA = {
+  "Science": {
+    icon: "🔬",
+    parts: {
+      "Physics": {
+        icon: "⚡",
+        lessons: [
+          {
+            id:"sp1", unit:"Unit 1", title:"Measurement", month:"June",
+            questions:{
+              mcq:[
+                {
+                  q:"Choose the correct order of units from smallest to largest.",
+                  options:["mm < cm < m < km","mm > cm > m > km","km < m < cm < mm","mm > m > cm > km"],
+                  correct:0
+                },
+                {
+                  q:"Rulers, measuring tapes and metre scales are used to measure",
+                  options:["Mass","Weight","Time","Length"],
+                  correct:3
+                },
+                {
+                  q:"1 metric ton is equal to",
+                  options:["100 quintals","10 quintals","1/10 quintals","1/100 quintals"],
+                  correct:1
+                },
+                {
+                  q:"Which among the following is NOT a device to measure mass?",
+                  options:["Spring balance","Beam balance","Physical balance","Digital balance"],
+                  correct:0
+                },
+              ],
+              fill:[],match:[],
+              brief:[
+                {
+                  q:"What is the difference between fundamental quantities and derived quantities?",
+                  answer:"Quantities which cannot be expressed in terms of any other physical quantities are called fundamental quantities. Example: Length, mass, time, temperature. Quantities which can be expressed in terms of fundamental quantities are called derived quantities. Example: Area, volume, density.",
+                },
+                {
+                  q:"What is the least count of a Vernier caliper and a screw gauge?",
+                  answer:"The least count of a Vernier caliper is 0.01 cm (0.1 mm). The least count of a screw gauge is 0.01 mm.",
+                }
+              ],
+              distinguish:[
+                {
+                  termA:"Mass",
+                  termB:"Weight",
+                  answerA:"Mass is a fundamental quantity. It has magnitude alone and is a scalar quantity. It is the amount of matter contained in a body. Mass remains the same everywhere. It is measured using a physical balance. Its unit is kilogram.",
+                  answerB:"Weight is a derived quantity. It has magnitude and direction and is a vector quantity. It is the normal force exerted by the surface on the object against gravitational pull. Weight varies from place to place. It is measured using a spring balance. Its unit is newton.",
+                }
+              ],
+              paragraph:[
+                {
+                  q:"Describe the SI system of units and its seven fundamental quantities.",
+                  answer:"The SI system of units is the modernised and improved form of the previous system of units. It is accepted in almost all countries. There are seven fundamental units in the SI system. They are: Length (metre), Mass (kilogram), Time (second), Temperature (kelvin), Electric current (ampere), Luminous intensity (candela), and Amount of substance (mole). With the help of these seven fundamental units, the units for all other derived quantities are obtained.",
+                }
+              ]
+            }
+          },
+          { id:"sp2",  unit:"Unit 2",  title:"Motion",                        month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp3",  unit:"Unit 3",  title:"Fluids",                        month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp4",  unit:"Unit 4",  title:"Electric Charge and Electric Current", month:"October", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp5",  unit:"Unit 5",  title:"Magnetism and Electromagnetism", month:"November", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp6",  unit:"Unit 6",  title:"Light",                         month:"December", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp7",  unit:"Unit 7",  title:"Heat",                          month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp8",  unit:"Unit 8",  title:"Sound",                         month:"February", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sp9",  unit:"Unit 9",  title:"Universe",                      month:"March",    questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+        ]
+      },
+      "Chemistry": {
+        icon: "⚗️",
+        lessons: [
+          { id:"sc10", unit:"Unit 10", title:"Matter Around Us", month:"June",
+            questions:{
+              mcq:[
+                { q:"The separation of denser particles from lighter particles done by rotation at high speed is called __________.", options:["Filtration","sedimentation","decantation","centrifugation"], correct:3 },
+                { q:"Among the following __________ is a mixture.", options:["Common Salt","Juice","Carbon dioxide","Pure Silver"], correct:1 },
+                { q:"When we mix a drop of ink in water we get a __________.", options:["Heterogeneous Mixture","Compound","Homogeneous Mixture","Suspension"], correct:2 },
+                { q:"__________ is essential to perform separation by solvent extraction method.", options:["Separating funnel","filter paper","centrifuge machine","sieve"], correct:0 },
+                { q:"__________ has the same properties throughout the sample.", options:["Pure substance","Mixture","Colloid","Suspension"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[],
+              distinguish:[
+                {
+                  q:"Write the differences between elements and compounds and give an example for each.",
+                  termA:"Element",
+                  termB:"Compound",
+                  answerA:"Made up of only one kind of atom.\nThe smallest particle that retains all its properties is an atom.\nCannot be broken down into simpler substances.\nExample: Copper",
+                  answerB:"Made up of more than one kind of atom.\nThe smallest particle that retains all its properties is the molecule.\nCan be broken down into elements by chemical methods.\nExample: Water"
+                }
+              ],
+              paragraph:[]
+            }
+          },
+          { id:"sc11", unit:"Unit 11", title:"Atomic Structure",                       month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sc12", unit:"Unit 12", title:"Periodic Classification of Elements",    month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sc13", unit:"Unit 13", title:"Chemical Bonding",                       month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sc14", unit:"Unit 14", title:"Acids, Bases and Salts",                 month:"November", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sc15", unit:"Unit 15", title:"Carbon and its Compounds",               month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sc16", unit:"Unit 16", title:"Applied Chemistry",                      month:"February", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+        ]
+      },
+      "Biology": {
+        icon: "🧬",
+        lessons: [
+          { id:"sb17", unit:"Unit 17", title:"Animal Kingdom",              month:"June",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb18", unit:"Unit 18", title:"Organisation of Tissues",     month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb19", unit:"Unit 19", title:"Plant Physiology",            month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb20", unit:"Unit 20", title:"Organ Systems in Animals",    month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb21", unit:"Unit 21", title:"Nutrition and Health",        month:"November", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb22", unit:"Unit 22", title:"World of Microbes",           month:"November", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb23", unit:"Unit 23", title:"Economic Biology",            month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb24", unit:"Unit 24", title:"Environmental Science",       month:"February", questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+          { id:"sb25", unit:"Unit 25", title:"LibreOffice Impress",         month:"September",questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
+        ]
+      }
+    }
+  },
   "Social Science": {
     icon:"🌏",
     parts: {
       "History": {
         icon:"📜",
         lessons: [
-          { id:"h1",  unit:"Unit 1",  title:"Evolution of Humans and Society – Prehistoric Period", month:"June",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h2",  unit:"Unit 2",  title:"Ancient Civilisations",                                month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h3",  unit:"Unit 3",  title:"Early Tamil Society and Culture",                      month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h4",  unit:"Unit 4",  title:"Intellectual Awakening and Socio-Political Changes",   month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h5",  unit:"Unit 5",  title:"The Classical World",                                  month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h6",  unit:"Unit 6",  title:"The Middle Ages",                                      month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h7",  unit:"Unit 7",  title:"State and Society in Medieval India",                  month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h8",  unit:"Unit 8",  title:"The Beginning of the Modern Age",                      month:"November", questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h9",  unit:"Unit 9",  title:"The Age of Revolutions",                               month:"Nov–Dec",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h10", unit:"Unit 10", title:"Industrial Revolution",                                month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"h11", unit:"Unit 11", title:"Colonialism in Asia and Africa",                       month:"Jan–Feb",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
+          { id:"h1",  unit:"Unit 1",  title:"Evolution of Humans and Society – Prehistoric Period", month:"June",
+            questions:{
+              mcq:[
+                { q:"__________ is genetically closest to humans.", options:["Gorilla","Chimpanzee","Orang-utan","Great Apes"], correct:1 },
+                { q:"The period called __________ marks the beginning of agriculture and animal domestication.", options:["Palaeolithic","Mesolithic","Neolithic","Megalithic"], correct:2 },
+                { q:"Direct ancestor of modern man was __________.", options:["Homo habilis","Homo erectus","Homo sapiens","Neanderthal man"], correct:2 },
+                { q:"__________ refers to the area covering Egypt, Israel-Palestine and Iraq.", options:["Great Rift Valley","Fertile Crescent","Solo river","Neander Valley"], correct:1 },
+                { q:"Sir Robert Bruce Foote, a geologist from England first discovered the __________ tools at Pallavaram near Chennai.", options:["Microlithic","Palaeolithic","Mesolithic","Neolithic"], correct:1 },
+                { q:"Which of the following statement(s) about the pre-historic period is correct? (i) The period before the introduction of writing is called pre-history. (ii) Pre-historic people developed language, made paintings and artefacts. (iii) Pre-historic societies are treated as literate. (iv) The pre-historic period is called ancient.", options:["(i) is correct","(i) and (ii) are correct","(i) and (iv) are correct","(ii) and (iii) are correct"], correct:1 },
+                { q:"Which of the following about the Neolithic period is correct? (i) The Neolithic people used polished stone axes called Celts. (ii) Evidence of Neolithic village is found at Payyampalli in Chennai district. (iii) The cultural period that succeeded the Neolithic is called the Bronze Age. (iv) The period that witnessed domestication of animals and cultivation of crops is called Mesolithic.", options:["(i) is correct","(ii) is correct","(ii) and (iii) are correct","(iv) is correct"], correct:2 },
+                { q:"Assertion (A): Many of the Mesolithic sites are found nearby rivers and tanks. Reason (R): Irrigation management developed during Mesolithic period.", options:["A and R are correct and R explains A","A and R are correct but R doesn't explain A","A is correct but R is incorrect","A and R both are incorrect"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h2",  unit:"Unit 2",  title:"Ancient Civilisations", month:"July",
+            questions:{
+              mcq:[
+                { q:"The earliest signs to denote words through pictures", options:["Calligraphy","Pictographic","Ideographic","Stratigraphic"], correct:1 },
+                { q:"The preservation process of dead body in ancient Egypt", options:["Sarcophagus","Hyksos","Mummification","Polytheism"], correct:2 },
+                { q:"The Sumerian system of writing", options:["Pictographic","Hieroglyphic","Sonogram","Cuneiform"], correct:3 },
+                { q:"The Harappans did not have the knowledge of", options:["Gold and Elephant","Horse and Iron","Sheep and Silver","Ox and Platinum"], correct:1 },
+                { q:"The Bronze image suggestive of the use of lost-wax process known to the Indus people.", options:["Jar","Priest king","Dancing girl","Bird"], correct:2 },
+                { q:"Which statement about Mesopotamia is correct? (i) The oldest civilisation in Mesopotamia belonged to the Akkadians. (ii) The Chinese developed the Hieroglyphic system. (iii) The Euphrates and Tigris drain into the Mannar Gulf. (iv) Hammurabi, the king of Babylon was a great law maker.", options:["(i) is correct","(i) and (ii) are correct","(iii) is correct","(iv) is correct"], correct:3 },
+                { q:"Which statement about China is correct? (i) Yangtze River is known as Sorrow of China. (ii) Wu-Ti constructed the Great Wall of China. (iii) Chinese invented gun powder. (iv) According to traditions Mencius was the founder of Taoism.", options:["(i) is correct","(ii) is correct","(iii) is correct","(iii) and (iv) are correct"], correct:3 },
+                { q:"What is the correct chronological order of four civilisations of Mesopotamia?", options:["Sumerians - Assyrians - Akkadians - Babylonians","Babylonians - Sumerians - Assyrians - Akkadians","Sumerians - Akkadians - Babylonians - Assyrians","Babylonians - Assyrians - Akkadians - Sumerians"], correct:2 },
+                { q:"Assertion (A): Assyrians of Mesopotamian civilisation were contemporaries of Indus civilisation. Reason (R): The Documents of an Assyrian ruler refer to the ships from Meluha.", options:["A and R are correct and A explains R","A and R are correct but A doesn't explain R","A is incorrect but R is correct","Both A and R are incorrect"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h3",  unit:"Unit 3",  title:"Early Tamil Society and Culture", month:"July",
+            questions:{
+              mcq:[
+                { q:"The name of the script used in the Sangam Age", options:["English","Devanagari","Tamil-Brahmi","Granta"], correct:2 },
+                { q:"The Sri Lankan chronicle composed in the Pali language mentioning about merchants and horse traders from Tamil Nadu", options:["Deepavamsa","Arthasastra","Mahavamsa","Indica"], correct:2 },
+                { q:"The notable Chola king credited with bringing forest lands under the plough and developing irrigational facilities", options:["Karikalan","Rajarajan I","Kulothungan","Rajendran I"], correct:0 },
+                { q:"Inscription that mentions the Cheras", options:["Pugalur","Girnar","Pulimankombai","Madurai"], correct:0 },
+                { q:"Which statements are correct? (i) Coins as a medium of exchange were introduced for the first time in the Mesolithic Age. (ii) Prakrit was the language used by the common people in Northern India during the Mauryan period. (iii) Vienna Papyrus, a Roman document, mentions trade related to Muziri. (iv) The concept of Thinai is presented in the Tamil grammar work of Pathupaattu.", options:["(i) is correct","(ii) is correct","(ii) and (ii) are correct","(iii) and (iv) are correct"], correct:3 },
+                { q:"Which statements about the Sangam age are correct? (i) Pathitrupathu speaks about the Pandya kings and their territory. (ii) The Akanaanuru describes the trading activities at Kaveripoompattinum. (iii) The Chola Emblem was the tiger and they issued square copper coins with images of a tiger. (iv) Neythal is a sandy desert region.", options:["(i) is correct","(ii) and (iii) are correct","(iii) is correct","(iv) is correct"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h4",  unit:"Unit 4",  title:"Intellectual Awakening and Socio-Political Changes", month:"August",
+            questions:{
+              mcq:[
+                { q:"Identify the founder of a new sect who exemplified simplicity and self-denial.", options:["Buddha","Lao-tze","Confucius","Zoroaster"], correct:0 },
+                { q:"The Magadha king influenced by the teachings of Mahavira", options:["Dhananandha","Chandragupta","Bimbisara","Shishunaga"], correct:2 },
+                { q:"The northern India extended from the Kabul Valley in the north to the Godavari in the south witnessed the rise of Sixteen States.", options:["Mahajanapadas","Gana-sanghas","Dravida","Dakshinapatha"], correct:0 },
+                { q:"Tri-ratnas are the three principles taught by", options:["Buddha","Mahavira","Lao-tze","Confucius"], correct:1 },
+                { q:"The account which throws light on Mauryan polity and society", options:["Marco Polo","Fahien","Megasthanes","Seleucus"], correct:2 },
+                { q:"Which statements are correct? (i) Under the Magadha king the mahamatriyas functioned as secretaries to the ministers. (ii) Accounts of Megasthanes titled Indica is a useful record about Mauryan polity and society. (iii) Nanda's attempt to build an imperial structure was cut short by Ashoka who founded the Mauryan kingdom. (iv) According to tradition, towards the end of his life Chandragupta become an ardent follower of Buddhism.", options:["(i) is correct","(ii) is correct","(i) and (ii) are correct","(iii) and (iv) are correct"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h5",  unit:"Unit 5",  title:"The Classical World", month:"August",
+            questions:{
+              mcq:[
+                { q:"__________ is the Greek city-state which resisted the Persians to the end.", options:["Acropolis","Sparta","Athens","Rome"], correct:1 },
+                { q:"The other name for Greeks was __________.", options:["Hellenists","Hellenes","Phoenicians","Spartans"], correct:1 },
+                { q:"The founder of Han dynasty was __________.", options:["Wu Ti","Hung Chao","Liu Pang","Mangu Khan"], correct:2 },
+                { q:"__________ was the Roman Governor responsible for the crucifixion of Jesus.", options:["Innocent I","Hildebrand","Leo I","Pontius Pilate"], correct:3 },
+                { q:"The Peloponnesian War was fought between __________ and __________.", options:["Greeks and Persians","Plebeians and Patricians","Spartans and Athenians","Greeks and Romans"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h6",  unit:"Unit 6",  title:"The Middle Ages", month:"October",
+            questions:{
+              mcq:[
+                { q:"__________ was the original religion of Japan.", options:["Shinto","Confucianism","Taoism","Animism"], correct:0 },
+                { q:"__________ means great name - lord.", options:["Daimyo","Shogun","Fujiwara","Tokugawa"], correct:0 },
+                { q:"The Arab General who conquered Spain was __________.", options:["Tariq","Alaric","Saladin","Mohammad the Conqueror"], correct:0 },
+                { q:"Harun-al-Rashid was the able emperor of __________.", options:["Abbasid dynasty","Umayyad dynasty","Sassanid dynasty","Mongol dynasty"], correct:0 },
+                { q:"Feudalism centred around __________.", options:["vassalage","slavery","serfdom","land"], correct:3 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h7",  unit:"Unit 7",  title:"State and Society in Medieval India", month:"October",
+            questions:{
+              mcq:[
+                { q:"__________ was the second stronghold of Ala-ud-din Khalji's expanding Kingdom.", options:["Dauladabad","Delhi","Madurai","Bidar"], correct:0 },
+                { q:"The Deccan Sultanates were conquered by __________.", options:["Ala-ud-din Khilji","Ala-ud-din Bahman-shah","Aurangzeb","Malik Kafur"], correct:3 },
+                { q:"The establishment of __________ empire changed the administrative and institutional structures of South India.", options:["Bahmani","Vijayanagar","Mughal","Nayak"], correct:1 },
+                { q:"Krishnadeva Raya was a contemporary of __________.", options:["Babur","Humayun","Akbar","Shershah"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h8",  unit:"Unit 8",  title:"The Beginning of the Modern Age", month:"November",
+            questions:{
+              mcq:[
+                { q:"Who among the following is known as the Father of Humanism?", options:["Leonardo da Vinci","Petrarch","Erasmus","Thomas More"], correct:1 },
+                { q:"The School of Athens was painted by", options:["Raphael Sanzio","Michelangelo","Albrecht Durer","Leonardo da Vinci"], correct:0 },
+                { q:"William Harvey discovered __________.", options:["Heliocentric theory","Geocentric theory","Gravitational force","Circulation of blood"], correct:3 },
+                { q:"Who wrote the 95 Theses?", options:["Martin Luther","Zwingli","John Calvin","Thomas More"], correct:0 },
+                { q:"Who wrote the book Institutes of Christian Religion?", options:["Martin Luther","Zwingli","John Calvin","Cervantes"], correct:2 },
+                { q:"Which sailor was the first to cross the Equator?", options:["Henry, the Navigator","Lopo Gonzalves","Bartholomew Diaz","Christopher Columbus"], correct:1 },
+                { q:"__________ named the sea as Pacific Ocean as it was very calm.", options:["Columbus","Amerigo Vespucci","Ferdinand Magellan","Vasco da Gama"], correct:2 },
+                { q:"The continent of America was named after __________.", options:["Amerigo Vespucci","Christopher Columbus","Vasco da Gama","Hernando Cortez"], correct:0 },
+                { q:"__________ was the headquarters of the Portuguese possession in the East.", options:["Manila","Bombay","Pondicherry","Goa"], correct:3 },
+                { q:"Which among the following plants were introduced from America to Europe?", options:["Sugarcane","Sweet Potato","Rice","Wheat"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h9",  unit:"Unit 9",  title:"The Age of Revolutions", month:"Nov–Dec",
+            questions:{
+              mcq:[
+                { q:"The first British colony in America was __________.", options:["New York","Philadelphia","Jamestown","Amsterdam"], correct:2 },
+                { q:"The pioneer of French Revolution who fought on the side of Washington against the British was __________.", options:["Mirabeau","Lafayette","Napoleon","Danton"], correct:1 },
+                { q:"Lafayette, Thomas Jefferson and Mirabeau wrote the __________.", options:["Declaration of Independence","Declaration of Pilnitz","Declaration of Rights of Man and Citizen","Human Rights Charter"], correct:2 },
+                { q:"The defeat of British at __________ paved the way for the friendship between France and America.", options:["Trenton","Saratoga","Pennsylvania","New York"], correct:1 },
+                { q:"__________ was the symbol of 'Royal Despotism' in France.", options:["Versailles Palace","Prison of Bastille","Paris Commune","Estates General"], correct:1 },
+                { q:"The forces of Austria and Prussia were defeated by the French Revolutionary forces at __________.", options:["Verna","Versailles","Pilnitz","Valmy"], correct:3 },
+                { q:"Candide was written by __________.", options:["Voltaire","Rousseau","Montesquieu","Danton"], correct:0 },
+                { q:"The moderate liberals who wanted to retain Louis XVI as a limited monarchy were called __________.", options:["Girondins","Jacobins","Emigres","Royalists"], correct:0 },
+                { q:"American War of Independence was ended with the Peace of Paris in the year __________.", options:["1776","1779","1781","1783"], correct:3 },
+                { q:"Thomas Paine's famous pamphlet was __________.", options:["Common Sense","Rights of Man","Bill of Rights","Abolition of Slavery"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h10", unit:"Unit 10", title:"Industrial Revolution", month:"January",
+            questions:{
+              mcq:[
+                { q:"Who established the first steam boat service?", options:["Arkwright","Samuel Crompton","Robert Fulton","James Watt"], correct:2 },
+                { q:"Why was Manchester considered ideal for textile production?", options:["availability of land","rich human resources","better living condition","cool climate"], correct:3 },
+                { q:"Who invented the sewing machine?", options:["Elias Howe","Eli Whitney","Samuel Crompton","Humphrey Davy"], correct:0 },
+                { q:"Which family introduced steam engine in France?", options:["de Wendel","de Hindal","de Arman","de Renault"], correct:0 },
+                { q:"Who called Slater, the father of American Industrial Revolution?", options:["F.D. Roosevelt","Andrew Jackson","Winston Churchill","Woodrow Wilson"], correct:1 },
+                { q:"Which of the following is observed to commemorate the Hay Market Massacre?", options:["Independence Day","Farmers Day","Labour Day","Martyrs Day"], correct:2 },
+                { q:"Where was Zollverein Customs Union formed?", options:["England","Germany","France","America"], correct:1 },
+                { q:"Who produced the first batch of automobiles in France?", options:["Louis Renault","Armand Peugeot","Thomas Alva Edison","McAdam"], correct:0 },
+                { q:"What was the invention that removed seeds from cotton?", options:["Rolling Mill","Cotton Gin","Spinning Mule","Spinning Jenny"], correct:1 },
+                { q:"Which of the following was used as fuel in olden days to smelt iron?", options:["Coke","Charcoal","Firewood","Paper"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"h11", unit:"Unit 11", title:"Colonialism in Asia and Africa", month:"Jan–Feb",
+            questions:{
+              mcq:[
+                { q:"__________ was brought to the attention of the East India Company by Francis Light.", options:["Spice islands","Java island","Penang island","Malacca"], correct:2 },
+                { q:"In 1896 __________ states were formed into Federated Malay States.", options:["Four","Five","Three","Six"], correct:0 },
+                { q:"__________ was the only part of Indo-China which was directly under French Control.", options:["Annam","Tong king","Cambodia","Cochin-China"], correct:3 },
+                { q:"The Discovery of gold in the __________ led to a large number of British miners settled in and around Johannesburg.", options:["Transvaal","Orange Free State","Cape Colony","Rhodesia"], correct:0 },
+                { q:"__________ became the first European power to establish trade with India.", options:["Portuguese","French","Danes","Dutch"], correct:0 },
+                { q:"Indentured labour system was a form of __________.", options:["contract labour system","slavery","debt bondage","serfdom"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
         ]
       },
       "Geography": {
@@ -494,40 +859,126 @@ const DATA = {
           {
             id:"g1", unit:"Unit 1", title:"Lithosphere – I Endogenetic Processes", month:"June",
             questions:{
-              mcq:[], fill:[], match:[],
+              mcq:[
+                { q:"__________ is the rigid outer layer of the Earth.", options:["Core","Mantle","Crust","Inner core"], correct:2 },
+                { q:"__________ layer is made up of liquid iron.", options:["Inner core","Outer core","Mantle","Crust"], correct:1 },
+                { q:"Magma is found in the __________.", options:["crust","mantle","core","None of the above"], correct:1 },
+                { q:"The movement of tectonic plates is induced by __________ energy.", options:["hydel","thermal","wave","tidal"], correct:1 },
+                { q:"In the ancient period, Gondwanaland moved towards __________ direction.", options:["north","south","east","west"], correct:0 },
+                { q:"Many million years ago, India was a part of the super continent __________.", options:["Gondwana","Laurasia","Panthalasa","Pangea"], correct:3 },
+                { q:"The movement of plates that creates stress and tension in the rocks causing them to stretch and cracks result in __________.", options:["fold","fault","mountain","earthquake"], correct:1 },
+                { q:"__________ refers to a bowl-shaped depression found at the top of the volcano.", options:["crater","vent","chamber","volcanic cone"], correct:0 },
+                { q:"The point of origin of an Earthquake is called the __________.", options:["epicentre","focus","seismic wave","magnitude"], correct:1 },
+              ],
+              fill:[], match:[],
               brief:[
-                {
-                  q:"Write a brief note on the various spheres of the Earth.",
-                  answer:"The lithosphere is the solid outer part of the Earth.\nThe atmosphere is a thin layer of gases.\nThe hydrosphere is the watery part of the Earth's surface.\nThe biosphere is the layer of Earth where life exists.",
-                },
-                {
-                  q:"Mention the layers of the interior of the Earth.",
-                  answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core.",
-                }
+                { q:"Write a brief note on the various spheres of the Earth.", answer:"The lithosphere is the solid outer part of the Earth.\nThe atmosphere is a thin layer of gases.\nThe hydrosphere is the watery part of the Earth's surface.\nThe biosphere is the layer of Earth where life exists." },
+                { q:"Mention the layers of the interior of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core." }
+              ],
+              truefalse:[],
+              reasons:[
+                { q:"Igneous rocks are also called Primary Rocks or Mother rocks.", answer:"Igneous rocks are also called Primary or Mother rocks because all other rocks are directly or indirectly formed from them." },
               ],
               distinguish:[
-                {
-                  termA:"Core",
-                  termB:"Crust",
-                  answerA:"The core is the innermost and hottest layer of the Earth which lies below the mantle.",
-                  answerB:"Crust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth.",
-                }
+                { termA:"Core", termB:"Crust", answerA:"The core is the innermost and hottest layer of the Earth which lies below the mantle.", answerB:"Crust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth." }
               ],
               paragraph:[
-                {
-                  q:"Describe the structure of the Earth.",
-                  answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core.\n\nCrust:\nCrust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth.\n\nMantle:\nThe interior part beneath the crust is called mantle, which is about 2,900 km thick.\n\nCore:\nThe core is the innermost and hottest layer of the Earth which lies below the mantle.",
-                }
+                { q:"Describe the structure of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core.\n\nCrust:\nCrust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth.\n\nMantle:\nThe interior part beneath the crust is called mantle, which is about 2,900 km thick.\n\nCore:\nThe core is the innermost and hottest layer of the Earth which lies below the mantle." },
+                { q:"Write a note on the internal and external processes of Earth.", answer:"The forces that act from the Earth's interior towards the Earth's surface are called Internal processes. They are caused by the heat energy from the interior of the Earth. They are responsible for building up the relief of the Earth's surface through folding, faulting and volcanic activity.\n\nThe forces that act on the surface of the Earth due to natural agents like running water, glacier, wind, waves, etc., are called External processes. They wear down (denude) the surface features built up by internal processes. The wearing down and rebuilding of the Earth's surface is known as gradation." }
               ]
             }
           },
-          { id:"g2", unit:"Unit 2", title:"Lithosphere – II Exogenetic Processes",         month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g3", unit:"Unit 3", title:"Atmosphere",                                     month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g4", unit:"Unit 4", title:"Hydrosphere",                                    month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g5", unit:"Unit 5", title:"Biosphere",                                      month:"August",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g6", unit:"Unit 6", title:"Man and Environment",                             month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g7", unit:"Unit 7", title:"Mapping Skills",                                  month:"November", questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"g8", unit:"Unit 8", title:"Disaster Management: Responding to Disasters",   month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
+          { id:"g2", unit:"Unit 2", title:"Lithosphere – II Exogenetic Processes", month:"July",
+            questions:{
+              mcq:[
+                { q:"The disintegration or decomposition of rocks is generally called as __________.", options:["weathering","erosion","transportation","deposition"], correct:0 },
+                { q:"The process of the levelling up of land by means of natural agents.", options:["aggradation","degradation","gradation","none"], correct:2 },
+                { q:"__________ is seen in the lower course of the river.", options:["Rapids","Alluvial fan","Delta","Gorges"], correct:2 },
+                { q:"Karst topography is formed due to the action of __________.", options:["Glacier","Wind","Sea waves","Ground water"], correct:3 },
+                { q:"Which one of the following is not a depositional feature of a glacier?", options:["cirque","Moraines","Drumlins","Eskers"], correct:0 },
+                { q:"Deposits of fine silt blown by wind is called as __________.", options:["Loess","Barchans","Hamada","Ripples"], correct:0 },
+                { q:"Stacks are formed by __________.", options:["Wave erosion","River erosion","Glacial erosion","Wind deposition"], correct:0 },
+                { q:"__________ erosion is responsible for the formation of cirque.", options:["wind","glacier","river","underground water"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g3", unit:"Unit 3", title:"Atmosphere", month:"July",
+            questions:{
+              mcq:[
+                { q:"__________ is the most important gas for the survival of living organisms.", options:["Helium","carbon dioxide","oxygen","methane"], correct:2 },
+                { q:"The lowest layer of the atmosphere is __________.", options:["Troposphere","Stratosphere","Exosphere","Mesosphere"], correct:0 },
+                { q:"__________ reflects radio waves.", options:["Exosphere","Ionosphere","Mesosphere","Stratosphere"], correct:1 },
+                { q:"The process of change of state of water from gaseous to liquid state is called __________.", options:["Precipitation","evaporation","transpiration","condensation"], correct:3 },
+                { q:"The __________ is the chief energy source of the Earth.", options:["Sun","Moon","Stars","Clouds"], correct:0 },
+                { q:"All types of clouds are found in the __________.", options:["Troposphere","Ionosphere","Mesosphere","Exosphere"], correct:0 },
+                { q:"__________ clouds are called 'Sheep clouds'.", options:["Alto-cumulus","Alto-Stratus","Nimbo-stratus","Cirro-stratus"], correct:0 },
+                { q:"The Monsoons are __________.", options:["prevailing winds","periodic winds","local winds","none of the above"], correct:1 },
+                { q:"Dew in the form of ice crystals is called __________.", options:["frost","fog","mist","sleet"], correct:0 },
+                { q:"__________ is called the eye of the storm/cyclone.", options:["Pressure","wind","cyclones","snow"], correct:0 },
+                { q:"The vertical movement of air is called __________.", options:["Wind","storm","Air current","drift"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g4", unit:"Unit 4", title:"Hydrosphere", month:"August",
+            questions:{
+              mcq:[
+                { q:"The temperature of the ocean waters generally __________ at greater depth.", options:["increases","decreases","remains constant","none of the above"], correct:1 },
+                { q:"Ocean currents are produced due to __________.", options:["rotation of earth","variation in temperature","earth's movement","all the above"], correct:3 },
+                { q:"Which of the following indicates the correct sequence of the topography beneath the surface of the sea?", options:["Continental shelf-Continental slope-Sea plain-Sea trench","Continental slope-Continental shelf-Sea plain-Sea trench","Sea plain-Continental slope-Continental shelf-Sea trench","Continental slope-Sea plain-Continental shelf-Sea trench"], correct:0 },
+                { q:"The oceanic ridge comes into existence due to __________.", options:["convergence of tectonic plates","divergence of tectonic plates","lateral movements of plates","stearing of plates"], correct:1 },
+                { q:"Which of the following is NOT correctly matched?", options:["Gulf Stream - Pacific Ocean","Labrador current - North Atlantic Ocean","Canary current - Mediterranean Sea","Mozambique current - Indian Ocean"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g5", unit:"Unit 5", title:"Biosphere", month:"August",
+            questions:{
+              mcq:[
+                { q:"The coldest biome on Earth is __________.", options:["Tundra","Taiga","Desert","Oceans"], correct:0 },
+                { q:"This is the smallest unit of biosphere.", options:["Ecosystems","Biome","Environment","None of the above"], correct:0 },
+                { q:"Nutrients are recycled in the atmosphere with the help of certain micro organisms, referred to as __________.", options:["Producers","Decomposers","Consumers","None of the above"], correct:1 },
+                { q:"To which climatic conditions are Xerophytic plants specifically adapted to?", options:["Saline and sandy","Limited moisture availability","Cold temperature","Humid"], correct:1 },
+                { q:"Why is the usage of rainforest biomes for large scale agriculture unsustainable?", options:["because it is too wet","because the temperature is too warm","because the soil is too thin","because the soil is poor"], correct:3 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g6", unit:"Unit 6", title:"Man and Environment", month:"October",
+            questions:{
+              mcq:[
+                { q:"All external influences and factors that affect the growth and development of living organisms is __________.", options:["Environment","Ecosystem","Biotic factors","Abiotic factors"], correct:0 },
+                { q:"The 'World Population Day' is observed on __________ every year.", options:["August 11th","September 11th","July 11th","January 11th"], correct:2 },
+                { q:"The statistical study of human population is __________.", options:["Demography","Morphology","Etymology","Seismography"], correct:0 },
+                { q:"The extraction of valuable minerals and other geological minerals from the mines, is __________.", options:["Fishing","Lumbering","Mining","Agriculture"], correct:2 },
+                { q:"The Secondary sector of the economy produces __________ from raw materials.", options:["Semi finished goods","Finished goods","Economic goods","raw materials"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g7", unit:"Unit 7", title:"Mapping Skills", month:"November",
+            questions:{
+              mcq:[
+                { q:"__________ indicates the purpose or theme of the map.", options:["Title","Scale","Direction","Legend"], correct:0 },
+                { q:"Standard symbols that are used in maps to convey a definite meaning are called __________.", options:["conventional signs and symbols","coordinates","grid references","directions"], correct:0 },
+                { q:"GPS consists of a constellation of __________ satellites.", options:["7","24","32","64"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"g8", unit:"Unit 8", title:"Disaster Management: Responding to Disasters", month:"January",
+            questions:{
+              mcq:[
+                { q:"One among the following is NOT the first responder in case of a disaster.", options:["police officers","firefighters","insurance agents","emergency medical technicians"], correct:2 },
+                { q:"'Drop, Cover, Hold' is a mock drill for __________.", options:["Fire","Earthquake","Tsunami","Riot"], correct:1 },
+                { q:"When you happen to see a fire break out, you will make a call to __________.", options:["114","112","115","118"], correct:1 },
+                { q:"Which of the following statements is untrue?", options:["'Stop, Drop, Roll' is for fire","'Drop, Cover, Hold' is for an earthquake","'If sea water recedes back, run to higher places' is for flood","'If gunshots are heard, drop to the ground and cover the head with hand' is for riot"], correct:2 },
+                { q:"Which of the following statements belongs to responding to earthquake?", options:["Avoid any place where police or security forces action is in progress","Know the height of your street above sea level","Stay away from glass, windows, outside doors and walls and anything that could fall","Before opening a door, feel it with the back of your hand"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
         ]
       },
       "Civics": {
@@ -640,24 +1091,132 @@ const DATA = {
                   answer:"Forms of Democratic government\n\n1. Parliamentary form of government\n2. Presidential form of government",
                 }
               ],
-              distinguish:[], paragraph:[]
+              distinguish:[], paragraph:[], truefalse:[], reasons:[]
             }
           },
-          { id:"c2", unit:"Unit 2", title:"Election, Political Parties and Pressure Groups", month:"July",      questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"c3", unit:"Unit 3", title:"Human Rights",                                     month:"Aug–Sep",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"c4", unit:"Unit 4", title:"Forms of Government",                              month:"October",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"c5", unit:"Unit 5", title:"Local Self Government",                            month:"November",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"c6", unit:"Unit 6", title:"Road Safety",                                      month:"January",   questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
+          { id:"c2", unit:"Unit 2", title:"Election, Political Parties and Pressure Groups", month:"July",
+            questions:{
+              mcq:[
+                { q:"India has adapted the electoral system followed in the __________.", options:["USA","United Kingdom","Canada","Russia"], correct:1 },
+                { q:"The Election Commission of India is a/an __________.", options:["Independent body","Statutory body","Private body","Public corporation"], correct:0 },
+                { q:"Which Article of the Constitution provides for an Election Commission?", options:["Article 280","Article 315","Article 324","Article 325"], correct:2 },
+                { q:"Which part of the constitution of India says about the election commission?", options:["Part III","Part XV","Part XX","Part XXII"], correct:1 },
+                { q:"Who accords recognition to various political parties as national or regional parties?", options:["The President","The Election Commission","The Parliament","The President in consultation with the Election Commission"], correct:1 },
+                { q:"Assertion (A): Indian Constitution provides for an independent Election Commission. Reason (R): To ensure free and fair elections in the country.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:0 },
+                { q:"NOTA was introduced in the year __________.", options:["2012","2013","2014","2015"], correct:1 },
+                { q:"The term pressure groups originated in __________.", options:["USA","UK","USSR","India"], correct:0 },
+                { q:"Assertion (A): A large number of pressure groups exist in India. Reason (R): Pressure Groups are not developed in India to the same extent as in the USA.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"c3", unit:"Unit 3", title:"Human Rights", month:"Aug–Sep",
+            questions:{
+              mcq:[
+                { q:"According to the UNO a child is a person who has not completed the age of __________ years.", options:["12","14","16","18"], correct:3 },
+                { q:"Kailash Satyarthi and Malala have been awarded Nobel Prize for __________.", options:["Literature","Peace","Physics","Economics"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"c4", unit:"Unit 4", title:"Forms of Government", month:"October",
+            questions:{ mcq:[], fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[] }
+          },
+          { id:"c5", unit:"Unit 5", title:"Local Self Government", month:"November",
+            questions:{
+              mcq:[
+                { q:"Which committee was appointed by the planning commission in 1985?", options:["Balwant Rai Mehta","Ashok Mehta","G V K Rao","L M Singhvi"], correct:2 },
+                { q:"The Uthiramerur stone inscription shows evidences of prevalent local self government during the __________ period in Tamil Nadu.", options:["Chola","Chera","Pandiya","Pallava"], correct:0 },
+                { q:"The 73rd and 74th constitutional Amendment Acts, was enacted during the year __________.", options:["1992","1995","1997","1990"], correct:0 },
+                { q:"__________ act as the inspector of Village Panchayat.", options:["Commissioner","District Collector","Councillors","Mayor"], correct:1 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"c6", unit:"Unit 6", title:"Road safety", month:"January",
+            questions:{ mcq:[], fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[] }
+          },
         ]
       },
       "Economics": {
         icon:"💹",
         lessons: [
-          { id:"e1", unit:"Unit 1", title:"Understanding Development: Perspectives, Measurement and Sustainability", month:"June",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"e2", unit:"Unit 2", title:"Employment in India and Tamil Nadu",                                       month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"e3", unit:"Unit 3", title:"Money and Credit",                                                         month:"October",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"e4", unit:"Unit 4", title:"Agriculture in Tamil Nadu",                                                month:"November", questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
-          { id:"e5", unit:"Unit 5", title:"Migration",                                                                month:"January",  questions:{mcq:[],fill:[],match:[],brief:[],distinguish:[],paragraph:[]} },
+          { id:"e1", unit:"Unit 1", title:"Understanding Development: Perspectives, Measurement and Sustainability", month:"June",
+            questions:{
+              mcq:[
+                { q:"Assertion (A): Development increases the quality of life. Reason (R): People will have higher incomes, better education, better health and nutrition, less poverty.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:0 },
+                { q:"The term 'Human resources' refers to __________.", options:["investment on poor people","expenditure on agriculture","investment on assets","collective abilities of people"], correct:3 },
+                { q:"For comparing development between countries, their __________ is considered to be one of the most important attributes.", options:["growth","income","expenditure","savings"], correct:1 },
+                { q:"__________ is considered a true measure of national income.", options:["GNP","GDP","NNP","NDP"], correct:2 },
+                { q:"The __________ income is also called per capita income.", options:["average","total","people","monthly"], correct:0 },
+                { q:"Which one of the following country is not a G-8 country?", options:["Japan","Canada","Russia","India"], correct:3 },
+                { q:"Which one of the following country is not a member of SAARC?", options:["India","Pakistan","China","Bhutan"], correct:2 },
+                { q:"Assertion (A): The Net National Product (NNP) is considered as a true measure of national output. Reason (R): It is also known as national income.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:0 },
+                { q:"Assertion (A): Human resource is necessary for the progress of any country. Reason (R): Investment in education and health of people can result in a high rate of returns in the future for a country.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:0 },
+                { q:"The Human Development Index (HDI) does not take into account the following dimension in its calculation.", options:["Gender","Health","Education","Income"], correct:0 },
+                { q:"Among the following states which state has the literacy rate (2011) higher than national average?", options:["Andhra Pradesh","Uttar Pradesh","Tamil Nadu","None of these"], correct:2 },
+                { q:"Sex-ratio means __________.", options:["the ratio between adult-male and adult-female in a population","the ratio between female and male in a population","the relationship between male of female","the number of females per thousand males"], correct:3 },
+                { q:"Inter-generational equality is ensured under the process of __________.", options:["Industrial progress","Economic development","Sustainable development","Economic growth"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"e2", unit:"Unit 2", title:"Employment in India and Tamil Nadu", month:"July",
+            questions:{
+              mcq:[
+                { q:"We take age group __________ years for computation of the workforce.", options:["12–60","15–60","21–65","5–14"], correct:1 },
+                { q:"Which is the correct sequence of various sectors in GDP of India in the descending order?", options:["Primary sector, Secondary sector, Tertiary sector","Primary sector, Tertiary sector, Secondary sector","Tertiary sector, Secondary sector, Primary sector","Secondary sector, Tertiary sector, Primary sector"], correct:2 },
+                { q:"Which one of the following sectors is the largest employer in India?", options:["Primary Sector","Secondary Sector","Tertiary Sector","Public sector"], correct:0 },
+                { q:"Which one of the following is not in Primary Sector?", options:["Agriculture","Manufacturing","Mining","Fishery"], correct:1 },
+                { q:"Which one of the following is not in the Secondary Sector?", options:["Construction","Manufacturing","Small Scale Industry","Forestry"], correct:3 },
+                { q:"Tertiary Sector include/s __________.", options:["Transport","Insurance","Banking","All of these"], correct:3 },
+                { q:"Which sector is not included in the occupational pattern?", options:["Primary sector","Secondary sector","Tertiary sector","Private sector"], correct:3 },
+                { q:"Which Delhi Sultan of medieval India formed 'Employment Bureau' to solve the unemployment problem?", options:["Muhamad Bin Tugluq","Allauddin Khilji","Feroz Shah Tugluq","Balban"], correct:0 },
+                { q:"__________ sector is registered and follows government rules.", options:["Agriculture","Organised","Unorganised","Private"], correct:1 },
+                { q:"__________ sector provides job security and higher wages.", options:["Public sector","Organised sector","Unorganised sector","Private sector"], correct:1 },
+                { q:"Find the odd one __________.", options:["Banking","Railways","Insurance","Small Scale Industry"], correct:3 },
+                { q:"The sectors are classified into Public and Private sectors on the basis of __________.", options:["number of workers employed","nature of economic activity","ownership of enterprises","employment conditions"], correct:2 },
+                { q:"Assertion (A): The unorganised sector of the economy characterised by the household manufacturing activity and small-scale industry. Reason (R): Jobs here are low paid and often not regular.", options:["Both (A) and (R) are true and (R) explains (A)","Both (A) and (R) are true and (R) does not explain (A)","(A) is correct and (R) is false","(A) is false and (R) is true"], correct:0 },
+                { q:"People who employ workers and pay rewards for their work is termed as __________.", options:["employee","employer","labour","caretaker"], correct:1 },
+                { q:"__________ continues to be the largest employer in Tamil Nadu.", options:["Agriculture","Manufacturing","Banking","Small Scale Industry"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"e3", unit:"Unit 3", title:"Money and Credit", month:"October",
+            questions:{
+              mcq:[
+                { q:"Certain metals like __________ (gold/iron) were used as a medium of exchange during ancient times.", options:["gold","silver","iron","copper"], correct:0 },
+                { q:"The Head Quarters of the RBI is at __________ (Chennai/Mumbai).", options:["Chennai","Mumbai","Delhi","Kolkata"], correct:1 },
+                { q:"International trade is carried on in terms of __________ (US Dollars/Pounds).", options:["US Dollars","Pounds","Euros","Yen"], correct:0 },
+                { q:"The currency of Japan is __________.", options:["Yen","Yuan","Ringgit","Dollar"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"e4", unit:"Unit 4", title:"Agriculture in Tamil Nadu", month:"November",
+            questions:{
+              mcq:[
+                { q:"Irrigated land surface out of cultivable land is __________.", options:["27%","57%","28%","49%"], correct:1 },
+                { q:"Out of the following, which is NOT a food crop?", options:["Bajra","Ragi","Maize","Coconut"], correct:3 },
+                { q:"The productivity of paddy during the year 2014-2015 was __________.", options:["3,039 kg","4,429 kg","2,775 kg","3,519 kg"], correct:1 },
+                { q:"Both agricultural productivity and food productivity has __________.", options:["decreased","not stable","remained stable","increased"], correct:3 },
+                { q:"The Northeast monsoon period in Tamil Nadu is __________.", options:["August – October","September – November","October – December","November – January"], correct:2 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+          { id:"e5", unit:"Unit 5", title:"Migration", month:"January",
+            questions:{
+              mcq:[
+                { q:"According to the 2011 census, the total population of India was __________.", options:["121 crore","221 crore","102 crore","100 crore"], correct:0 },
+                { q:"__________ has recorded the maximum number of emigrants.", options:["Ramanathapuram","Coimbatore","Chennai","Vellore"], correct:2 },
+                { q:"During 2015, __________ of illiterates were migrants from Tamil Nadu.", options:["7%","175%","23%","9%"], correct:0 },
+                { q:"The poorer sections of the population migrate __________.", options:["as a survival strategy","to improve their living standards","as a service","to get experience"], correct:0 },
+              ],
+              fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
         ]
       }
     }
@@ -756,11 +1315,10 @@ let currentLesson  = null;
 let currentQType   = "brief";   // active question type tab
 let currentQIndex  = 0;
 let sessionResults = [];
-let scores         = {};        // "lessonId:qtype" → avg%
-
-// MCQ / match answer selection state
+let questionStates = []; // per-question: {pct, answered, skipped} — for nav dots
 let mcqSelected    = null;
 let matchAnswers   = {};        // leftIdx → selected right value
+let scores         = {};        // "lessonId:qtype" → avg%
 
 // Mode
 let currentMode    = "study";   // "study" | "exam"
@@ -928,8 +1486,60 @@ function renderQTypeTabs(){
 function startQTypeSession(){
   currentQIndex=0;
   sessionResults=[];
+  matchAnswers={};
+  mcqSelected=null;
+  const total=(currentLesson.questions[currentQType]||[]).length;
+  questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
+  renderNavBar();
+  renderCurrentQuestion();
+}
+
+// ── NAVIGATION BAR ──
+function renderNavBar(){
+  const qs=currentLesson.questions[currentQType]||[];
+  const bar=document.getElementById("qNavBar");
+  if(!qs.length){ bar.style.display="none"; return; }
+  bar.style.display="flex";
+  // Only show nav in study mode (exam hides it to prevent peeking)
+  if(currentMode==="exam"){ bar.style.display="none"; return; }
+  bar.innerHTML="";
+
+  // Prev button
+  const prev=document.createElement("button");
+  prev.className="q-nav-prev"; prev.textContent="← Prev";
+  prev.disabled=currentQIndex===0;
+  prev.onclick=()=>jumpToQuestion(currentQIndex-1);
+  bar.appendChild(prev);
+
+  // Dot per question
+  qs.forEach((_,i)=>{
+    const dot=document.createElement("div");
+    dot.className="q-nav-dot";
+    dot.textContent=i+1;
+    if(i===currentQIndex) dot.classList.add("current");
+    else if(questionStates[i]?.answered){
+      const p=questionStates[i].pct;
+      dot.classList.add(p>=80?"answered-good":p>=50?"answered-mid":"answered-poor");
+    } else if(questionStates[i]?.skipped) dot.classList.add("skipped");
+    dot.onclick=()=>jumpToQuestion(i);
+    bar.appendChild(dot);
+  });
+
+  // Next button
+  const next=document.createElement("button");
+  next.className="q-nav-next"; next.textContent="Next →";
+  next.disabled=currentQIndex>=qs.length-1;
+  next.onclick=()=>jumpToQuestion(currentQIndex+1);
+  bar.appendChild(next);
+}
+
+function jumpToQuestion(idx){
+  const total=(currentLesson.questions[currentQType]||[]).length;
+  if(idx<0||idx>=total) return;
+  currentQIndex=idx;
   mcqSelected=null;
   matchAnswers={};
+  renderNavBar();
   renderCurrentQuestion();
 }
 
@@ -966,6 +1576,8 @@ function renderCurrentQuestion(){
     case "fill":       renderFill(q, qnum, isLast); break;
     case "match":      renderMatch(q, qnum, isLast); break;
     case "brief":      renderTextAnswer(q, qnum, isLast, false); break;
+    case "truefalse":  renderTrueFalse(q, qnum, isLast); break;
+    case "reasons":    renderTextAnswer(q, qnum, isLast, false); break;
     case "distinguish":renderDistinguish(q, qnum, isLast); break;
     case "paragraph":  renderTextAnswer(q, qnum, isLast, true); break;
   }
@@ -995,9 +1607,13 @@ function renderMCQ(q, qnum, isLast){
       <span class="mcq-opt-letter">${String.fromCharCode(65+i)}</span>
       <span>${o.text}</span>
     </div>`).join("");
-  const examBtn = currentMode==="exam"
+
+  // Study mode: no Check Answer button — clicking an option immediately reveals result
+  // Exam mode: Next → button, no feedback
+  const actionBtn = currentMode==="exam"
     ? `<button class="btn-next" id="examNextBtn" onclick="examNextMCQ(${newCorrect},${isLast})" disabled style="margin-bottom:24px">${isLast?"Submit Exam 📋":"Next →"}</button>`
-    : `<button class="btn-check" id="checkBtn" onclick="checkMCQ(${newCorrect},${isLast})" disabled>Check Answer</button>`;
+    : ``;
+
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Choose the Correct Answer</div>
@@ -1005,7 +1621,7 @@ function renderMCQ(q, qnum, isLast){
       <div class="q-text">${q.q}</div>
       <div class="mcq-options">${opts}</div>
     </div>
-    ${examBtn}
+    ${actionBtn}
     <div class="result-panel" id="resultPanel"></div>
     <div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
@@ -1013,12 +1629,29 @@ function renderMCQ(q, qnum, isLast){
     </div>`;
 }
 function selectMCQ(idx, correctIdx, isLast){
+  // Prevent re-clicking after answer is revealed
+  if(document.getElementById("btnRow")?.style.display==="flex") return;
+
   mcqSelected=idx;
-  document.querySelectorAll(".mcq-option").forEach((el,i)=>el.classList.toggle("selected",i===idx));
-  const cb=document.getElementById("checkBtn");
-  const eb=document.getElementById("examNextBtn");
-  if(cb) cb.disabled=false;
-  if(eb) eb.disabled=false;
+
+  if(currentMode==="study"){
+    // Immediately show green/red on all options
+    document.querySelectorAll(".mcq-option").forEach((el,i)=>{
+      el.onclick=null; // disable further clicks
+      if(i===correctIdx) el.classList.add("correct");
+      else if(i===idx)   el.classList.add("wrong");
+    });
+    const pct = idx===correctIdx ? 100 : 0;
+    sessionResults.push({pct});
+    if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+    showSimpleResult(pct, idx===correctIdx ? "Correct! Well done 🎉" : "Incorrect. The correct answer is highlighted in green.");
+    document.getElementById("btnRow").style.display="flex";
+  } else {
+    // Exam mode — just select visually, enable Next button
+    document.querySelectorAll(".mcq-option").forEach((el,i)=>el.classList.toggle("selected",i===idx));
+    const eb=document.getElementById("examNextBtn");
+    if(eb) eb.disabled=false;
+  }
 }
 function examNextMCQ(correctIdx, isLast){
   const qs=currentLesson.questions[currentQType];
@@ -1040,19 +1673,7 @@ function examNextMCQ(correctIdx, isLast){
   if(isLast){ showAnswerPaper(); return; }
   currentQIndex++; mcqSelected=null; renderCurrentQuestion();
 }
-function checkMCQ(correctIdx, isLast){
-  const correct=mcqSelected===correctIdx;
-  document.querySelectorAll(".mcq-option").forEach((el,i)=>{
-    if(i===correctIdx) el.classList.add("correct");
-    else if(i===mcqSelected) el.classList.add("wrong");
-    el.onclick=null;
-  });
-  document.getElementById("checkBtn").disabled=true;
-  const pct=correct?100:0;
-  sessionResults.push({pct});
-  showSimpleResult(pct, correct?"Correct! Well done 🎉":"Incorrect. See the correct answer above.");
-  document.getElementById("btnRow").style.display="flex";
-}
+// checkMCQ is now handled directly inside selectMCQ for study mode
 
 // ── FILL IN BLANKS ──
 function renderFill(q, qnum, isLast){
@@ -1177,20 +1798,30 @@ function checkMatch(correctMap, count, isLast){
   document.getElementById("btnRow").style.display="flex";
 }
 
-// ── TEXT ANSWER (brief / paragraph) ──
+// ── TEXT ANSWER (brief / reasons / paragraph / detail) ──
 function renderTextAnswer(q, qnum, isLast, isParagraph){
-  const placeholder=isParagraph?"Write a detailed paragraph answer…":"Write a brief answer…";
-  const minH=isParagraph?180:120;
+  const labelMap = { brief:"Answer in Brief", reasons:"Give Reasons", paragraph:"Answer in Paragraph / Detail" };
+  const label = labelMap[currentQType] || (isParagraph?"Answer in Paragraph / Detail":"Answer in Brief");
+  const placeholder = isParagraph ? "Write a detailed answer…" : "Write your answer…";
+  const minH = isParagraph ? 180 : 120;
+  const peekBtn = currentMode==="study"
+    ? `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
+       <div class="peek-panel" id="peekPanel">
+         <div class="peek-label">Model Answer</div>
+         <div class="peek-text">${q.answer.replace(/</g,"&lt;")}</div>
+       </div>`
+    : "";
   const actionBtns = currentMode==="exam"
     ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Submit Exam 📋":"Next →"}</button>`
     : `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
-      <div class="q-label">${isParagraph?"Write in Paragraph":"Answer in Brief"}</div>
+      <div class="q-label">${label}</div>
       <div class="q-num">${qnum}</div>
       <div class="q-text">${q.q}</div>
     </div>
+    ${peekBtn}
     <div class="answer-area" id="answerArea">
       <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px"></textarea>
       <div class="answer-actions">${actionBtns}</div>
@@ -1200,6 +1831,85 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`;
+}
+
+// ── TRUE OR FALSE ──
+function renderTrueFalse(q, qnum, isLast){
+  // q.statement, q.answer (true|false), q.reason (optional explanation)
+  const actionBtn = currentMode==="exam"
+    ? `<button class="btn-next" id="examNextBtn" onclick="examNextTF('${q.answer}',${isLast})" disabled style="margin-bottom:24px">${isLast?"Submit Exam 📋":"Next →"}</button>`
+    : ``;
+  document.getElementById("quizBody").innerHTML=`
+    <div class="question-card">
+      <div class="q-label">True or False</div>
+      <div class="q-num">${qnum}</div>
+      <div class="q-text">${q.statement||q.q}</div>
+      <div class="mcq-options" style="margin-top:14px">
+        <div class="mcq-option" id="tfopt0" onclick="selectTF('true','${q.answer}',${isLast},${JSON.stringify(q.reason||"")})">
+          <span class="mcq-opt-letter">T</span><span>True</span>
+        </div>
+        <div class="mcq-option" id="tfopt1" onclick="selectTF('false','${q.answer}',${isLast},${JSON.stringify(q.reason||"")})">
+          <span class="mcq-opt-letter">F</span><span>False</span>
+        </div>
+      </div>
+    </div>
+    ${actionBtn}
+    <div class="result-panel" id="resultPanel"></div>
+    <div class="btn-row" id="btnRow" style="display:none">
+      <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
+      <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
+    </div>`;
+}
+function selectTF(selected, correct, isLast, reason){
+  if(document.getElementById("btnRow")?.style.display==="flex") return;
+  const isCorrect = selected===correct;
+  document.querySelectorAll(".mcq-option").forEach(el=>el.onclick=null);
+  document.getElementById("tfopt0").classList.toggle("correct", correct==="true");
+  document.getElementById("tfopt0").classList.toggle("wrong", selected==="true" && !isCorrect);
+  document.getElementById("tfopt1").classList.toggle("correct", correct==="false");
+  document.getElementById("tfopt1").classList.toggle("wrong", selected==="false" && !isCorrect);
+  const pct = isCorrect ? 100 : 0;
+  sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const panel=document.getElementById("resultPanel");
+  panel.classList.add("visible");
+  const cls=isCorrect?"perfect":"poor";
+  const correctLabel = correct==="true" ? "True" : "False";
+  panel.innerHTML=`
+    <div class="score-stamp">
+      <div class="score-circle ${cls}">${pct}%</div>
+      <div><div class="score-label">${isCorrect?"Correct! 🎉":"Incorrect — it is "+correctLabel}</div></div>
+    </div>
+    ${reason?`<div class="result-section"><div class="result-section-title correct">Reason</div><div class="diff-answer-block model">${reason.replace(/</g,"&lt;")}</div></div>`:""}`;
+  renderNavBar();
+  document.getElementById("btnRow").style.display="flex";
+}
+function examNextTF(correct, isLast){
+  const qs=currentLesson.questions[currentQType];
+  const q=qs[currentQIndex];
+  const sel = document.querySelector(".mcq-option.selected span:last-child")?.textContent?.toLowerCase();
+  const pct = sel===correct?100:0;
+  sessionResults.push({pct});
+  examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse"});
+  if(isLast){showAnswerPaper();return;}
+  currentQIndex++; mcqSelected=null; renderCurrentQuestion();
+}
+function togglePeek(){
+  const p=document.getElementById("peekPanel");
+  const b=document.querySelector(".btn-peek");
+  const ta=document.getElementById("answerInput");
+  if(!p) return;
+  const opening=!p.classList.contains("visible");
+  p.classList.toggle("visible",opening);
+  if(opening){
+    // Disable textarea while model answer is visible — keep content so user can still see what they wrote
+    if(ta) ta.disabled=true;
+    b.textContent="🙈 Hide Model Answer";
+  } else {
+    // Clear and re-enable when hiding — so user writes from memory
+    if(ta){ ta.value=""; ta.disabled=false; ta.focus(); }
+    b.textContent="👁 View Model Answer before writing";
+  }
 }
 function examNextText(isLast){
   const qs=currentLesson.questions[currentQType];
@@ -1211,6 +1921,32 @@ function examNextText(isLast){
   if(isLast){ showAnswerPaper(); return; }
   currentQIndex++; renderCurrentQuestion();
 }
+// ── ANNOTATED DIFF helper — word-level annotation, same line format as model ──
+function buildAnnotatedDiff(userText, modelText){
+  const {diff} = scoreAnswer(userText, modelText);
+  let annotated = "";
+  diff.forEach(d=>{
+    const w = d.word.replace(/</g,"&lt;");
+    if(d.type==="ok")          annotated += `<span class="word-ok">${w}</span> `;
+    else if(d.type==="wrong")  annotated += `<span class="word-wrong">${w}</span> `;
+    else if(d.type==="misspelled") annotated += `<span class="word-wrong" title="→${d.correct}">${w}</span> `;
+    else if(d.type==="missing") annotated += `<span class="word-missing">[${w}]</span> `;
+  });
+
+  // Preserve the model answer's line breaks in both blocks
+  const modelFormatted = modelText.replace(/</g,"&lt;").replace(/\n/g,"<br>");
+
+  return `
+    <div class="result-section">
+      <div class="result-section-title">Your Answer</div>
+      <div class="diff-answer-block">${annotated||"<em>(skipped)</em>"}</div>
+    </div>
+    <div class="result-section">
+      <div class="result-section-title correct">✅ Model Answer</div>
+      <div class="diff-answer-block model">${modelFormatted}</div>
+    </div>`;
+}
+
 function checkTextAnswer(){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
@@ -1219,66 +1955,65 @@ function checkTextAnswer(){
   if(!userText) return;
   document.getElementById("answerInput").disabled=true;
   document.getElementById("checkBtn").disabled=true;
-  document.getElementById("answerArea").querySelector(".btn-skip").disabled=true;
+  const skipBtn=document.getElementById("answerArea")?.querySelector(".btn-skip");
+  if(skipBtn) skipBtn.disabled=true;
 
-  const {pct, diff}=scoreAnswer(userText, q.answer);
+  const {pct}=scoreAnswer(userText, q.answer);
   sessionResults.push({pct});
+  // Record state for nav dot
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  renderNavBar();
 
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
-
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const lbl=pct>=80?"Great answer!":pct>=50?"Good effort — almost there!":"Keep practising!";
-
-  // build diff HTML
-  let diffHTML="";
-  diff.forEach(d=>{
-    if(d.type==="ok")          diffHTML+=`<span class="word-ok">${d.word}</span> `;
-    else if(d.type==="wrong")  diffHTML+=`<span class="word-wrong">${d.word}</span> `;
-    else if(d.type==="misspelled") diffHTML+=`<span class="word-wrong" title="should be: ${d.correct}">${d.word}→<em>${d.correct}</em></span> `;
-    else if(d.type==="missing") diffHTML+=`<span class="word-missing">[${d.word}]</span> `;
-  });
 
   panel.innerHTML=`
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div><div class="score-label">${lbl}</div>
-      <div class="score-detail">Sequence-matched score · green=correct · red=wrong/extra · [bracketed]=missing</div></div>
+      <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div></div>
     </div>
-    <div class="result-section">
-      <div class="result-section-title">Your Answer (annotated)</div>
-      <div class="highlighted-answer">${diffHTML||"<em>(skipped)</em>"}</div>
-    </div>
-    <div class="result-section">
-      <div class="result-section-title correct">✅ Model Answer</div>
-      <div class="ideal-answer">${q.answer}</div>
-    </div>`;
+    ${buildAnnotatedDiff(userText, q.answer)}`;
 
   document.getElementById("answerArea").style.display="none";
+  hidePeek();
   document.getElementById("btnRow").style.display="flex";
 }
 
 // ── DISTINGUISH BETWEEN ──
 function renderDistinguish(q, qnum, isLast){
+  const peekBtn = currentMode==="study"
+    ? `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
+       <div class="peek-panel" id="peekPanel">
+         ${buildDistTable(q, true)}
+       </div>`
+    : "";
   const actionBtns = currentMode==="exam"
     ? `<button class="btn-check" id="checkBtn" onclick="examNextDistinguish(${isLast})">${isLast?"Submit Exam 📋":"Next →"}</button>`
     : `<button class="btn-check" id="checkBtn" onclick="checkDistinguish()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
+
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Distinguish Between</div>
       <div class="q-num">${qnum}</div>
-      <div class="q-text distinguish">Distinguish between <strong>${q.termA}</strong> and <strong>${q.termB}</strong>.</div>
-      <div class="distinguish-labels">
-        <div class="dist-label">${q.termA}</div>
-        <div class="dist-label">${q.termB}</div>
-      </div>
+      <div class="q-text distinguish">${q.q || `Distinguish between <strong>${q.termA}</strong> and <strong>${q.termB}</strong>.`}</div>
     </div>
+    ${peekBtn}
     <div class="answer-area" id="answerArea">
-      <textarea class="answer-textarea" id="answerInput"
-        placeholder="Explain the differences between ${q.termA} and ${q.termB}…"
-        style="min-height:150px"></textarea>
-      <div class="answer-actions">${actionBtns}</div>
+      <div class="dist-input-grid">
+        <div class="dist-input-col">
+          <div class="dist-input-label">${q.termA}</div>
+          <textarea class="dist-textarea" id="distInputA" placeholder="Write about ${q.termA}…"></textarea>
+        </div>
+        <div class="dist-input-col">
+          <div class="dist-input-label">${q.termB}</div>
+          <textarea class="dist-textarea" id="distInputB" placeholder="Write about ${q.termB}…"></textarea>
+        </div>
+      </div>
+      <div class="answer-actions" style="padding:0 12px 12px">${actionBtns}</div>
     </div>
     <div class="result-panel" id="resultPanel"></div>
     <div class="btn-row" id="btnRow" style="display:none">
@@ -1286,42 +2021,102 @@ function renderDistinguish(q, qnum, isLast){
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`;
 }
+
+// Toggle peek for distinguish — disables BOTH textareas
+function togglePeekDist(){
+  const p=document.getElementById("peekPanel");
+  const b=document.querySelector(".btn-peek");
+  const taA=document.getElementById("distInputA");
+  const taB=document.getElementById("distInputB");
+  if(!p) return;
+  const opening=!p.classList.contains("visible");
+  p.classList.toggle("visible",opening);
+  if(opening){
+    if(taA) taA.disabled=true;
+    if(taB) taB.disabled=true;
+    b.textContent="🙈 Hide Model Answer";
+  } else {
+    if(taA){ taA.value=""; taA.disabled=false; taA.focus(); }
+    if(taB){ taB.value=""; taB.disabled=false; }
+    b.textContent="👁 View Model Answer before writing";
+  }
+}
+
+// Build the distinguish table — rows are created by splitting each answer on \n
+function buildDistTable(q, isPeek=false){
+  const rowsA = q.answerA.split("\n").filter(r=>r.trim());
+  const rowsB = q.answerB.split("\n").filter(r=>r.trim());
+  const maxRows = Math.max(rowsA.length, rowsB.length);
+  let rows="";
+  for(let i=0;i<maxRows;i++){
+    const a=(rowsA[i]||"").replace(/</g,"&lt;");
+    const b=(rowsB[i]||"").replace(/</g,"&lt;");
+    rows+=`<tr><td>${a}</td><td>${b}</td></tr>`;
+  }
+  const label = isPeek ? "✅ Model Answer" : "";
+  return `
+    ${isPeek?`<div class="peek-label">${label}</div>`:""}
+    <table class="dist-table">
+      <thead><tr><th>${q.termA}</th><th>${q.termB}</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// Build annotated diff for a single textarea vs model text
+function buildDistAnnotated(userText, modelText){
+  const {diff}=scoreAnswer(userText, modelText);
+  let html="";
+  diff.forEach(d=>{
+    const w=d.word.replace(/</g,"&lt;");
+    if(d.type==="ok")           html+=`<span class="word-ok">${w}</span> `;
+    else if(d.type==="wrong")   html+=`<span class="word-wrong">${w}</span> `;
+    else if(d.type==="misspelled") html+=`<span class="word-wrong" title="→${d.correct}">${w}</span> `;
+    else if(d.type==="missing") html+=`<span class="word-missing">[${w}]</span> `;
+  });
+  return html||"<em style='color:var(--muted)'>(not written)</em>";
+}
+
 function examNextDistinguish(isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  const userText=document.getElementById("answerInput").value.trim();
-  const combinedRef=q.answerA+" "+q.answerB;
-  const {pct}=scoreAnswer(userText||"", combinedRef);
+  const userA=(document.getElementById("distInputA")?.value||"").trim();
+  const userB=(document.getElementById("distInputB")?.value||"").trim();
+  const combined=userA+" "+userB;
+  const {pct}=scoreAnswer(combined, q.answerA+" "+q.answerB);
   sessionResults.push({pct});
   examAnswers.push({
     q:`Distinguish: ${q.termA} vs ${q.termB}`,
-    userText: userText||"(no answer)",
-    modelText: `${q.termA}:\n${q.answerA}\n\n${q.termB}:\n${q.answerB}`,
+    userText:`${q.termA}: ${userA}\n${q.termB}: ${userB}`,
+    modelText:`${q.termA}:\n${q.answerA}\n\n${q.termB}:\n${q.answerB}`,
     pct, qtype:currentQType
   });
   if(isLast){ showAnswerPaper(); return; }
   currentQIndex++; renderCurrentQuestion();
 }
+
 function checkDistinguish(){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  const isLast=currentQIndex>=qs.length-1;
-  const userText=document.getElementById("answerInput").value.trim();
-  if(!userText) return;
-  document.getElementById("answerInput").disabled=true;
-  document.getElementById("checkBtn").disabled=true;
+  const userA=(document.getElementById("distInputA")?.value||"").trim();
+  const userB=(document.getElementById("distInputB")?.value||"").trim();
+  if(!userA && !userB) return;
 
-  const combinedRef=q.answerA+" "+q.answerB;
-  const {pct,diff}=scoreAnswer(userText, combinedRef);
-  sessionResults.push({pct});
-
-  let diffHTML="";
-  diff.forEach(d=>{
-    if(d.type==="ok")          diffHTML+=`<span class="word-ok">${d.word}</span> `;
-    else if(d.type==="wrong")  diffHTML+=`<span class="word-wrong">${d.word}</span> `;
-    else if(d.type==="misspelled") diffHTML+=`<span class="word-wrong" title="→${d.correct}">${d.word}</span> `;
-    else if(d.type==="missing") diffHTML+=`<span class="word-missing">[${d.word}]</span> `;
+  // Disable both textareas
+  ["distInputA","distInputB"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.disabled=true;
   });
+  document.getElementById("checkBtn").disabled=true;
+  const skipBtn=document.getElementById("answerArea")?.querySelector(".btn-skip");
+  if(skipBtn) skipBtn.disabled=true;
+
+  // Score each side separately, average them
+  const {pct:pctA}=scoreAnswer(userA, q.answerA);
+  const {pct:pctB}=scoreAnswer(userB, q.answerB);
+  const pct=Math.round((pctA+pctB)/2);
+  sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  renderNavBar();
 
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const panel=document.getElementById("resultPanel");
@@ -1329,28 +2124,35 @@ function checkDistinguish(){
   panel.innerHTML=`
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
-      <div><div class="score-label">${pct>=80?"Excellent!":pct>=50?"Good effort!":"Keep practising!"}</div>
-      <div class="score-detail">Sequence-matched score</div></div>
+      <div>
+        <div class="score-label">${pct>=80?"Excellent!":pct>=50?"Good effort!":"Keep practising!"}</div>
+        <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div>
+      </div>
     </div>
-    <div class="result-section">
-      <div class="result-section-title">Your Answer</div>
-      <div class="highlighted-answer">${diffHTML||"<em>(skipped)</em>"}</div>
+    <div class="result-section-title" style="margin-bottom:6px">Your Answer</div>
+    <div class="dist-your-grid">
+      <div class="dist-your-box">
+        <div class="dist-your-title">${q.termA}</div>
+        <div>${buildDistAnnotated(userA, q.answerA)}</div>
+      </div>
+      <div class="dist-your-box">
+        <div class="dist-your-title">${q.termB}</div>
+        <div>${buildDistAnnotated(userB, q.answerB)}</div>
+      </div>
     </div>
-    <div class="result-section">
-      <div class="result-section-title correct">✅ ${q.termA}</div>
-      <div class="ideal-answer">${q.answerA}</div>
-    </div>
-    <div class="result-section">
-      <div class="result-section-title correct">✅ ${q.termB}</div>
-      <div class="ideal-answer">${q.answerB}</div>
-    </div>`;
+    <div class="result-section-title correct" style="margin:10px 0 4px">✅ Model Answer</div>
+    ${buildDistTable(q)}`;
 
   document.getElementById("answerArea").style.display="none";
+  hidePeek();
   document.getElementById("btnRow").style.display="flex";
 }
 
 // ── SIMPLE RESULT (MCQ / FILL / MATCH) ──
 function showSimpleResult(pct, detail){
+  // Record state for nav dot (already pushed to sessionResults before calling this)
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  renderNavBar();
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
@@ -1365,13 +2167,29 @@ function showSimpleResult(pct, detail){
 // ── SKIP ──
 function skipQuestion(isLast){
   sessionResults.push({pct:0});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:false,skipped:true,pct:0};
+  renderNavBar();
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
   panel.innerHTML=`<div class="score-stamp"><div class="score-circle poor">0%</div><div><div class="score-label">Skipped</div></div></div>`;
   if(document.getElementById("answerArea")) document.getElementById("answerArea").style.display="none";
   if(document.getElementById("checkBtn")) document.getElementById("checkBtn").disabled=true;
+  // Disable single or dual textareas
+  ["answerInput","distInputA","distInputB"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.disabled=true;
+  });
+  hidePeek();
   if(currentMode==="study") document.getElementById("btnRow").style.display="flex";
   else nextQuestion();
+}
+
+// ── HIDE PEEK BUTTON & PANEL ──
+function hidePeek(){
+  const btn=document.querySelector(".btn-peek");
+  const panel=document.getElementById("peekPanel");
+  if(btn)   btn.style.display="none";
+  if(panel) panel.style.display="none";
 }
 
 // ── TRY AGAIN (single question) ──
@@ -1393,6 +2211,27 @@ function nextQuestion(){
   renderCurrentQuestion();
 }
 
+// ── MOTIVATION MESSAGES ──
+function getMotivation(avg){
+  if(avg===100) return { msg:"Perfect score! You're a star! ⭐", tick:"✓✓" };
+  if(avg>=90)   return { msg:"Outstanding work! Keep it up!", tick:"✓✓" };
+  if(avg>=80)   return { msg:"Excellent! You really know this material.", tick:"✓" };
+  if(avg>=70)   return { msg:"Very good! A little more practice and you'll ace it.", tick:"✓" };
+  if(avg>=60)   return { msg:"Good effort! Review the highlighted answers and try again.", tick:"" };
+  if(avg>=50)   return { msg:"Keep going! You're halfway there — revise and retry.", tick:"" };
+  if(avg>=35)   return { msg:"Don't give up! Read the model answers carefully and try again.", tick:"" };
+  return         { msg:"Every expert was once a beginner. Keep practising! 💪", tick:"" };
+}
+
+function setTeacherMark(scoreEl, tickEl, wrapEl, motivationEl, avg){
+  scoreEl.textContent = avg;
+  const cls = avg>=80?"great": avg>=50?"good":"";
+  wrapEl.className = wrapEl.className.replace(/\bgreat\b|\bgood\b/g,"").trim() + (cls?" "+cls:"");
+  const {msg, tick} = getMotivation(avg);
+  tickEl.textContent = tick;
+  motivationEl.textContent = `"${msg}"`;
+}
+
 // ── SUMMARY (study mode) ──
 function showSummary(){
   if(currentMode==="exam"){ showAnswerPaper(); return; }
@@ -1403,9 +2242,14 @@ function showSummary(){
   document.getElementById("answerPaper").classList.remove("visible");
   const sum=document.getElementById("summaryScreen");
   sum.classList.add("visible");
-  document.getElementById("summaryScore").textContent=avg+"%";
   document.getElementById("summaryTrophy").textContent=avg>=80?"🏆":avg>=50?"📚":"💪";
-  document.getElementById("summarySubtitle").textContent=avg>=80?"Excellent! You really know this.":avg>=50?"Good progress! A bit more practice.":"Keep going! Practice makes perfect.";
+  setTeacherMark(
+    document.getElementById("teacherScore"),
+    document.getElementById("teacherTick"),
+    document.getElementById("teacherMark"),
+    document.getElementById("teacherMotivation"),
+    avg
+  );
   document.getElementById("statCorrect").textContent=sessionResults.filter(r=>r.pct>=80).length;
   document.getElementById("statPartial").textContent=sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
   document.getElementById("statWrong").textContent=sessionResults.filter(r=>r.pct<40).length;
@@ -1429,9 +2273,13 @@ function showAnswerPaper(){
   document.getElementById("paperMeta").textContent=
     `${currentQType.toUpperCase()} · ${examAnswers.length} question${examAnswers.length!==1?"s":""} · ${new Date().toLocaleDateString()}`;
 
-  const ring=document.getElementById("paperScoreRing");
-  ring.textContent=avg+"%";
-  ring.className="paper-score-ring "+(avg>=80?"perfect":avg>=50?"good":"poor");
+  setTeacherMark(
+    document.getElementById("paperTeacherScore"),
+    document.getElementById("paperTeacherTick"),
+    document.getElementById("paperTeacherMark"),
+    document.getElementById("paperMotivation"),
+    avg
+  );
 
   const qWrap=document.getElementById("paperQuestions");
   qWrap.innerHTML="";
