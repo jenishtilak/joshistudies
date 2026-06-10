@@ -210,6 +210,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .word-ok{color:var(--green)}
 .word-wrong{background:var(--red-light);color:var(--red);border-radius:2px;padding:0 2px;text-decoration:line-through}
 .word-missing{background:var(--gold-light);color:#9a6c00;border-radius:3px;padding:1px 5px;font-style:italic;font-size:12px}
+.word-correction{font-size:11px;color:var(--green);font-style:normal;font-weight:700;text-decoration:none;margin-left:2px;background:var(--green-light);border-radius:3px;padding:0 3px}
 .ideal-answer{font-size:13px;line-height:1.8;color:var(--text);background:var(--green-light);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:10px 12px;white-space:pre-line}
 
 .btn-row{display:flex;gap:10px;margin-bottom:24px}
@@ -652,7 +653,29 @@ const DATA = {
                 { q:"__________ is essential to perform separation by solvent extraction method.", options:["Separating funnel","filter paper","centrifuge machine","sieve"], correct:0 },
                 { q:"__________ has the same properties throughout the sample.", options:["Pure substance","Mixture","Colloid","Suspension"], correct:0 },
               ],
-              fill:[], match:[], brief:[], truefalse:[], reasons:[],
+              fill:[
+                { q:"A __________ mixture has no distinguishable boundary between its components.", answer:"Homogeneous" },
+                { q:"An example of a substance that sublimes is __________.", answer:"Camphor (or Iodine / Ammonium chloride)" },
+                { q:"Alcohol can be separated from water by __________.", answer:"Distillation" },
+                { q:"In petroleum refining, the method of separation used is __________.", answer:"Fractional distillation" },
+                { q:"Chromatography is based on the principle of __________.", answer:"Adsorption" },
+              ],
+              match:[
+                {
+                  left:["Element","Compound","Colloid","Suspension","Mixture"],
+                  right:["Settles down on standing","Impure substance","Made up of molecules","Pure substance","Made up of atoms"],
+                  correct:[4,2,1,0,3]
+                }
+              ],
+              brief:[],
+              truefalse:[
+                { statement:"Oil and water are immiscible with each other.", answer:"true", reason:"Oil and water do not mix because oil is non-polar and water is polar." },
+                { statement:"A compound cannot be broken into simpler substances chemically.", answer:"false", reason:"A compound can be broken down into simpler substances (elements) by chemical methods." },
+                { statement:"Liquid – liquid colloids are called gel.", answer:"false", reason:"Liquid–liquid colloids are called emulsion. Gel is a solid–liquid colloid." },
+                { statement:"Buttermilk is an example of heterogeneous mixture.", answer:"false", reason:"Buttermilk is a colloidal solution (homogeneous mixture)." },
+                { statement:"Aspirin is composed of 60% Carbon, 4.5% Hydrogen and 35.5% Oxygen by mass. Aspirin is a mixture.", answer:"false", reason:"Aspirin is a compound because its constituents are present in a definite proportion by mass." },
+              ],
+              reasons:[],
               distinguish:[
                 {
                   q:"Write the differences between elements and compounds and give an example for each.",
@@ -870,10 +893,19 @@ const DATA = {
                 { q:"__________ refers to a bowl-shaped depression found at the top of the volcano.", options:["crater","vent","chamber","volcanic cone"], correct:0 },
                 { q:"The point of origin of an Earthquake is called the __________.", options:["epicentre","focus","seismic wave","magnitude"], correct:1 },
               ],
-              fill:[], match:[],
+              fill:[],
+              match:[
+                {
+                  left:["Endogenetic process","Mantle","Convergent boundaries","Earthquake","Composite volcano"],
+                  right:["Seismograph","Subduction Zone","Volcanic","Pacific Ocean","SIMA"],
+                  correct:[4,1,2,0,3]
+                }
+              ],
               brief:[
                 { q:"Write a brief note on the various spheres of the Earth.", answer:"The lithosphere is the solid outer part of the Earth.\nThe atmosphere is a thin layer of gases.\nThe hydrosphere is the watery part of the Earth's surface.\nThe biosphere is the layer of Earth where life exists." },
-                { q:"Mention the layers of the interior of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core." }
+                { q:"Mention the layers of the interior of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core." },
+                { q:"Define plate tectonics.", answer:"Collisions of these plates produce mountain ranges and other irregular surface features, both on land and the ocean floor. This phenomenon is called plate tectonics." },
+                { q:"What is Tsunami?", answer:"The word Tsunami is a Japanese term, meaning harbour waves. It is adopted to describe large seismically generated sea waves caused by Earthquakes, submarine explosions and landslides." },
               ],
               truefalse:[],
               reasons:[
@@ -1929,7 +1961,7 @@ function buildAnnotatedDiff(userText, modelText){
     const w = d.word.replace(/</g,"&lt;");
     if(d.type==="ok")          annotated += `<span class="word-ok">${w}</span> `;
     else if(d.type==="wrong")  annotated += `<span class="word-wrong">${w}</span> `;
-    else if(d.type==="misspelled") annotated += `<span class="word-wrong" title="→${d.correct}">${w}</span> `;
+    else if(d.type==="misspelled") annotated += `<span class="word-wrong">${w}</span><span class="word-correction">→${d.correct.replace(/</g,"&lt;")}</span> `;
     else if(d.type==="missing") annotated += `<span class="word-missing">[${w}]</span> `;
   });
 
@@ -2070,7 +2102,7 @@ function buildDistAnnotated(userText, modelText){
     const w=d.word.replace(/</g,"&lt;");
     if(d.type==="ok")           html+=`<span class="word-ok">${w}</span> `;
     else if(d.type==="wrong")   html+=`<span class="word-wrong">${w}</span> `;
-    else if(d.type==="misspelled") html+=`<span class="word-wrong" title="→${d.correct}">${w}</span> `;
+    else if(d.type==="misspelled") html+=`<span class="word-wrong">${w}</span><span class="word-correction">→${d.correct.replace(/</g,"&lt;")}</span> `;
     else if(d.type==="missing") html+=`<span class="word-missing">[${w}]</span> `;
   });
   return html||"<em style='color:var(--muted)'>(not written)</em>";
@@ -2296,7 +2328,7 @@ function showAnswerPaper(){
       userDisplay=diff.map(d=>{
         if(d.type==="ok")          return `<span class="word-ok">${d.word}</span>`;
         if(d.type==="wrong")       return `<span class="word-wrong">${d.word}</span>`;
-        if(d.type==="misspelled")  return `<span class="word-wrong" title="→${d.correct}">${d.word}</span>`;
+        if(d.type==="misspelled")  return `<span class="word-wrong">${d.word}</span><span class="word-correction">→${d.correct.replace(/</g,"&lt;")}</span>`;
         if(d.type==="missing")     return `<span class="word-missing">[${d.word}]</span>`;
         return d.word;
       }).join(" ");
