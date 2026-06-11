@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Buddy — Class 9 Social Science</title>
+<title>Study Buddy — Class 9</title>
 <style>
 :root {
   --navy:#1a2744; --navy-mid:#253561; --navy-light:#2e4080;
@@ -160,7 +160,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .dist-peek-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:4px}
 
 /* fill in the blank */
-.blank-input{border:none;border-bottom:2px solid var(--navy);background:transparent;font-size:16px;font-weight:600;color:var(--navy);padding:2px 6px;min-width:120px;outline:none;font-family:inherit}
+.blank-input{border:none;border-bottom:2.5px solid var(--navy);background:transparent;font-size:15px;font-weight:600;color:var(--navy);padding:3px 8px;min-width:130px;max-width:200px;outline:none;font-family:inherit;border-radius:0;vertical-align:baseline;transition:border-color .2s}
+.blank-input:focus{border-bottom-color:var(--gold);background:var(--gold-light)}
+.blank-input:disabled{background:transparent}
+.fill-sentence{font-size:16px;line-height:2.4;color:var(--text);padding:16px;background:var(--parchment);border-radius:var(--radius)}
 
 /* match the following */
 .match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
@@ -288,7 +291,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-/* ── QUESTION NAVIGATION BAR ── */
+.quiz-timer{font-size:13px;font-weight:700;color:var(--navy);background:var(--parchment);border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;letter-spacing:.3px;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
+.quiz-timer.warning{background:var(--gold-light);border-color:var(--gold);color:#8a5c00}
+.time-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--parchment);border:1px solid var(--border);border-radius:12px;padding:2px 8px;color:var(--muted);font-weight:600}
+.time-chip.fast{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.time-chip.slow{background:var(--gold-light);border-color:var(--gold);color:#8a5c00}
+.mock-exam-bar{display:flex;align-items:center;gap:10px;padding:8px 0 14px}
+.btn-mock-exam{padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;white-space:nowrap}
+.btn-mock-exam:hover{background:var(--navy-mid)}
+.mock-exam-hint{font-size:12px;color:var(--muted)}
+
+/* ── MOCK EXAM MODAL ── */
+.mock-exam-box{background:#fff;border-radius:16px;width:min(96vw,600px);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.mock-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.mock-title{font-size:18px;font-weight:800;color:var(--navy)}
+.mock-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:4px 8px;line-height:1}
+.mock-sub{font-size:13px;color:var(--muted);padding:10px 20px 6px;flex-shrink:0}
+.mock-subject-tabs{display:flex;gap:8px;padding:0 20px 12px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.mock-subj-tab{padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;font-family:inherit}
+.mock-subj-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.mock-lesson-list{flex:1;overflow-y:auto;padding:12px 20px}
+.mock-part-group{margin-bottom:14px}
+.mock-part-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.mock-part-name button{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;color:var(--muted);font-family:inherit}
+.mock-lesson-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;user-select:none}
+.mock-lesson-item:hover{background:var(--parchment)}
+.mock-lesson-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--navy);cursor:pointer;flex-shrink:0}
+.mock-lesson-name{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.mock-lesson-qcount{font-size:11px;color:var(--muted)}
+.mock-qtype-section{padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0}
+.mock-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px}
+.mock-qtype-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mock-qtype-chip{padding:5px 12px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;font-family:inherit}
+.mock-qtype-chip.active{background:var(--gold-light);border-color:var(--gold);color:var(--navy)}
+.mock-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px}
+.mock-count{font-size:13px;font-weight:600;color:var(--muted)}
+.btn-start-mock{padding:11px 24px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-start-mock:disabled{opacity:.35;cursor:default}
+.btn-start-mock:not(:disabled):hover{background:var(--navy-mid)}
 .q-nav-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:101px;z-index:7}
 .q-nav-bar::-webkit-scrollbar{display:none}
 @media(min-width:820px){.q-nav-bar{top:57px}}
@@ -315,65 +355,71 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .diff-answer-block.model{background:var(--green-light);border-left:3px solid var(--green);border-radius:0 8px 8px 0}
 
 /* ── TEACHER MARK CIRCLE ── */
+.summary-total-time{font-size:13px;color:var(--muted);font-weight:600;text-align:center;margin-bottom:6px}
 .teacher-mark-wrap{display:flex;flex-direction:column;align-items:center;margin:10px 0 20px}
 .teacher-mark{
   position:relative;width:110px;height:110px;border-radius:50%;
-  border:4px solid var(--red);background:#fff;
+  border:4px solid var(--red);background:#1a2744;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:0 2px 16px rgba(224,92,92,.3);transform:rotate(-4deg);
-  font-family:'Georgia',serif;
+  box-shadow:0 2px 16px rgba(224,92,92,.4);transform:rotate(-4deg);
+  font-family:'Courier New',monospace;
 }
-.teacher-mark.great{border-color:var(--green);box-shadow:0 2px 16px rgba(76,175,130,.3)}
-.teacher-mark.good {border-color:#e8a020;box-shadow:0 2px 16px rgba(232,184,75,.3)}
-.teacher-mark .tm-score{font-size:26px;font-weight:900;line-height:1;color:var(--red)}
-.teacher-mark.great .tm-score{color:var(--green)}
-.teacher-mark.good  .tm-score{color:#b8860b}
-.teacher-mark .tm-sep{width:55%;border-top:2px solid var(--border);margin:3px 0}
-.teacher-mark .tm-denom{font-size:13px;font-weight:700;color:var(--muted)}
-.teacher-mark .tm-tick{position:absolute;top:-16px;right:-12px;font-size:30px;transform:rotate(8deg);line-height:1}
+.teacher-mark.great{border-color:#4ccc8a;box-shadow:0 2px 16px rgba(76,175,130,.4);background:#1a3030}
+.teacher-mark.good {border-color:#e8a020;box-shadow:0 2px 16px rgba(232,184,75,.4);background:#2a2010}
+.teacher-mark .tm-score{font-size:28px;font-weight:900;line-height:1;color:#ff6b6b;text-align:center}
+.teacher-mark.great .tm-score{color:#4ccc8a}
+.teacher-mark.good  .tm-score{color:#e8c060}
+.teacher-mark .tm-sep{width:55%;border-top:1.5px solid rgba(255,255,255,.3);margin:4px 0}
+.teacher-mark .tm-denom{font-size:12px;font-weight:700;color:rgba(255,255,255,.6);text-align:center}
+.teacher-mark .tm-tick{position:absolute;top:-14px;right:-10px;font-size:26px;transform:rotate(8deg);line-height:1}
 .teacher-motivation{font-size:14px;font-weight:600;color:var(--navy);margin-top:14px;text-align:center;max-width:270px;line-height:1.6;font-style:italic}
 /* Paper version */
 .paper-mark-wrap{display:flex;flex-direction:column;align-items:center;margin:20px 0 8px}
 .paper-teacher-mark{
   position:relative;width:120px;height:120px;border-radius:50%;
-  border:4.5px solid var(--red);background:#fff;
+  border:4.5px solid var(--red);background:#1a2744;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  box-shadow:0 3px 20px rgba(224,92,92,.35);transform:rotate(-3deg);
-  font-family:'Georgia',serif;
+  box-shadow:0 3px 20px rgba(224,92,92,.4);transform:rotate(-3deg);
+  font-family:'Courier New',monospace;
 }
-.paper-teacher-mark.great{border-color:var(--green);box-shadow:0 3px 20px rgba(76,175,130,.35)}
-.paper-teacher-mark.good {border-color:#e8a020;box-shadow:0 3px 20px rgba(232,184,75,.35)}
-.paper-teacher-mark .ptm-score{font-size:30px;font-weight:900;line-height:1;color:var(--red)}
-.paper-teacher-mark.great .ptm-score{color:var(--green)}
-.paper-teacher-mark.good  .ptm-score{color:#b8860b}
-.paper-teacher-mark .ptm-sep{width:55%;border-top:2px solid var(--border);margin:3px 0}
-.paper-teacher-mark .ptm-denom{font-size:14px;font-weight:700;color:var(--muted)}
+.paper-teacher-mark.great{border-color:#4ccc8a;box-shadow:0 3px 20px rgba(76,175,130,.4);background:#1a3030}
+.paper-teacher-mark.good {border-color:#e8a020;box-shadow:0 3px 20px rgba(232,184,75,.4);background:#2a2010}
+.paper-teacher-mark .ptm-score{font-size:30px;font-weight:900;line-height:1;color:#ff6b6b;text-align:center}
+.paper-teacher-mark.great .ptm-score{color:#4ccc8a}
+.paper-teacher-mark.good  .ptm-score{color:#e8c060}
+.paper-teacher-mark .ptm-sep{width:55%;border-top:1.5px solid rgba(255,255,255,.3);margin:4px 0}
+.paper-teacher-mark .ptm-denom{font-size:13px;font-weight:700;color:rgba(255,255,255,.6);text-align:center}
 .paper-teacher-mark .ptm-tick{position:absolute;top:-16px;right:-12px;font-size:32px;transform:rotate(8deg);line-height:1}
 .paper-motivation{font-size:14px;font-weight:600;color:var(--navy);margin-top:14px;text-align:center;max-width:300px;line-height:1.6;font-style:italic}
 
-/* ── MODE PICKER MODAL ── */
+/* ── SESSION REPORT ── */
+.report-btn{position:fixed;bottom:76px;right:16px;z-index:200;background:var(--navy);color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:18px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-family:inherit}
+@media(min-width:820px){.report-btn{bottom:20px;right:20px}}
+.report-panel{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;padding:0}
+.report-panel.visible{display:flex}
+.report-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 40px}
+.report-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.report-title{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.report-subtitle{font-size:12px;color:var(--muted);margin-bottom:20px}
+.report-subject{margin-bottom:20px}
+.report-subject-name{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.report-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.report-row:last-child{border-bottom:none}
+.report-lesson{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+.report-qtype{font-size:11px;color:var(--muted)}
+.report-bar-wrap{width:80px;height:8px;background:var(--parchment);border-radius:4px;overflow:hidden;flex-shrink:0}
+.report-bar{height:100%;border-radius:4px;transition:width .5s}
+.report-pct{font-size:12px;font-weight:700;width:36px;text-align:right;flex-shrink:0}
+.report-time{font-size:11px;color:var(--muted);flex-shrink:0}
+.report-empty{font-size:14px;color:var(--muted);text-align:center;padding:40px 0}
+.report-close{width:100%;padding:12px;background:var(--parchment);border:none;border-radius:10px;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;font-family:inherit;margin-top:16px}
+
+/* ── MODAL OVERLAY (shared for mock exam) ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.hidden{display:none}
-.modal-box{background:#fff;border-radius:18px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.18)}
-.modal-title{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px}
-.modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5}
-.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
-.mode-card{border:2px solid var(--border);border-radius:14px;padding:18px 14px;cursor:pointer;text-align:center;transition:all .2s;background:var(--parchment)}
-.mode-card:hover{border-color:var(--navy);background:#fff;transform:translateY(-2px)}
-.mode-card.selected{border-color:var(--navy);background:#fff}
-.mode-card .mc-icon{font-size:32px;margin-bottom:8px}
-.mode-card .mc-name{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px}
-.mode-card .mc-desc{font-size:11px;color:var(--muted);line-height:1.4}
-.mode-card.exam-card.selected{border-color:var(--red);background:var(--red-light)}
-.mode-card.exam-card.selected .mc-name{color:var(--red)}
-.btn-start-mode{width:100%;padding:14px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:background .2s}
-.btn-start-mode:hover{background:var(--navy-light)}
-.btn-cancel-mode{width:100%;padding:10px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;margin-top:8px}
 
-/* ── MODE BADGE in quiz header ── */
-.mode-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:.6px;text-transform:uppercase;flex-shrink:0}
-.mode-badge.study{background:rgba(76,175,130,.25);color:#2d8a5e}
-.mode-badge.exam{background:rgba(224,92,92,.25);color:#c0392b}
+/* ── MODE BADGE ── */
+.mode-badge{display:none}
 
 /* ── EXAM ANSWER PAPER ── */
 .answer-paper{display:none;padding:20px 16px 32px;max-width:700px;margin:0 auto;width:100%}
@@ -412,7 +458,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 <div class="welcome-screen" id="welcomeScreen">
   <div class="wl-icon">📚</div>
   <div class="wl-title">Study Buddy</div>
-  <div class="wl-sub">Class 9 · Social Science<br>Your personal exam prep companion</div>
+  <div class="wl-sub">Class 9 · Science &amp; Social Science<br>Your personal exam prep companion</div>
   <div class="wl-card">
     <div class="wl-card-title">🔒 Enter Passcode</div>
     <div class="wl-input-wrap">
@@ -432,15 +478,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo"><h1>📚 Study Buddy</h1><p>Class 9 · Social Science</p></div>
+  <div class="sidebar-logo"><h1>📚 Study Buddy</h1><p>Class 9 · Science &amp; Social Science</p></div>
   <nav class="sidebar-nav" id="sidebarNav"></nav>
+  <div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)">
+    <button onclick="openReport()" style="width:100%;padding:9px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📊 Session Report</button>
+    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🎯 Mock Exam</button>
+  </div>
 </aside>
 
 <!-- MAIN -->
 <div class="main-content">
   <div class="mobile-header">
     <span style="font-size:22px">📚</span>
-    <div><h1>Study Buddy</h1><p>Class 9 · Social Science</p></div>
+    <div><h1>Study Buddy</h1><p>Class 9 · Science &amp; Social Science</p></div>
   </div>
   <div class="subject-tabs" id="subjectTabs"></div>
   <div class="part-tabs"    id="partTabs"></div>
@@ -450,16 +500,63 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   </div>
   <div class="lesson-pane">
     <div class="part-heading" id="partHeading"></div>
+    <div class="mock-exam-bar">
+      <button class="btn-mock-exam" onclick="openMockExam()">🎯 Mock Exam</button>
+      <span class="mock-exam-hint">Test yourself across multiple lessons</span>
+    </div>
     <div class="lesson-grid"  id="lessonGrid"></div>
   </div>
 </div>
 </div>
 
+<!-- SESSION REPORT BUTTON -->
+<button class="report-btn" id="reportBtn" onclick="openReport()" title="Session Report">📊</button>
+
+<!-- SESSION REPORT PANEL -->
+<div class="report-panel" id="reportPanel" onclick="if(event.target===this)closeReport()">
+  <div class="report-sheet">
+    <div class="report-handle"></div>
+    <div class="report-title">📊 Session Report</div>
+    <div class="report-subtitle" id="reportSubtitle">Topics studied this session</div>
+    <div id="reportBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="report-close" style="flex:1" onclick="closeReport()">Done</button>
+      <button class="report-close" style="flex:1;background:var(--navy);color:#fff" onclick="downloadReport()">⬇ Download Report</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="mockExamModal">
+  <div class="mock-exam-box">
+    <div class="mock-header">
+      <div class="mock-title">🎯 Mock Exam</div>
+      <button class="mock-close" onclick="closeMockExam()">✕</button>
+    </div>
+    <div class="mock-sub">Select lessons to include in your mock exam</div>
+
+    <!-- Subject tabs -->
+    <div class="mock-subject-tabs" id="mockSubjectTabs"></div>
+
+    <!-- Part sections with lesson checkboxes -->
+    <div class="mock-lesson-list" id="mockLessonList"></div>
+
+    <!-- Question type filter -->
+    <div class="mock-qtype-section">
+      <div class="mock-section-label">Question Types</div>
+      <div class="mock-qtype-chips" id="mockQTypeChips"></div>
+    </div>
+
+    <div class="mock-footer">
+      <div class="mock-count" id="mockCount">0 questions selected</div>
+      <button class="btn-start-mock" id="startMockBtn" onclick="startMockExam()" disabled>Start Mock Exam →</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📖</span>Lessons</div>
-  <div class="nav-item"        onclick="setNav(this)"><span class="nav-icon">📊</span>Progress</div>
-  <div class="nav-item"        onclick="setNav(this)"><span class="nav-icon">⚙️</span>Settings</div>
+  <div class="nav-item"        onclick="setNav(this);openReport()"><span class="nav-icon">📊</span>Report</div>
+  <div class="nav-item"        onclick="setNav(this)"><span class="nav-icon">🎯</span>Mock Exam</div>
 </nav>
 
 <!-- QUIZ OVERLAY -->
@@ -471,6 +568,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
       <div class="quiz-part-label"   id="quizPartLabel"></div>
     </div>
     <div class="mode-badge study" id="modeBadge">Study</div>
+    <div class="quiz-timer" id="quizTimer">0:00</div>
     <div class="q-counter" id="qCounter"></div>
   </div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -505,6 +603,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
       <div class="stat-box"><div class="stat-num amber" id="statPartial">0</div><div class="stat-label">Partial</div></div>
       <div class="stat-box"><div class="stat-num red"   id="statWrong">0</div><div class="stat-label">Wrong</div></div>
     </div>
+    <div class="summary-total-time" id="summaryTotalTime"></div>
     <button class="btn-retry"        onclick="retrySection()">🔁 Try Again</button>
     <button class="btn-back-lessons" onclick="closeQuiz()">← Back to Lessons</button>
   </div>
@@ -532,27 +631,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   </div>
 </div>
 
-<!-- MODE PICKER MODAL -->
-<div class="modal-overlay hidden" id="modeModal">
-  <div class="modal-box">
-    <div class="modal-title">Choose Your Mode</div>
-    <div class="modal-sub">How would you like to practice this section?</div>
-    <div class="mode-cards">
-      <div class="mode-card selected" id="modeStudyCard" onclick="selectMode('study')">
-        <div class="mc-icon">📖</div>
-        <div class="mc-name">Study Mode</div>
-        <div class="mc-desc">Check answers after each question. Try again anytime.</div>
-      </div>
-      <div class="mode-card exam-card" id="modeExamCard" onclick="selectMode('exam')">
-        <div class="mc-icon">📝</div>
-        <div class="mc-name">Exam Mode</div>
-        <div class="mc-desc">Answer all questions first. Full report at the end.</div>
-      </div>
-    </div>
-    <button class="btn-start-mode" onclick="confirmMode()">Start →</button>
-    <button class="btn-cancel-mode" onclick="cancelMode()">Cancel</button>
-  </div>
-</div>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -604,31 +682,7 @@ const DATA = {
                   correct:0
                 },
               ],
-              fill:[],match:[],
-              brief:[
-                {
-                  q:"What is the difference between fundamental quantities and derived quantities?",
-                  answer:"Quantities which cannot be expressed in terms of any other physical quantities are called fundamental quantities. Example: Length, mass, time, temperature. Quantities which can be expressed in terms of fundamental quantities are called derived quantities. Example: Area, volume, density.",
-                },
-                {
-                  q:"What is the least count of a Vernier caliper and a screw gauge?",
-                  answer:"The least count of a Vernier caliper is 0.01 cm (0.1 mm). The least count of a screw gauge is 0.01 mm.",
-                }
-              ],
-              distinguish:[
-                {
-                  termA:"Mass",
-                  termB:"Weight",
-                  answerA:"Mass is a fundamental quantity. It has magnitude alone and is a scalar quantity. It is the amount of matter contained in a body. Mass remains the same everywhere. It is measured using a physical balance. Its unit is kilogram.",
-                  answerB:"Weight is a derived quantity. It has magnitude and direction and is a vector quantity. It is the normal force exerted by the surface on the object against gravitational pull. Weight varies from place to place. It is measured using a spring balance. Its unit is newton.",
-                }
-              ],
-              paragraph:[
-                {
-                  q:"Describe the SI system of units and its seven fundamental quantities.",
-                  answer:"The SI system of units is the modernised and improved form of the previous system of units. It is accepted in almost all countries. There are seven fundamental units in the SI system. They are: Length (metre), Mass (kilogram), Time (second), Temperature (kelvin), Electric current (ampere), Luminous intensity (candela), and Amount of substance (mole). With the help of these seven fundamental units, the units for all other derived quantities are obtained.",
-                }
-              ]
+              fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]
             }
           },
           { id:"sp2",  unit:"Unit 2",  title:"Motion",                        month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
@@ -654,11 +708,11 @@ const DATA = {
                 { q:"__________ has the same properties throughout the sample.", options:["Pure substance","Mixture","Colloid","Suspension"], correct:0 },
               ],
               fill:[
-                { q:"A __________ mixture has no distinguishable boundary between its components.", answer:"Homogeneous" },
-                { q:"An example of a substance that sublimes is __________.", answer:"Camphor (or Iodine / Ammonium chloride)" },
-                { q:"Alcohol can be separated from water by __________.", answer:"Distillation" },
-                { q:"In petroleum refining, the method of separation used is __________.", answer:"Fractional distillation" },
-                { q:"Chromatography is based on the principle of __________.", answer:"Adsorption" },
+                { sentence:"A ___ mixture has no distinguishable boundary between its components.", answers:["Homogeneous"] },
+                { sentence:"An example of a substance that sublimes is ___.", answers:["Camphor"] },
+                { sentence:"Alcohol can be separated from water by ___.", answers:["Distillation"] },
+                { sentence:"In petroleum refining, the method of separation used is ___.", answers:["Fractional distillation"] },
+                { sentence:"Chromatography is based on the principle of ___.", answers:["Adsorption"] },
               ],
               match:[
                 {
@@ -667,7 +721,10 @@ const DATA = {
                   correct:[4,2,1,0,3]
                 }
               ],
-              brief:[],
+              brief:[
+                { q:"How are homogeneous solutions different from heterogeneous solutions? Explain with examples.", answer:"A mixture in which the components cannot be seen separately is called a homogeneous mixture. Example: Salt solution, sugar solution.\n\nA mixture in which the components can be seen separately is called a heterogeneous mixture. Example: Sand and water, oil and water." },
+                { q:"Define Sublimation.", answer:"Certain solid substances when heated change directly from solid to gaseous state without attaining liquid state. The vapours when cooled give back the solid substance. This process is known as sublimation. Examples: Iodine, camphor, ammonium chloride." },
+              ],
               truefalse:[
                 { statement:"Oil and water are immiscible with each other.", answer:"true", reason:"Oil and water do not mix because oil is non-polar and water is polar." },
                 { statement:"A compound cannot be broken into simpler substances chemically.", answer:"false", reason:"A compound can be broken down into simpler substances (elements) by chemical methods." },
@@ -893,14 +950,7 @@ const DATA = {
                 { q:"__________ refers to a bowl-shaped depression found at the top of the volcano.", options:["crater","vent","chamber","volcanic cone"], correct:0 },
                 { q:"The point of origin of an Earthquake is called the __________.", options:["epicentre","focus","seismic wave","magnitude"], correct:1 },
               ],
-              fill:[
-                { q:"__________ is the rigid outer layer of the Earth.", answer:"Crust" },
-                { q:"__________ layer is made up of liquid iron.", answer:"Outer core" },
-                { q:"The movement of tectonic plates is induced by __________ energy.", answer:"Thermal" },
-                { q:"In the ancient period, Gondwanaland moved towards __________ direction.", answer:"North" },
-                { q:"__________ refers to a bowl-shaped depression found at the top of the volcano.", answer:"Crater" },
-                { q:"The point of origin of an Earthquake is called the __________.", answer:"Focus" },
-              ],
+              fill:[],
               match:[
                 {
                   left:["Endogenetic process","Mantle","Convergent boundaries","Earthquake","Composite volcano"],
@@ -914,13 +964,17 @@ const DATA = {
                 { q:"Define plate tectonics.", answer:"Collisions of these plates produce mountain ranges and other irregular surface features, both on land and the ocean floor. This phenomenon is called plate tectonics." },
                 { q:"What is Tsunami?", answer:"The word Tsunami is a Japanese term, meaning harbour waves. It is adopted to describe large seismically generated sea waves caused by Earthquakes, submarine explosions and landslides." },
                 { q:"What is a Volcano? Mention its major components.", answer:"A volcano is a vent or an opening on the surface of the Earth crust, through which hot solid, liquid and gaseous materials erupt.\n\nVolcanoes have the following major components: Magma chamber, Vents and Volcanic cone." },
+                { q:"What is an Earthquake and how does it occur?", answer:"Earthquakes are generally caused by the sudden vibrations in the Earth's crust, which spreads outward in all directions as waves from the source of disturbance." },
+                { q:"What are seismic waves and mention its types?", answer:"Earthquakes generate seismic waves. The nature, force and speed of these seismic waves depend on the nature of the medium through which it passes.\n\nThere are three types of seismic waves:\n1. Primary or P-waves\n2. Secondary or S-waves\n3. Surface Waves (or) L-waves" },
               ],
               truefalse:[],
               reasons:[
                 { q:"Igneous rocks are also called Primary Rocks or Mother rocks.", answer:"Igneous rocks are also called Primary or Mother rocks because all other rocks are directly or indirectly formed from them." },
               ],
               distinguish:[
-                { termA:"Core", termB:"Crust", answerA:"The core is the innermost and hottest layer of the Earth which lies below the mantle.", answerB:"Crust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth." }
+                { termA:"Core", termB:"Crust", answerA:"The core is the innermost and hottest layer of the Earth which lies below the mantle.", answerB:"Crust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth." },
+                { termA:"Epicentre", termB:"Hypocentre (Focus)", answerA:"Epicentre is a point on the Earth's surface that lies directly above the focus. The impact of the Earthquake is felt the most at the epicentre.", answerB:"Hypocentre (Focus) is the point inside the Earth where the earthquake originates. It generates a series of elastic waves." },
+                { termA:"Convergent Boundary", termB:"Divergent Boundary", answerA:"Here the plates move toward each other and sometimes, a plate sinks under another. This process is called subduction.", answerB:"Here the plates pull away from each other as magma pushes up from the mantle, creating new crust." },
               ],
               paragraph:[
                 { q:"Describe the structure of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core.\n\nCrust:\nCrust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth.\n\nMantle:\nThe interior part beneath the crust is called mantle, which is about 2,900 km thick.\n\nCore:\nThe core is the innermost and hottest layer of the Earth which lies below the mantle." },
@@ -1361,10 +1415,19 @@ let matchAnswers   = {};        // leftIdx → selected right value
 let scores         = {};        // "lessonId:qtype" → avg%
 
 // Mode
-let currentMode    = "study";   // "study" | "exam"
-let pendingLesson  = null;      // lesson waiting for mode selection
+// ── SESSION LOG ──
+let sessionLog = [];
+let currentMode = "study";  // always study — exam mode removed
+let examAnswers = [];       // used by mock exam tracking
+let pendingLesson = null;   // stub - not used // {subject, part, lesson, qtype, pct, timeMs, ts}
+
 // In exam mode we store full answer text per question index
-let examAnswers    = [];        // [{userText, q, qtype}]
+
+// ── TIMER STATE ──
+let _timerInterval = null;
+let _sessionStart  = 0;
+let _questionStart = 0;
+let _questionTimes = [];  // ms per question
 
 // ═══════════════════════════════════════════════════════
 //  INIT
@@ -1461,30 +1524,11 @@ function renderLessons(){
 }
 
 // ═══════════════════════════════════════════════════════
-//  MODE PICKER
+//  LESSON START (direct — no mode picker)
 // ═══════════════════════════════════════════════════════
-function openLesson(lesson){
-  pendingLesson = lesson;
-  selectMode(currentMode); // highlight last used mode
-  document.getElementById("modeModal").classList.remove("hidden");
-}
-function selectMode(mode){
-  currentMode = mode;
-  document.getElementById("modeStudyCard").classList.toggle("selected", mode==="study");
-  document.getElementById("modeExamCard").classList.toggle("selected",  mode==="exam");
-}
-function cancelMode(){
-  document.getElementById("modeModal").classList.add("hidden");
-  pendingLesson = null;
-}
-function confirmMode(){
-  document.getElementById("modeModal").classList.add("hidden");
-  const lesson = pendingLesson; pendingLesson = null;
-  startLesson(lesson);
-}
+function openLesson(lesson){ startLesson(lesson); }
 function startLesson(lesson){
   currentLesson = lesson;
-  examAnswers   = [];
   const firstWithQ=QTYPES.find(qt=>lesson.questions[qt.id]&&lesson.questions[qt.id].length>0);
   currentQType=firstWithQ?firstWithQ.id:QTYPES[0].id;
 
@@ -1496,31 +1540,70 @@ function startLesson(lesson){
   document.getElementById("summaryScreen").classList.remove("visible");
   document.getElementById("answerPaper").classList.remove("visible");
 
-  // mode badge
-  const badge=document.getElementById("modeBadge");
-  badge.textContent=currentMode==="exam"?"Exam":"Study";
-  badge.className="mode-badge "+(currentMode==="exam"?"exam":"study");
-
-  // In exam mode disable qtype tab switching mid-session
   renderQTypeTabs();
   startQTypeSession();
 }
 
 function renderQTypeTabs(){
-  const wrap=document.getElementById("qtypeTabs"); wrap.innerHTML="";
+  const wrap=document.getElementById("qtypeTabs");
+  // Hide tabs entirely in mock exam — questions span many lessons/types
+  if(currentLesson && currentLesson.id==="__mock__"){
+    wrap.innerHTML=""; return;
+  }
+  wrap.innerHTML="";
   QTYPES.forEach(qt=>{
     const count=(currentLesson.questions[qt.id]||[]).length;
+    if(!count) return; // don't show tabs with 0 questions
     const t=document.createElement("div");
     t.className="qtype-tab"+(qt.id===currentQType?" active":"");
     t.innerHTML=`${qt.icon} ${qt.label}<span class="qt-count">${count}</span>`;
-    if(currentMode==="study"){
-      t.onclick=()=>{ currentQType=qt.id; renderQTypeTabs(); startQTypeSession(); };
-    } else {
-      t.style.cursor="default";
-      t.title="Tab switching disabled in Exam Mode";
-    }
+    if(count) t.onclick=()=>{ currentQType=qt.id; renderQTypeTabs(); startQTypeSession(); };
     wrap.appendChild(t);
+    // Auto-scroll active tab into view
+    if(qt.id===currentQType) setTimeout(()=>t.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),50);
   });
+}
+
+// ── TIMER FUNCTIONS ──
+function fmtMs(ms){
+  const s=Math.floor(ms/1000), m=Math.floor(s/60);
+  return m>0?`${m}:${String(s%60).padStart(2,"0")}`:`0:${String(s).padStart(2,"0")}`;
+}
+function startTimer(){
+  stopTimer();
+  _sessionStart=Date.now();
+  _questionStart=Date.now();
+  _questionTimes=[];
+  _timerInterval=setInterval(()=>{
+    const el=document.getElementById("quizTimer");
+    if(el) el.textContent=fmtMs(Date.now()-_sessionStart);
+  },1000);
+}
+function stopTimer(){
+  if(_timerInterval){ clearInterval(_timerInterval); _timerInterval=null; }
+}
+function stampQuestion(){
+  const elapsed=Date.now()-_questionStart;
+  _questionTimes.push(elapsed);
+  _questionStart=Date.now();
+  return elapsed;
+}
+function logQuestion(pct, elapsed){
+  sessionLog.push({
+    subject: currentSubject||'',
+    part: currentPart||'',
+    lessonId: currentLesson?.id||'',
+    lessonTitle: currentLesson?.title||'',
+    qtype: currentQType||'',
+    pct, timeMs: elapsed, ts: Date.now()
+  });
+  const btn=document.getElementById('reportBtn');
+  if(btn) btn.classList.add('visible');
+}
+function timeChip(ms){
+  const s=Math.round(ms/1000);
+  const cls=s<=15?"fast":s>=60?"slow":"";
+  return `<span class="time-chip ${cls}">⏱ ${fmtMs(ms)}</span>`;
 }
 
 function startQTypeSession(){
@@ -1530,6 +1613,7 @@ function startQTypeSession(){
   mcqSelected=null;
   const total=(currentLesson.questions[currentQType]||[]).length;
   questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
+  startTimer();
   renderNavBar();
   renderCurrentQuestion();
 }
@@ -1540,9 +1624,8 @@ function renderNavBar(){
   const bar=document.getElementById("qNavBar");
   if(!qs.length){ bar.style.display="none"; return; }
   bar.style.display="flex";
-  // Only show nav in study mode (exam hides it to prevent peeking)
-  if(currentMode==="exam"){ bar.style.display="none"; return; }
   bar.innerHTML="";
+  if(!qs.length) { bar.style.display="none"; return; }
 
   // Prev button
   const prev=document.createElement("button");
@@ -1593,6 +1676,8 @@ function renderCurrentQuestion(){
   document.getElementById("summaryScreen").classList.remove("visible");
   body.scrollTo(0,0);
   document.getElementById("quizOverlay").scrollTo(0,0);
+  // Keep active tab highlight in sync
+  renderQTypeTabs();
 
   // update progress
   const total=qs.length;
@@ -1648,11 +1733,7 @@ function renderMCQ(q, qnum, isLast){
       <span>${o.text}</span>
     </div>`).join("");
 
-  // Study mode: no Check Answer button — clicking an option immediately reveals result
-  // Exam mode: Next → button, no feedback
-  const actionBtn = currentMode==="exam"
-    ? `<button class="btn-next" id="examNextBtn" onclick="examNextMCQ(${newCorrect},${isLast})" disabled style="margin-bottom:24px">${isLast?"Submit Exam 📋":"Next →"}</button>`
-    : ``;
+  const actionBtn = ``;
 
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
@@ -1671,27 +1752,22 @@ function renderMCQ(q, qnum, isLast){
 function selectMCQ(idx, correctIdx, isLast){
   // Prevent re-clicking after answer is revealed
   if(document.getElementById("btnRow")?.style.display==="flex") return;
-
   mcqSelected=idx;
-
-  if(currentMode==="study"){
-    // Immediately show green/red on all options
-    document.querySelectorAll(".mcq-option").forEach((el,i)=>{
-      el.onclick=null; // disable further clicks
-      if(i===correctIdx) el.classList.add("correct");
-      else if(i===idx)   el.classList.add("wrong");
-    });
-    const pct = idx===correctIdx ? 100 : 0;
-    sessionResults.push({pct});
-    if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
-    showSimpleResult(pct, idx===correctIdx ? "Correct! Well done 🎉" : "Incorrect. The correct answer is highlighted in green.");
-    document.getElementById("btnRow").style.display="flex";
-  } else {
-    // Exam mode — just select visually, enable Next button
-    document.querySelectorAll(".mcq-option").forEach((el,i)=>el.classList.toggle("selected",i===idx));
-    const eb=document.getElementById("examNextBtn");
-    if(eb) eb.disabled=false;
-  }
+  // Immediately show green/red on all options
+  document.querySelectorAll(".mcq-option").forEach((el,i)=>{
+    el.onclick=null;
+    if(i===correctIdx) el.classList.add("correct");
+    else if(i===idx)   el.classList.add("wrong");
+  });
+  const pct = idx===correctIdx ? 100 : 0;
+  sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const elapsed=stampQuestion();
+  logQuestion(pct,elapsed);
+  showSimpleResult(pct,
+    (idx===correctIdx?"Correct! Well done 🎉":"Incorrect. The correct answer is highlighted in green.")
+    +` ${timeChip(elapsed)}`);
+  document.getElementById("btnRow").style.display="flex";
 }
 function examNextMCQ(correctIdx, isLast){
   const qs=currentLesson.questions[currentQType];
@@ -1710,29 +1786,36 @@ function examNextMCQ(correctIdx, isLast){
     pct,
     qtype: currentQType
   });
-  if(isLast){ showAnswerPaper(); return; }
-  currentQIndex++; mcqSelected=null; renderCurrentQuestion();
+  if(isLast){ showMockResults(); return; }
+  mcqSelected=null; nextQuestion();
 }
 // checkMCQ is now handled directly inside selectMCQ for study mode
 
 // ── FILL IN BLANKS ──
 function renderFill(q, qnum, isLast){
   let idx=0;
-  const html=q.sentence.replace(/___/g,()=>`<input class="blank-input" id="blank${idx++}" placeholder="..." autocomplete="off">`);
-  const actionBar = currentMode==="exam"
-    ? `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
-        <button class="btn-check" id="checkBtn" onclick="examNextFill(${JSON.stringify(q.answers)},${isLast})" style="border-radius:0">${isLast?"Submit Exam 📋":"Next →"}</button>
-       </div>`
-    : `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
-        <button class="btn-check" id="checkBtn" onclick="checkFill(${JSON.stringify(q.answers)},${isLast})" style="border-radius:0">Check Answer</button>
+  const html=q.sentence.replace(/___/g,()=>
+    `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false">`
+  );
+
+  const peekBtn = `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
+       <div class="peek-panel" id="peekPanel">
+         <div class="peek-label">Answer</div>
+         <div class="peek-text">${q.answers.join(" / ")}</div>
+       </div>`;
+
+  const actionBar = `<div class="answer-actions">
+        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM()">Check Answer</button>
         <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>
        </div>`;
+
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Fill in the Blanks</div>
       <div class="q-num">${qnum}</div>
-      <div class="q-text" style="line-height:2">${html}</div>
+      <div class="fill-sentence">${html}</div>
     </div>
+    ${peekBtn}
     ${actionBar}
     <div class="result-panel" id="resultPanel"></div>
     <div class="btn-row" id="btnRow" style="display:none">
@@ -1740,6 +1823,66 @@ function renderFill(q, qnum, isLast){
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`;
 }
+
+function toggleFillPeek(){
+  const p=document.getElementById("peekPanel");
+  const b=document.querySelector(".btn-peek");
+  const opening=!p.classList.contains("visible");
+  p.classList.toggle("visible",opening);
+  // Disable/clear all blank inputs while peeking, re-enable on hide
+  document.querySelectorAll(".blank-input").forEach(inp=>{
+    if(opening){ inp.disabled=true; }
+    else { inp.value=""; inp.disabled=false; }
+  });
+  if(!opening) document.querySelector(".blank-input")?.focus();
+  b.textContent=opening?"🙈 Hide Answer":"👁 View Answer before filling";
+}
+
+function checkFillFromDOM(){
+  const qs=currentLesson.questions[currentQType];
+  const q=qs[currentQIndex];
+  checkFill(q.answers);
+}
+
+function checkFill(answers){
+  const qs=currentLesson.questions[currentQType];
+  const q=qs[currentQIndex];
+  const isLast=currentQIndex>=qs.length-1;
+  let correct=0;
+  answers.forEach((ans,i)=>{
+    const inp=document.getElementById("blank"+i);
+    if(!inp) return;
+    const userVal=inp.value.trim();
+    const ok=userVal.toLowerCase()===ans.toLowerCase() || levenshtein(userVal.toLowerCase(),ans.toLowerCase())<=1;
+    inp.disabled=true;
+    if(ok){
+      inp.style.borderColor="var(--green)";
+      inp.style.color="var(--green)";
+      inp.style.background="var(--green-light)";
+      correct++;
+    } else {
+      inp.style.borderColor="var(--red)";
+      inp.style.color="var(--red)";
+      inp.style.background="var(--red-light)";
+      // Show correct answer inline after the input
+      const span=document.createElement("span");
+      span.className="word-correction";
+      span.textContent="→ "+ans;
+      inp.insertAdjacentElement("afterend",span);
+    }
+  });
+  const pct=Math.round(100*correct/answers.length);
+  sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  document.getElementById("checkBtn").disabled=true;
+  hidePeek();
+  const fillElapsed=stampQuestion();
+  logQuestion(pct,fillElapsed);
+  renderNavBar();
+  showSimpleResult(pct,`${correct} / ${answers.length} correct ${timeChip(fillElapsed)}`);
+  document.getElementById("btnRow").style.display="flex";
+}
+
 function examNextFill(answers, isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
@@ -1749,28 +1892,8 @@ function examNextFill(answers, isLast){
   const pct=Math.round(100*correct/answers.length);
   sessionResults.push({pct});
   examAnswers.push({q:q.sentence,userText:userVals.join(" / "),modelText:answers.join(" / "),pct,qtype:currentQType});
-  if(isLast){ showAnswerPaper(); return; }
-  currentQIndex++; renderCurrentQuestion();
-}
-function checkFill(answers, isLast){
-  let correct=0;
-  answers.forEach((ans,i)=>{
-    const inp=document.getElementById("blank"+i);
-    if(!inp) return;
-    const userVal=inp.value.trim().toLowerCase();
-    const refVal=ans.toLowerCase();
-    const ok=userVal===refVal || levenshtein(userVal,refVal)<=1;
-    inp.disabled=true;
-    inp.style.borderColor=ok?"var(--green)":"var(--red)";
-    inp.style.color=ok?"var(--green)":"var(--red)";
-    if(!ok){ inp.value+=" (→ "+ans+")"; }
-    if(ok) correct++;
-  });
-  const pct=Math.round(100*correct/answers.length);
-  sessionResults.push({pct});
-  document.getElementById("checkBtn").disabled=true;
-  showSimpleResult(pct,`${correct} / ${answers.length} blanks correct`);
-  document.getElementById("btnRow").style.display="flex";
+  if(isLast){ showMockResults(); return; }
+  nextQuestion();
 }
 
 // ── MATCH THE FOLLOWING ──
@@ -1782,13 +1905,14 @@ function renderMatch(q, qnum, isLast){
     <div><select class="match-right-select" id="match${i}">
       <option value="">— Select —</option>${rightOpts}
     </select></div>`).join("");
-  const actionBar = currentMode==="exam"
-    ? `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
-        <button class="btn-check" id="checkBtn" onclick="examNextMatch(${JSON.stringify(q.correct)},${JSON.stringify(q.left)},${isLast})" style="border-radius:0">${isLast?"Submit Exam 📋":"Next →"}</button>
-       </div>`
-    : `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
-        <button class="btn-check" id="checkBtn" onclick="checkMatch(${JSON.stringify(q.correct)},${q.left.length},${isLast})" style="border-radius:0">Check Answer</button>
+  const actionBar = `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
+        <button class="btn-check" id="checkBtn" onclick="checkMatchFromDOM()" style="border-radius:0">Check Answer</button>
         <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>
+       </div>`;
+  const peekBtn = `<button class="btn-peek" id="matchPeekBtn" onclick="toggleMatchPeek()">👁 View Answers before matching</button>
+       <div class="peek-panel" id="peekPanel">
+         <div class="peek-label">Correct Matches</div>
+         ${q.left.map((l,i)=>`<div class="peek-text" style="margin-bottom:4px"><strong>${l}</strong> → ${q.right[q.correct[i]]}</div>`).join("")}
        </div>`;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
@@ -1796,6 +1920,7 @@ function renderMatch(q, qnum, isLast){
       <div class="q-num">${qnum}</div>
       <div class="match-grid">${leftRows}</div>
     </div>
+    ${peekBtn}
     ${actionBar}
     <div class="result-panel" id="resultPanel"></div>
     <div class="btn-row" id="btnRow" style="display:none">
@@ -1803,9 +1928,61 @@ function renderMatch(q, qnum, isLast){
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`;
 }
-function examNextMatch(correctMap, leftLabels, isLast){
+function toggleMatchPeek(){
+  const p=document.getElementById("peekPanel");
+  const b=document.getElementById("matchPeekBtn");
+  if(!p) return;
+  const opening=!p.classList.contains("visible");
+  p.classList.toggle("visible",opening);
+  // Disable/clear all selects while peeking
+  document.querySelectorAll(".match-right-select").forEach(sel=>{
+    if(opening){ sel.disabled=true; }
+    else { sel.value=""; sel.disabled=false; }
+  });
+  b.textContent=opening?"🙈 Hide Answers":"👁 View Answers before matching";
+}
+function checkMatchFromDOM(){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
+  const isLast=currentQIndex>=qs.length-1;
+  let correct=0;
+  q.left.forEach((_,i)=>{
+    const sel=document.getElementById("match"+i);
+    const ok=sel.value===q.right[q.correct[i]];
+    sel.disabled=true;
+    sel.style.borderColor=ok?"var(--green)":"var(--red)";
+    sel.style.color=ok?"var(--green)":"var(--red)";
+    if(!ok){
+      // Show correct answer after select
+      const span=document.createElement("span");
+      span.className="word-correction";
+      span.textContent="→ "+q.right[q.correct[i]];
+      sel.insertAdjacentElement("afterend",span);
+    }
+    if(ok) correct++;
+  });
+  const count=q.left.length;
+  const pct=Math.round(100*correct/count);
+  sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const matchElapsed=stampQuestion();
+  logQuestion(pct,matchElapsed);
+  hidePeek();
+  document.getElementById("checkBtn").disabled=true;
+  showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
+  document.getElementById("btnRow").style.display="flex";
+}
+function checkMatch(correctMap, count, isLast){
+  checkMatchFromDOM();
+}
+function examNextMatchFromDOM(isLast){
+  const qs=currentLesson.questions[currentQType];
+  const q=qs[currentQIndex];
+  const correctMap={};
+  q.left.forEach((_,i)=>{ correctMap[i]=q.right[q.correct[i]]; });
+  examNextMatch(correctMap, q.left, isLast);
+}
+function examNextMatch(correctMap, leftLabels, isLast){
   const count=leftLabels.length;
   let correct=0;
   const pairs=leftLabels.map((l,i)=>{
@@ -1817,9 +1994,10 @@ function examNextMatch(correctMap, leftLabels, isLast){
   const modelPairs=leftLabels.map((l,i)=>`${l} → ${correctMap[i]}`);
   const pct=Math.round(100*correct/count);
   sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   examAnswers.push({q:"Match: "+leftLabels.join(", "),userText:pairs.join("\n"),modelText:modelPairs.join("\n"),pct,qtype:currentQType});
-  if(isLast){ showAnswerPaper(); return; }
-  currentQIndex++; renderCurrentQuestion();
+  if(isLast){ showMockResults(); return; }
+  nextQuestion();
 }
 function checkMatch(correctMap, count, isLast){
   let correct=0;
@@ -1833,8 +2011,11 @@ function checkMatch(correctMap, count, isLast){
   }
   const pct=Math.round(100*correct/count);
   sessionResults.push({pct});
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const matchElapsed=stampQuestion();
+  logQuestion(pct,matchElapsed);
   document.getElementById("checkBtn").disabled=true;
-  showSimpleResult(pct,`${correct} / ${count} matched correctly`);
+  showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
   document.getElementById("btnRow").style.display="flex";
 }
 
@@ -1844,16 +2025,12 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   const label = labelMap[currentQType] || (isParagraph?"Answer in Paragraph / Detail":"Answer in Brief");
   const placeholder = isParagraph ? "Write a detailed answer…" : "Write your answer…";
   const minH = isParagraph ? 180 : 120;
-  const peekBtn = currentMode==="study"
-    ? `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
+  const peekBtn = `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
          <div class="peek-label">Model Answer</div>
          <div class="peek-text">${q.answer.replace(/</g,"&lt;")}</div>
-       </div>`
-    : "";
-  const actionBtns = currentMode==="exam"
-    ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Submit Exam 📋":"Next →"}</button>`
-    : `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
+       </div>`;
+  const actionBtns = `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
@@ -1876,9 +2053,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
 // ── TRUE OR FALSE ──
 function renderTrueFalse(q, qnum, isLast){
   // q.statement, q.answer (true|false), q.reason (optional explanation)
-  const actionBtn = currentMode==="exam"
-    ? `<button class="btn-next" id="examNextBtn" onclick="examNextTF('${q.answer}',${isLast})" disabled style="margin-bottom:24px">${isLast?"Submit Exam 📋":"Next →"}</button>`
-    : ``;
+  const actionBtn = ``;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">True or False</div>
@@ -1903,6 +2078,7 @@ function renderTrueFalse(q, qnum, isLast){
 function selectTF(selected, correct, isLast, reason){
   if(document.getElementById("btnRow")?.style.display==="flex") return;
   const isCorrect = selected===correct;
+  if(document.getElementById("btnRow")?.style.display==="flex") return;
   document.querySelectorAll(".mcq-option").forEach(el=>el.onclick=null);
   document.getElementById("tfopt0").classList.toggle("correct", correct==="true");
   document.getElementById("tfopt0").classList.toggle("wrong", selected==="true" && !isCorrect);
@@ -1911,6 +2087,8 @@ function selectTF(selected, correct, isLast, reason){
   const pct = isCorrect ? 100 : 0;
   sessionResults.push({pct});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const tfelapsed=stampQuestion();
+  logQuestion(pct,tfelapsed);
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
   const cls=isCorrect?"perfect":"poor";
@@ -1918,7 +2096,8 @@ function selectTF(selected, correct, isLast, reason){
   panel.innerHTML=`
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
-      <div><div class="score-label">${isCorrect?"Correct! 🎉":"Incorrect — it is "+correctLabel}</div></div>
+      <div><div class="score-label">${isCorrect?"Correct! 🎉":"Incorrect — it is "+correctLabel}</div>
+      <div style="margin-top:4px">${timeChip(tfelapsed)}</div></div>
     </div>
     ${reason?`<div class="result-section"><div class="result-section-title correct">Reason</div><div class="diff-answer-block model">${reason.replace(/</g,"&lt;")}</div></div>`:""}`;
   renderNavBar();
@@ -1931,8 +2110,8 @@ function examNextTF(correct, isLast){
   const pct = sel===correct?100:0;
   sessionResults.push({pct});
   examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse"});
-  if(isLast){showAnswerPaper();return;}
-  currentQIndex++; mcqSelected=null; renderCurrentQuestion();
+  if(isLast){ showMockResults(); return; }
+  mcqSelected=null; nextQuestion();
 }
 function togglePeek(){
   const p=document.getElementById("peekPanel");
@@ -1958,8 +2137,8 @@ function examNextText(isLast){
   const {pct}=scoreAnswer(userText||"", q.answer);
   sessionResults.push({pct});
   examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType});
-  if(isLast){ showAnswerPaper(); return; }
-  currentQIndex++; renderCurrentQuestion();
+  if(isLast){ showMockResults(); return; }
+  nextQuestion();
 }
 // ── ANNOTATED DIFF helper — word-level annotation, same line format as model ──
 function buildAnnotatedDiff(userText, modelText){
@@ -2000,8 +2179,9 @@ function checkTextAnswer(){
 
   const {pct}=scoreAnswer(userText, q.answer);
   sessionResults.push({pct});
-  // Record state for nav dot
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const txtElapsed=stampQuestion();
+  logQuestion(pct,txtElapsed);
   renderNavBar();
 
   const panel=document.getElementById("resultPanel");
@@ -2012,7 +2192,7 @@ function checkTextAnswer(){
   panel.innerHTML=`
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
-      <div><div class="score-label">${lbl}</div>
+      <div><div class="score-label">${lbl} ${timeChip(txtElapsed)}</div>
       <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div></div>
     </div>
     ${buildAnnotatedDiff(userText, q.answer)}`;
@@ -2024,15 +2204,11 @@ function checkTextAnswer(){
 
 // ── DISTINGUISH BETWEEN ──
 function renderDistinguish(q, qnum, isLast){
-  const peekBtn = currentMode==="study"
-    ? `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
+  const peekBtn = `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
          ${buildDistTable(q, true)}
-       </div>`
-    : "";
-  const actionBtns = currentMode==="exam"
-    ? `<button class="btn-check" id="checkBtn" onclick="examNextDistinguish(${isLast})">${isLast?"Submit Exam 📋":"Next →"}</button>`
-    : `<button class="btn-check" id="checkBtn" onclick="checkDistinguish()">Check Answer</button>
+       </div>`;
+  const actionBtns = `<button class="btn-check" id="checkBtn" onclick="checkDistinguish()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
 
   document.getElementById("quizBody").innerHTML=`
@@ -2130,8 +2306,8 @@ function examNextDistinguish(isLast){
     modelText:`${q.termA}:\n${q.answerA}\n\n${q.termB}:\n${q.answerB}`,
     pct, qtype:currentQType
   });
-  if(isLast){ showAnswerPaper(); return; }
-  currentQIndex++; renderCurrentQuestion();
+  if(isLast){ showMockResults(); return; }
+  nextQuestion();
 }
 
 function checkDistinguish(){
@@ -2156,6 +2332,8 @@ function checkDistinguish(){
   const pct=Math.round((pctA+pctB)/2);
   sessionResults.push({pct});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
+  const distElapsed=stampQuestion();
+  logQuestion(pct,distElapsed);
   renderNavBar();
 
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
@@ -2165,7 +2343,7 @@ function checkDistinguish(){
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div>
-        <div class="score-label">${pct>=80?"Excellent!":pct>=50?"Good effort!":"Keep practising!"}</div>
+        <div class="score-label">${pct>=80?"Excellent!":pct>=50?"Good effort!":"Keep practising!"} ${timeChip(distElapsed)}</div>
         <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div>
       </div>
     </div>
@@ -2208,6 +2386,8 @@ function showSimpleResult(pct, detail){
 function skipQuestion(isLast){
   sessionResults.push({pct:0});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:false,skipped:true,pct:0};
+  const skipElapsed=stampQuestion();
+  logQuestion(0,skipElapsed);
   renderNavBar();
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
@@ -2220,8 +2400,7 @@ function skipQuestion(isLast){
     if(el) el.disabled=true;
   });
   hidePeek();
-  if(currentMode==="study") document.getElementById("btnRow").style.display="flex";
-  else nextQuestion();
+  document.getElementById("btnRow").style.display="flex";
 }
 
 // ── HIDE PEEK BUTTON & PANEL ──
@@ -2243,12 +2422,299 @@ function tryAgainQuestion(){
 
 // ── NEXT ──
 function nextQuestion(){
+  // Mock exam flow
+  if(currentLesson.id==="__mock__"){
+    mockQIndex++;
+    mcqSelected=null; matchAnswers={};
+    document.getElementById("quizBody").style.display="block";
+    renderMockQuestion();
+    return;
+  }
   const total=(currentLesson.questions[currentQType]||[]).length;
   if(currentQIndex>=total-1){ showSummary(); return; }
   currentQIndex++;
-  mcqSelected=null;
-  matchAnswers={};
+  mcqSelected=null; matchAnswers={};
   renderCurrentQuestion();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MOCK EXAM
+// ═══════════════════════════════════════════════════════
+let mockSubject   = "Science";
+let mockSelected  = new Set();   // lesson ids
+let mockQTypes    = new Set(["mcq","fill","match","brief","truefalse","reasons","distinguish","paragraph"]);
+let mockQuestions = [];          // flat list of {q, qtype, lesson} objects
+let mockQIndex    = 0;
+
+function openMockExam(){
+  mockSubject = currentSubject;
+  mockSelected.clear();
+  // Reset all qtypes to selected by default each time
+  mockQTypes = new Set(["mcq","fill","match","brief","truefalse","reasons","distinguish","paragraph"]);
+  renderMockModal();
+  document.getElementById("mockExamModal").classList.remove("hidden");
+}
+function closeMockExam(){
+  document.getElementById("mockExamModal").classList.add("hidden");
+}
+
+function renderMockModal(){
+  // Subject tabs
+  const tabsEl = document.getElementById("mockSubjectTabs");
+  tabsEl.innerHTML = Object.keys(DATA).map(s=>
+    `<button class="mock-subj-tab${s===mockSubject?" active":""}" onclick="switchMockSubject('${s}')">${DATA[s].icon} ${s}</button>`
+  ).join("");
+
+  // Lesson list grouped by part
+  const listEl = document.getElementById("mockLessonList");
+  listEl.innerHTML = "";
+  Object.entries(DATA[mockSubject].parts).forEach(([partName, partData])=>{
+    const group = document.createElement("div");
+    group.className = "mock-part-group";
+    const allIds = partData.lessons.map(l=>l.id);
+    const allChecked = allIds.every(id=>mockSelected.has(id));
+    group.innerHTML = `<div class="mock-part-name">${partData.icon||""} ${partName}
+      <button onclick="toggleMockPart(${JSON.stringify(allIds)},${!allChecked})">${allChecked?"Deselect all":"Select all"}</button>
+    </div>`;
+    partData.lessons.forEach(lesson=>{
+      const totalQ = Object.entries(lesson.questions)
+        .filter(([qt])=>mockQTypes.has(qt))
+        .reduce((a,[,arr])=>a+arr.length, 0);
+      const item = document.createElement("label");
+      item.className = "mock-lesson-item";
+      item.innerHTML = `
+        <input type="checkbox" id="mock_${lesson.id}" ${mockSelected.has(lesson.id)?"checked":""}
+          onchange="toggleMockLesson('${lesson.id}',this.checked)">
+        <span class="mock-lesson-name">${lesson.unit} — ${lesson.title}</span>
+        <span class="mock-lesson-qcount">${totalQ}q</span>`;
+      group.appendChild(item);
+    });
+    listEl.appendChild(group);
+  });
+
+  // QType chips
+  const chipsEl = document.getElementById("mockQTypeChips");
+  chipsEl.innerHTML = QTYPES.map(qt=>
+    `<button class="mock-qtype-chip${mockQTypes.has(qt.id)?" active":""}"
+      onclick="toggleMockQType('${qt.id}')">${qt.icon} ${qt.label}</button>`
+  ).join("");
+
+  updateMockCount();
+}
+
+function switchMockSubject(subj){
+  mockSubject = subj;
+  mockSelected.clear();
+  renderMockModal();
+}
+
+function toggleMockLesson(id, on){
+  if(on) mockSelected.add(id); else mockSelected.delete(id);
+  updateMockCount();
+  renderMockModal();
+}
+
+function toggleMockPart(ids, on){
+  ids.forEach(id=>{ if(on) mockSelected.add(id); else mockSelected.delete(id); });
+  updateMockCount();
+  renderMockModal();
+}
+
+function toggleMockQType(qt){
+  if(mockQTypes.has(qt)) mockQTypes.delete(qt); else mockQTypes.add(qt);
+  updateMockCount();
+  renderMockModal();
+}
+
+function updateMockCount(){
+  let total = 0;
+  mockSelected.forEach(id=>{
+    const lesson = findLessonById(id);
+    if(lesson) Object.entries(lesson.questions).forEach(([qt,arr])=>{
+      if(mockQTypes.has(qt)) total += arr.length;
+    });
+  });
+  const countEl = document.getElementById("mockCount");
+  if(countEl) countEl.textContent = total
+    ? `${total} question${total!==1?"s":""} from ${mockSelected.size} lesson${mockSelected.size!==1?"s":""}`
+    : "Select at least one lesson to begin";
+  const startBtn = document.getElementById("startMockBtn");
+  if(startBtn) startBtn.disabled = total===0;
+}
+
+function findLessonById(id){
+  for(const subj of Object.values(DATA))
+    for(const part of Object.values(subj.parts))
+      for(const lesson of part.lessons)
+        if(lesson.id===id) return lesson;
+  return null;
+}
+
+function startMockExam(){
+  // Build flat question list from all selected lessons + qtypes IN ORDER
+  mockQuestions = [];
+  mockSelected.forEach(id=>{
+    const lesson = findLessonById(id);
+    if(!lesson) return;
+    QTYPES.forEach(qt=>{
+      if(!mockQTypes.has(qt.id)) return;
+      (lesson.questions[qt.id]||[]).forEach(q=>{
+        mockQuestions.push({q, qtype:qt.id, lesson, qtLabel:qt.label});
+      });
+    });
+  });
+  mockQIndex = 0;
+  closeMockExam();
+  startTimer();
+
+  // Reuse the quiz overlay in exam mode
+  currentMode = "exam";
+  examAnswers = [];
+  sessionResults = [];
+  questionStates = Array.from({length:mockQuestions.length},()=>({answered:false,skipped:false,pct:null}));
+
+  const ov = document.getElementById("quizOverlay");
+  ov.classList.add("visible");
+  ov.scrollTo(0,0);
+  document.getElementById("quizLessonTitle").textContent = `🎯 Mock Exam — ${mockSubject}`;
+  document.getElementById("quizPartLabel").textContent = `${mockSelected.size} lesson${mockSelected.size!==1?"s":""} · ${mockQuestions.length} questions`;
+  document.getElementById("summaryScreen").classList.remove("visible");
+  document.getElementById("answerPaper").classList.remove("visible");
+  document.getElementById("modeBadge").textContent = "Exam";
+  document.getElementById("modeBadge").className = "mode-badge exam";
+  document.getElementById("progressFill").style.width = "0%";
+
+  // Set up a virtual lesson for mock mode
+  currentLesson = {
+    id:"__mock__",
+    title:"Mock Exam",
+    questions: buildMockQuestionsMap()
+  };
+  currentQType = mockQuestions[0].qtype;
+  renderMockQuestion();
+}
+
+// Wrap a single question so existing render/check functions work
+function buildSingleQ(qtype, q){
+  const map={};
+  QTYPES.forEach(qt=>{ map[qt.id]=[]; });
+  map[qtype]=[q];
+  return map;
+}
+function buildMockQuestionsMap(){ return {}; } // legacy stub
+
+function renderMockQuestion(){
+  if(mockQIndex>=mockQuestions.length){ showMockResults(); return; }
+  const item=mockQuestions[mockQIndex];
+  const total=mockQuestions.length;
+  const isLast=mockQIndex>=total-1;
+  const qnum=`Question ${mockQIndex+1} of ${total}`;
+
+  // Update UI
+  document.getElementById("progressFill").style.width=`${(mockQIndex/total)*100}%`;
+  document.getElementById("qCounter").textContent=`${mockQIndex+1} / ${total}`;
+  document.getElementById("quizPartLabel").textContent=
+    `${item.lesson.unit} — ${item.lesson.title} · ${item.qtLabel}`;
+  const body=document.getElementById("quizBody");
+  body.style.display="block";
+  document.getElementById("summaryScreen").classList.remove("visible");
+  document.getElementById("answerPaper").classList.remove("visible");
+  document.getElementById("quizOverlay").scrollTo(0,0);
+
+  currentQType=item.qtype;
+  currentQIndex=0;
+  mcqSelected=null; matchAnswers={};
+  const map={};
+  QTYPES.forEach(qt=>{ map[qt.id]=[]; });
+  map[item.qtype]=[item.q];
+  currentLesson={ id:"__mock__", title:item.lesson.title, questions:map };
+
+  // Render mock nav bar
+  renderMockNavBar();
+
+  // Render question
+  switch(item.qtype){
+    case "mcq":        renderMCQ(item.q, qnum, isLast); break;
+    case "fill":       renderFill(item.q, qnum, isLast); break;
+    case "match":      renderMatch(item.q, qnum, isLast); break;
+    case "brief":      renderTextAnswer(item.q, qnum, isLast, false); break;
+    case "truefalse":  renderTrueFalse(item.q, qnum, isLast); break;
+    case "reasons":    renderTextAnswer(item.q, qnum, isLast, false); break;
+    case "distinguish":renderDistinguish(item.q, qnum, isLast); break;
+    case "paragraph":  renderTextAnswer(item.q, qnum, isLast, true); break;
+  }
+}
+
+function renderMockNavBar(){
+  const bar=document.getElementById("qNavBar");
+  bar.style.display="flex";
+  bar.innerHTML="";
+  const total=mockQuestions.length;
+
+  // Prev button
+  const prev=document.createElement("button");
+  prev.className="q-nav-prev"; prev.textContent="← Prev";
+  prev.disabled=mockQIndex===0;
+  prev.onclick=()=>jumpMockQuestion(mockQIndex-1);
+  bar.appendChild(prev);
+
+  // Scrollable dot container
+  const dotsWrap=document.createElement("div");
+  dotsWrap.style.cssText="display:flex;gap:5px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0";
+
+  mockQuestions.forEach((_,i)=>{
+    const dot=document.createElement("div");
+    dot.className="q-nav-dot";
+    dot.textContent=i+1;
+    if(i===mockQIndex) dot.classList.add("current");
+    else if(questionStates[i]?.answered){
+      const p=questionStates[i].pct;
+      dot.classList.add(p>=80?"answered-good":p>=50?"answered-mid":"answered-poor");
+    }
+    dot.onclick=()=>jumpMockQuestion(i);
+    dotsWrap.appendChild(dot);
+    // Auto-scroll current dot into view
+    if(i===mockQIndex) setTimeout(()=>dot.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),50);
+  });
+  bar.appendChild(dotsWrap);
+
+  // Next button
+  const next=document.createElement("button");
+  next.className="q-nav-next"; next.textContent="Next →";
+  next.disabled=mockQIndex>=total-1;
+  next.onclick=()=>jumpMockQuestion(mockQIndex+1);
+  bar.appendChild(next);
+}
+
+function jumpMockQuestion(idx){
+  if(idx<0||idx>=mockQuestions.length) return;
+  mockQIndex=idx;
+  mcqSelected=null; matchAnswers={};
+  renderMockQuestion();
+}
+
+function showMockResults(){
+  stopTimer();
+  const totalMs=Date.now()-_sessionStart;
+  const avg=sessionResults.length
+    ? Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length):0;
+  document.getElementById("quizBody").style.display="none";
+  document.getElementById("answerPaper").classList.remove("visible");
+  const sum=document.getElementById("summaryScreen");
+  sum.classList.add("visible");
+  document.getElementById("summaryTrophy").textContent=avg>=80?"🏆":avg>=50?"📚":"💪";
+  setTeacherMark(
+    document.getElementById("teacherScore"),
+    document.getElementById("teacherTick"),
+    document.getElementById("teacherMark"),
+    document.getElementById("teacherMotivation"),
+    avg
+  );
+  document.getElementById("statCorrect").textContent=sessionResults.filter(r=>r.pct>=80).length;
+  document.getElementById("statPartial").textContent=sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
+  document.getElementById("statWrong").textContent  =sessionResults.filter(r=>r.pct<40).length;
+  document.getElementById("summaryTotalTime").textContent=`⏱ Total time: ${fmtMs(totalMs)} · ${mockQuestions.length} questions`;
+  document.getElementById("progressFill").style.width="100%";
 }
 
 // ── MOTIVATION MESSAGES ──
@@ -2274,7 +2740,8 @@ function setTeacherMark(scoreEl, tickEl, wrapEl, motivationEl, avg){
 
 // ── SUMMARY (study mode) ──
 function showSummary(){
-  if(currentMode==="exam"){ showAnswerPaper(); return; }
+  stopTimer();
+  const totalMs=Date.now()-_sessionStart;
   const avg=sessionResults.length
     ?Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length):0;
   scores[currentLesson.id+":"+currentQType]=avg;
@@ -2293,12 +2760,15 @@ function showSummary(){
   document.getElementById("statCorrect").textContent=sessionResults.filter(r=>r.pct>=80).length;
   document.getElementById("statPartial").textContent=sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
   document.getElementById("statWrong").textContent=sessionResults.filter(r=>r.pct<40).length;
+  document.getElementById("summaryTotalTime").textContent=`⏱ Total time: ${fmtMs(totalMs)}`;
   document.getElementById("progressFill").style.width="100%";
   renderSidebar(); renderLessons();
 }
 
 // ── ANSWER PAPER (exam mode) ──
 function showAnswerPaper(){
+  stopTimer();
+  const totalMs=Date.now()-_sessionStart;
   const avg=sessionResults.length
     ?Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length):0;
   scores[currentLesson.id+":"+currentQType]=avg;
@@ -2311,7 +2781,7 @@ function showAnswerPaper(){
 
   document.getElementById("paperTitle").textContent=`${currentLesson.title} — Answer Paper`;
   document.getElementById("paperMeta").textContent=
-    `${currentQType.toUpperCase()} · ${examAnswers.length} question${examAnswers.length!==1?"s":""} · ${new Date().toLocaleDateString()}`;
+    `${currentQType.toUpperCase()} · ${examAnswers.length} question${examAnswers.length!==1?"s":""} · ${new Date().toLocaleDateString()} · ⏱ ${fmtMs(totalMs)}`;
 
   setTeacherMark(
     document.getElementById("paperTeacherScore"),
@@ -2366,7 +2836,156 @@ function retrySection(){
   document.getElementById("answerPaper").classList.remove("visible");
 }
 
+// ── SESSION REPORT ──
+function openReport(){
+  renderReport();
+  document.getElementById("reportPanel").classList.add("visible");
+}
+function downloadReport(){
+  if(!sessionLog.length){ alert("No activity to download yet."); return; }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const timeStr = now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+  const totalQ = sessionLog.length;
+  const avgPct = Math.round(sessionLog.reduce((a,e)=>a+e.pct,0)/totalQ);
+  const totalMs = sessionLog.reduce((a,e)=>a+e.timeMs,0);
+
+  const qtLabels={mcq:"Choose Correct",fill:"Fill in the Blanks",match:"Match the Following",
+    brief:"Answer in Brief",truefalse:"True or False",reasons:"Give Reasons",
+    distinguish:"Distinguish Between",paragraph:"Answer in Paragraph/Detail"};
+
+  // Group same as report
+  const grouped={};
+  sessionLog.forEach(e=>{
+    const sk=e.subject||"General";
+    const lk=e.lessonId+"|"+e.lessonTitle;
+    if(!grouped[sk]) grouped[sk]={};
+    if(!grouped[sk][lk]) grouped[sk][lk]={};
+    const qtk=e.qtype;
+    if(!grouped[sk][lk][qtk]) grouped[sk][lk][qtk]={pcts:[],times:[]};
+    grouped[sk][lk][qtk].pcts.push(e.pct);
+    grouped[sk][lk][qtk].times.push(e.timeMs);
+  });
+
+  let html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Study Buddy — Session Report ${dateStr}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a2744;line-height:1.6}
+  h1{font-size:24px;margin-bottom:4px} h2{font-size:16px;font-weight:700;margin:24px 0 8px;border-bottom:2px solid #1a2744;padding-bottom:4px}
+  .meta{font-size:13px;color:#7a849a;margin-bottom:24px}
+  .summary{display:flex;gap:20px;margin-bottom:24px;background:#f4f0e8;padding:16px;border-radius:10px}
+  .s-box{text-align:center} .s-num{font-size:28px;font-weight:900} .s-lbl{font-size:11px;color:#7a849a;text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}
+  th{background:#1a2744;color:#fff;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  td{padding:8px 12px;border-bottom:1px solid #ddd8cc}
+  tr:nth-child(even) td{background:#f9f7f3}
+  .pct-good{color:#4caf82;font-weight:700} .pct-mid{color:#b8860b;font-weight:700} .pct-poor{color:#e05c5c;font-weight:700}
+  .bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-left:6px}
+  @media print{body{margin:20px}}
+</style></head><body>
+<h1>📚 Study Buddy — Session Report</h1>
+<div class="meta">${dateStr} · ${timeStr}</div>
+<div class="summary">
+  <div class="s-box"><div class="s-num">${totalQ}</div><div class="s-lbl">Questions</div></div>
+  <div class="s-box"><div class="s-num">${avgPct}%</div><div class="s-lbl">Average Score</div></div>
+  <div class="s-box"><div class="s-num">${fmtMs(totalMs)}</div><div class="s-lbl">Total Time</div></div>
+</div>`;
+
+  Object.entries(grouped).forEach(([subj, lessons])=>{
+    html+=`<h2>${subj}</h2><table><tr><th>Lesson</th><th>Question Type</th><th>Questions</th><th>Score</th><th>Avg Time</th></tr>`;
+    Object.entries(lessons).forEach(([lk,qtypes])=>{
+      const [,title]=lk.split("|");
+      Object.entries(qtypes).forEach(([qt,data])=>{
+        const avg=Math.round(data.pcts.reduce((a,b)=>a+b,0)/data.pcts.length);
+        const avgT=Math.round(data.times.reduce((a,b)=>a+b,0)/data.times.length);
+        const cls=avg>=80?"pct-good":avg>=50?"pct-mid":"pct-poor";
+        const barColor=avg>=80?"#4caf82":avg>=50?"#e8b84b":"#e05c5c";
+        html+=`<tr><td>${title||"—"}</td><td>${qtLabels[qt]||qt}</td><td style="text-align:center">${data.pcts.length}</td>
+          <td><span class="${cls}">${avg}%</span><span class="bar" style="width:${avg*0.5}px;background:${barColor}"></span></td>
+          <td>⏱ ${fmtMs(avgT)}</td></tr>`;
+      });
+    });
+    html+=`</table>`;
+  });
+
+  html+=`<p style="font-size:11px;color:#999;margin-top:32px;text-align:center">Generated by Study Buddy · joshistudies.in</p></body></html>`;
+
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = `StudyBuddy_Report_${dateStr.replace(/ /g,"_")}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function closeReport(){
+  document.getElementById("reportPanel").classList.remove("visible");
+}
+function renderReport(){
+  const body=document.getElementById("reportBody");
+  if(!sessionLog.length){
+    body.innerHTML=`<div class="report-empty">No activity yet this session.<br>Start studying to see your stats here!</div>`;
+    document.getElementById("reportSubtitle").textContent="Topics studied this session";
+    return;
+  }
+
+  // Group by subject → part → lesson → qtype
+  const grouped={};
+  sessionLog.forEach(e=>{
+    const sk=e.subject||"General";
+    const pk=e.part||"—";
+    const lk=e.lessonId+"|"+e.lessonTitle;
+    const qtk=e.qtype;
+    if(!grouped[sk]) grouped[sk]={};
+    if(!grouped[sk][pk]) grouped[sk][pk]={};
+    if(!grouped[sk][pk][lk]) grouped[sk][pk][lk]={};
+    if(!grouped[sk][pk][lk][qtk]) grouped[sk][pk][lk][qtk]={pcts:[],times:[]};
+    grouped[sk][pk][lk][qtk].pcts.push(e.pct);
+    grouped[sk][pk][lk][qtk].times.push(e.timeMs);
+  });
+
+  const totalQ=sessionLog.length;
+  const avgPct=Math.round(sessionLog.reduce((a,e)=>a+e.pct,0)/totalQ);
+  document.getElementById("reportSubtitle").textContent=
+    `${totalQ} question${totalQ!==1?"s":""} answered · avg ${avgPct}% this session`;
+
+  const qtLabels={mcq:"MCQ",fill:"Fill",match:"Match",brief:"Brief",truefalse:"T/F",reasons:"Reasons",distinguish:"Distinguish",paragraph:"Paragraph"};
+  const barColor=p=>p>=80?"var(--green)":p>=50?"var(--gold)":"var(--red)";
+
+  let html="";
+  Object.entries(grouped).forEach(([subj,parts])=>{
+    html+=`<div class="report-subject"><div class="report-subject-name">${subj}</div>`;
+    Object.entries(parts).forEach(([part,lessons])=>{
+      if(part&&part!=="—") html+=`<div style="font-size:11px;color:var(--muted);font-weight:600;margin:8px 0 4px;padding-left:4px">${part}</div>`;
+      Object.entries(lessons).forEach(([lk, qtypes])=>{
+        const [,lessonTitle]=lk.split("|");
+        Object.entries(qtypes).forEach(([qt,data])=>{
+          const avg=Math.round(data.pcts.reduce((a,b)=>a+b,0)/data.pcts.length);
+          const avgTime=Math.round(data.times.reduce((a,b)=>a+b,0)/data.times.length);
+          const n=data.pcts.length;
+          html+=`<div class="report-row">
+            <div style="flex:1;min-width:0">
+              <div class="report-lesson">${lessonTitle||"—"}</div>
+              <div class="report-qtype">${qtLabels[qt]||qt} · ${n} q${n!==1?"s":""}</div>
+            </div>
+            <div class="report-bar-wrap"><div class="report-bar" style="width:${avg}%;background:${barColor(avg)}"></div></div>
+            <div class="report-pct" style="color:${barColor(avg)}">${avg}%</div>
+            <div class="report-time">⏱${fmtMs(avgTime)}</div>
+          </div>`;
+        });
+      });
+    });
+    html+="</div>";
+  });
+  body.innerHTML=html;
+}
+
 function closeQuiz(){
+  stopTimer();
   document.getElementById("quizOverlay").classList.remove("visible");
   renderSidebar(); renderLessons();
 }
