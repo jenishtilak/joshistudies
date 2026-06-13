@@ -254,8 +254,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .welcome-screen.gone{display:none}
 .wl-icon{font-size:56px;margin-bottom:16px;animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.wl-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:.3px;margin-bottom:6px}
-.wl-sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:40px;line-height:1.5}
+.wl-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:.3px;margin-bottom:4px}
+.wl-sub{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:14px;line-height:1.5}
+.wl-verse{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.1);
+  text-align:center;
+  animation:verseFadeIn 1.2s ease forwards;
+  opacity:0;
+}
+@keyframes verseFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.wl-verse-text{
+  font-size:14px;
+  color:rgba(255,255,255,.85);
+  font-style:italic;
+  line-height:1.8;
+  font-family:Georgia,serif;
+  letter-spacing:.2px;
+  display:block;
+  animation:textPulse 4s ease-in-out 1.2s infinite;
+}
+@keyframes textPulse{0%,100%{color:rgba(255,255,255,.85)}50%{color:rgba(255,255,255,1)}}
+.wl-verse-ref{
+  display:block;
+  margin-top:8px;
+  font-size:10px;
+  font-weight:700;
+  font-style:normal;
+  color:var(--gold);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  opacity:.8;
+}
 .wl-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
   border-radius:18px;padding:28px 24px;width:100%;max-width:360px}
 .wl-card-title{font-size:13px;font-weight:700;text-transform:uppercase;
@@ -291,11 +322,83 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-.quiz-timer{font-size:13px;font-weight:700;color:var(--navy);background:var(--parchment);border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;letter-spacing:.3px;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
-.quiz-timer.warning{background:var(--gold-light);border-color:var(--gold);color:#8a5c00}
+.quiz-timer{font-size:13px;font-weight:700;color:var(--navy);background:var(--parchment);border:1.5px solid var(--border);border-radius:20px;padding:3px 9px;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
+.q-timer-bar{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--parchment);border-bottom:1px solid var(--border);font-size:12px}
+.q-timer-bar .q-timer-label{color:var(--muted);font-weight:500}
+.q-timer-bar .q-timer{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:12px}
+
+/* ── MOCK EXAM ANSWER SHEET ── */
+.mock-answer-sheet{display:none;padding:20px 16px 40px;max-width:700px;margin:0 auto}
+.mock-answer-sheet.visible{display:block}
+.mas-header{text-align:center;padding-bottom:20px;border-bottom:2px dashed var(--border);margin-bottom:24px}
+.mas-title{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.mas-meta{font-size:12px;color:var(--muted);margin-bottom:16px}
+.mas-mark-row{display:flex;justify-content:center;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:10px}
+.mas-stats{display:flex;gap:16px;justify-content:center;margin-top:16px}
+.mas-stat{text-align:center}
+.mas-stat-num{font-size:22px;font-weight:800}
+.mas-stat-num.green{color:var(--green)}
+.mas-stat-num.amber{color:#e8a020}
+.mas-stat-num.red{color:var(--red)}
+.mas-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+
+/* Per-question card */
+.mas-q-card{border-radius:12px;padding:16px;margin-bottom:14px;border:1.5px solid var(--border);background:#fff;position:relative}
+.mas-q-card.good{border-color:var(--green);background:var(--green-light)}
+.mas-q-card.mid {border-color:#e8a020;background:var(--gold-light)}
+.mas-q-card.poor{border-color:var(--red);background:var(--red-light)}
+.mas-q-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mas-q-num{font-size:11px;font-weight:700;color:var(--muted);flex:1}
+.mas-q-type{font-size:10px;background:var(--navy);color:#fff;border-radius:10px;padding:2px 7px;font-weight:700}
+.mas-q-score{font-size:13px;font-weight:800;font-family:'Courier New',monospace}
+.mas-q-score.good{color:var(--green)}
+.mas-q-score.mid {color:#b8860b}
+.mas-q-score.poor{color:var(--red)}
+.mas-q-time{font-size:11px;color:var(--muted)}
+.mas-q-text{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;line-height:1.5}
+.mas-section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.mas-section-lbl.yours{color:var(--muted)}
+.mas-section-lbl.model{color:var(--green)}
+.mas-your-ans{font-size:13px;line-height:1.8;padding:8px 10px;background:rgba(255,255,255,.7);border-radius:6px;margin-bottom:8px}
+.mas-model-ans{font-size:13px;line-height:1.8;padding:8px 10px;background:var(--green-light);border-radius:6px;border-left:3px solid var(--green);white-space:pre-line;color:var(--text)}
+
+/* Spelling report */
+.mas-section-heading{font-size:13px;font-weight:800;color:var(--navy);margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.spell-table{width:100%;border-collapse:collapse;font-size:13px}
+.spell-table th{background:var(--navy);color:#fff;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.spell-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.spell-table tr:nth-child(even) td{background:var(--parchment)}
+.spell-wrong{text-decoration:line-through;color:var(--red);font-weight:700}
+.spell-right{color:var(--green);font-weight:700;margin-left:6px}
+
+/* Improve section */
+.improve-card{background:var(--parchment);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--navy)}
+.improve-lesson{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.improve-text{font-size:13px;color:var(--text);line-height:1.6}
 .time-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--parchment);border:1px solid var(--border);border-radius:12px;padding:2px 8px;color:var(--muted);font-weight:600}
 .time-chip.fast{background:var(--green-light);border-color:var(--green);color:var(--green)}
 .time-chip.slow{background:var(--gold-light);border-color:var(--gold);color:#8a5c00}
+/* ── LESSON CARD MODE BUTTONS ── */
+.lesson-card-modes{display:flex;gap:6px;margin-top:8px}
+.btn-revise{flex:1;padding:7px 0;background:var(--parchment);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;color:var(--navy);cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-revise:hover{background:var(--gold-light);border-color:var(--gold)}
+.btn-practice{flex:1;padding:7px 0;background:var(--navy);border:1.5px solid var(--navy);border-radius:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-practice:hover{background:var(--navy-mid)}
+/* ── REVISE MODE ── */
+.revise-body{padding:16px;max-width:700px;margin:0 auto;padding-bottom:60px}
+.revise-qtype-section{margin-bottom:28px}
+.revise-qtype-heading{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:6px 10px;background:var(--parchment);border-radius:6px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.revise-card{background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07);padding:16px;margin-bottom:12px}
+.revise-q-num{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.revise-q{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;line-height:1.5}
+.revise-answer{font-size:13px;line-height:1.9;color:var(--text);border-left:3px solid var(--green);padding-left:12px;white-space:pre-line}
+.revise-mcq-opt{font-size:13px;padding:8px 12px;border-radius:8px;background:var(--parchment);color:var(--muted);margin-bottom:5px}
+.revise-mcq-opt.correct{background:var(--green-light);color:var(--green);font-weight:700;border-left:3px solid var(--green)}
+.revise-blank{display:inline-block;background:var(--green-light);color:var(--green);font-weight:700;border-bottom:2px solid var(--green);padding:0 8px;border-radius:4px;margin:0 2px}
+.revise-match-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.revise-match-table th{background:var(--navy);color:#fff;padding:7px 10px;font-size:11px;font-weight:700;text-align:left}
+.revise-match-table td{padding:7px 10px;border:1px solid var(--border)}
+.revise-match-table tr:nth-child(odd) td{background:var(--parchment)}
 .mock-exam-bar{display:flex;align-items:center;gap:10px;padding:8px 0 14px}
 .btn-mock-exam{padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;white-space:nowrap}
 .btn-mock-exam:hover{background:var(--navy-mid)}
@@ -329,18 +432,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .btn-start-mock{padding:11px 24px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
 .btn-start-mock:disabled{opacity:.35;cursor:default}
 .btn-start-mock:not(:disabled):hover{background:var(--navy-mid)}
-.q-nav-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:101px;z-index:7}
+.q-nav-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;position:sticky;top:101px;z-index:7}
 .q-nav-bar::-webkit-scrollbar{display:none}
 @media(min-width:820px){.q-nav-bar{top:57px}}
-.q-nav-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:var(--parchment);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
+.q-nav-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--parchment);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
 .q-nav-dot.current{border-color:var(--navy);background:var(--navy);color:#fff}
-.q-nav-dot.answered-good{border-color:var(--green);background:var(--green-light);color:var(--green)}
-.q-nav-dot.answered-mid{border-color:#e8a020;background:var(--gold-light);color:#b8860b}
-.q-nav-dot.answered-poor{border-color:var(--red);background:var(--red-light);color:var(--red)}
-.q-nav-dot.skipped{border-color:var(--muted);background:#fff;color:var(--muted);opacity:.6}
-.q-nav-prev,.q-nav-next{padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;color:var(--navy);transition:all .15s;font-family:inherit}
-.q-nav-prev:disabled,.q-nav-next:disabled{opacity:.35;cursor:default}
+.q-nav-dot.answered-good{border-color:var(--navy);background:var(--navy);color:#fff}
+.q-nav-dot.answered-mid{border-color:var(--navy);background:var(--navy);color:#fff}
+.q-nav-dot.answered-poor{border-color:var(--navy);background:var(--navy);color:#fff}
+.q-nav-dot.skipped{border-color:var(--muted);background:#fff;color:var(--muted);opacity:.5}
+.q-nav-prev,.q-nav-next{padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;color:var(--navy);transition:all .15s;font-family:inherit}
+.q-nav-prev:disabled,.q-nav-next:disabled{opacity:.3;cursor:default}
 .q-nav-prev:not(:disabled):hover,.q-nav-next:not(:disabled):hover{border-color:var(--navy);background:var(--parchment)}
+.q-nav-dots-wrap{display:flex;gap:5px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0;align-items:center}
+.q-nav-dots-wrap::-webkit-scrollbar{display:none}
+.mock-submit-bar{position:sticky;bottom:0;z-index:10;background:#fff;border-top:1.5px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.mock-submit-progress{font-size:13px;font-weight:600;color:var(--muted)}
+.mock-submit-btn{padding:10px 24px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+.mock-submit-btn:hover{background:#3a9d6e}
 
 /* ── MODEL ANSWER PEEK (study mode) ── */
 .btn-peek{width:100%;padding:11px;background:transparent;color:var(--sage);font-size:13px;font-weight:600;border:1.5px dashed var(--sage);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
@@ -366,7 +475,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 }
 .teacher-mark.great{border-color:#4ccc8a;box-shadow:0 2px 16px rgba(76,175,130,.4);background:#1a3030}
 .teacher-mark.good {border-color:#e8a020;box-shadow:0 2px 16px rgba(232,184,75,.4);background:#2a2010}
-.teacher-mark .tm-score{font-size:28px;font-weight:900;line-height:1;color:#ff6b6b;text-align:center}
+.teacher-mark .tm-score{font-size:28px;font-weight:900;line-height:1;color:#e07b54;text-align:center}
 .teacher-mark.great .tm-score{color:#4ccc8a}
 .teacher-mark.good  .tm-score{color:#e8c060}
 .teacher-mark .tm-sep{width:55%;border-top:1.5px solid rgba(255,255,255,.3);margin:4px 0}
@@ -384,7 +493,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 }
 .paper-teacher-mark.great{border-color:#4ccc8a;box-shadow:0 3px 20px rgba(76,175,130,.4);background:#1a3030}
 .paper-teacher-mark.good {border-color:#e8a020;box-shadow:0 3px 20px rgba(232,184,75,.4);background:#2a2010}
-.paper-teacher-mark .ptm-score{font-size:30px;font-weight:900;line-height:1;color:#ff6b6b;text-align:center}
+.paper-teacher-mark .ptm-score{font-size:30px;font-weight:900;line-height:1;color:#e07b54;text-align:center}
 .paper-teacher-mark.great .ptm-score{color:#4ccc8a}
 .paper-teacher-mark.good  .ptm-score{color:#e8c060}
 .paper-teacher-mark .ptm-sep{width:55%;border-top:1.5px solid rgba(255,255,255,.3);margin:4px 0}
@@ -471,6 +580,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
     </div>
     <div class="wl-error" id="wlError"></div>
     <button class="wl-btn" onclick="checkPasscode()">Unlock →</button>
+    <div class="wl-verse" id="wlVerse"></div>
   </div>
   <div class="wl-footer">Authorised users only</div>
 </div>
@@ -567,11 +677,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
       <div class="quiz-lesson-title" id="quizLessonTitle"></div>
       <div class="quiz-part-label"   id="quizPartLabel"></div>
     </div>
-    <div class="mode-badge study" id="modeBadge">Study</div>
     <div class="quiz-timer" id="quizTimer">0:00</div>
     <div class="q-counter" id="qCounter"></div>
   </div>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="q-timer-bar">
+    <span class="q-timer-label">This question:</span>
+    <span class="q-timer" id="qTimer">0:00</span>
+  </div>
 
   <!-- Question-type tabs -->
   <div class="qtype-tabs-wrap">
@@ -583,6 +698,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
   <div class="quiz-body" id="quizBody">
     <!-- question + answer rendered here dynamically -->
+  </div>
+
+  <!-- MOCK EXAM ANSWER SHEET -->
+  <div class="mock-answer-sheet" id="mockAnswerSheet"></div>
+
+  <!-- Mock exam submit button - fixed at bottom -->
+  <div class="mock-submit-bar" id="mockSubmitBar" style="display:none">
+    <div class="mock-submit-progress" id="mockSubmitProgress">0 / 0 answered</div>
+    <button class="mock-submit-btn" onclick="submitMockExam()">Submit Exam ✓</button>
   </div>
 
   <!-- STUDY MODE summary -->
@@ -949,8 +1073,12 @@ const DATA = {
                 { q:"The movement of plates that creates stress and tension in the rocks causing them to stretch and cracks result in __________.", options:["fold","fault","mountain","earthquake"], correct:1 },
                 { q:"__________ refers to a bowl-shaped depression found at the top of the volcano.", options:["crater","vent","chamber","volcanic cone"], correct:0 },
                 { q:"The point of origin of an Earthquake is called the __________.", options:["epicentre","focus","seismic wave","magnitude"], correct:1 },
+                { q:"Consider: i. Mt. Fujiyama is a dormant volcano  ii. Mt. Kilimanjaro is a dormant volcano  iii. Mt. Tanzania is a dormant volcano. Which of the statement(s) is/are true?", options:["i is true","ii is true","iii is true","I, ii, iii are true"], correct:0 },
+                { q:"Statement: Magma gushes out when it finds vents. Reason: Interior of the Earth contains compressed hot magma. Which of the statement(s) is/are true?", options:["Statements & reason are true","Statement is true, reason is false","Statement is false, reason is true","Statement & reason are false"], correct:0 },
+                { q:"Statement I: Mountain ranges are formed by the collision of tectonic plates. Statement II: The movement of tectonic plates is due to the thermal energy from the mantle.", options:["Statement I is false, II is true","Statement I and II are false","Statement I is true, II is false","Statement I and II are true"], correct:3 },
               ],
               fill:[],
+              truefalse:[],
               match:[
                 {
                   left:["Endogenetic process","Mantle","Convergent boundaries","Earthquake","Composite volcano"],
@@ -966,6 +1094,7 @@ const DATA = {
                 { q:"What is a Volcano? Mention its major components.", answer:"A volcano is a vent or an opening on the surface of the Earth crust, through which hot solid, liquid and gaseous materials erupt.\n\nVolcanoes have the following major components: Magma chamber, Vents and Volcanic cone." },
                 { q:"What is an Earthquake and how does it occur?", answer:"Earthquakes are generally caused by the sudden vibrations in the Earth's crust, which spreads outward in all directions as waves from the source of disturbance." },
                 { q:"What are seismic waves and mention its types?", answer:"Earthquakes generate seismic waves. The nature, force and speed of these seismic waves depend on the nature of the medium through which it passes.\n\nThere are three types of seismic waves:\n1. Primary or P-waves\n2. Secondary or S-waves\n3. Surface Waves (or) L-waves" },
+                { q:"Write about the Pacific Ring of Fire.", answer:"One such area is the Circum-Pacific Ring of Fire, where the Pacific Plate meets many surrounding plates. This is the area where most of the world's earthquakes and volcanic eruptions occur along the plate boundaries." },
               ],
               truefalse:[],
               reasons:[
@@ -975,10 +1104,14 @@ const DATA = {
                 { termA:"Core", termB:"Crust", answerA:"The core is the innermost and hottest layer of the Earth which lies below the mantle.", answerB:"Crust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth." },
                 { termA:"Epicentre", termB:"Hypocentre (Focus)", answerA:"Epicentre is a point on the Earth's surface that lies directly above the focus. The impact of the Earthquake is felt the most at the epicentre.", answerB:"Hypocentre (Focus) is the point inside the Earth where the earthquake originates. It generates a series of elastic waves." },
                 { termA:"Convergent Boundary", termB:"Divergent Boundary", answerA:"Here the plates move toward each other and sometimes, a plate sinks under another. This process is called subduction.", answerB:"Here the plates pull away from each other as magma pushes up from the mantle, creating new crust." },
+                { termA:"Primary waves (P-waves)", termB:"Secondary waves (S-waves)", answerA:"Primary or P-waves are the fastest of all the Earthquake waves and the first to reach the epicentre. They travel through solids, liquids and gases.", answerB:"Secondary or S-waves travel only through solids. These transverse waves shake the ground perpendicular to the direction of travel. They are slower than P-waves." },
+                { termA:"Shield Volcano", termB:"Volcanic Dome", answerA:"Shield volcanoes are formed by intense viscous lava. These are shallow depositions with gently sloping sides.", answerB:"A lava dome or volcanic dome is roughly a circular mound formed due to the slow ejection of viscous lava from a volcano." },
               ],
               paragraph:[
                 { q:"Describe the structure of the Earth.", answer:"The structure of the Earth's interior is divided into three layers namely the crust, the mantle and the core.\n\nCrust:\nCrust is the outer layer of the Earth, where we live. It is the skin of our Earth, which ranges from 5 to 30 km. It is the solid and rigid layer of the Earth.\n\nMantle:\nThe interior part beneath the crust is called mantle, which is about 2,900 km thick.\n\nCore:\nThe core is the innermost and hottest layer of the Earth which lies below the mantle." },
-                { q:"Write a note on the internal and external processes of Earth.", answer:"The forces that act from the Earth's interior towards the Earth's surface are called Internal processes. They are caused by the heat energy from the interior of the Earth. They are responsible for building up the relief of the Earth's surface through folding, faulting and volcanic activity.\n\nThe forces that act on the surface of the Earth due to natural agents like running water, glacier, wind, waves, etc., are called External processes. They wear down (denude) the surface features built up by internal processes. The wearing down and rebuilding of the Earth's surface is known as gradation." }
+                { q:"Write a note on the internal and external processes of Earth.", answer:"The forces that act from the Earth's interior towards the Earth's surface are called Internal processes. They are caused by the heat energy from the interior of the Earth. They are responsible for building up the relief of the Earth's surface through folding, faulting and volcanic activity.\n\nThe forces that act on the surface of the Earth due to natural agents like running water, glacier, wind, waves, etc., are called External processes. They wear down (denude) the surface features built up by internal processes. The wearing down and rebuilding of the Earth's surface is known as gradation." },
+                { q:"How are volcanoes classified based on the periodicity of their eruptions?", answer:"Based on the periodicity of eruptions, volcanoes are classified into:\n\n(i) Active volcano: Active volcanoes are those which constantly eject volcanic lava, gases and fragmented materials.\n\n(ii) Dormant volcano: Volcanoes that do not show any sign of volcanic activity for a long period of time are known as dormant volcanoes.\n\n(iii) Extinct volcano: When a volcano permanently stops its volcanic activity, then it is called an extinct volcano." },
+                { q:"Explain the effects of Volcanoes.", answer:"Positive effects:\nVolcanic materials enrich the soil fertility that promotes agricultural activities. The hot volcanic region helps in generating geothermal energy.\n\nNegative effects:\nVolcanic eruption causes Earthquakes, flash floods, mud slide and rock fall. Lava can travel very far and burn, bury, or damage anything in its path." },
               ]
             }
           },
@@ -1380,10 +1513,13 @@ function scoreAnswer(userText, refText){
       diff.push({type:"ok",word:rw});
       ui=found+1;
     } else {
-      // check if there's a near-match (misspelling)
+      // check if there's a near-match (misspelling only — same first letter, similar length)
       let nearIdx=-1;
       for(let k=ui;k<Math.min(ui+5,user.length);k++){
-        if(levenshtein(user[k],rw)<=2 && user[k].length>2){ nearIdx=k; break; }
+        const uw=user[k], rlen=rw.length, ulen=uw.length;
+        // Must share first letter, length within 2, levenshtein <=2, and word length > 3
+        if(uw.length>3 && rlen>3 && uw[0]===rw[0] &&
+           Math.abs(rlen-ulen)<=2 && levenshtein(uw,rw)<=2){ nearIdx=k; break; }
       }
       if(nearIdx>=0){
         for(let k=ui;k<nearIdx;k++) diff.push({type:"wrong",word:user[k]});
@@ -1417,6 +1553,7 @@ let scores         = {};        // "lessonId:qtype" → avg%
 // Mode
 // ── SESSION LOG ──
 let sessionLog = [];
+let sessionSpellErrors = []; // {wrong, correct, lessonTitle, qtype}
 let currentMode = "study";  // always study — exam mode removed
 let examAnswers = [];       // used by mock exam tracking
 let pendingLesson = null;   // stub - not used // {subject, part, lesson, qtype, pct, timeMs, ts}
@@ -1433,6 +1570,15 @@ let _questionTimes = [];  // ms per question
 //  INIT
 // ═══════════════════════════════════════════════════════
 function init(){
+  // Show rotating Bible verse on welcome screen
+  const verses=[
+    {text:'"I can do all things through Christ who strengthens me."', ref:"Philippians 4:13"},
+    {text:'"For the LORD gives wisdom; from his mouth come knowledge and understanding."', ref:"Proverbs 2:6"},
+  ];
+  const v=verses[Math.floor(Date.now()/86400000)%verses.length];
+  const el=document.getElementById("wlVerse");
+  if(el) el.innerHTML=`<span class="wl-verse-text">${v.text}</span><span class="wl-verse-ref">${v.ref}</span>`;
+
   renderSidebar();
   renderSubjectTabs();
   renderPartTabs();
@@ -1517,16 +1663,114 @@ function renderLessons(){
       <div class="lesson-info">
         <div class="lesson-name">${lesson.title}</div>
         <div class="lesson-meta">${lesson.unit} · ${totalQ} question${totalQ!==1?"s":""} · ${lesson.month}</div>
+        <div class="lesson-card-modes">
+          <button class="btn-revise" onclick="event.stopPropagation();openRevise(${JSON.stringify(lesson.id)})">📖 Revise</button>
+          <button class="btn-practice" onclick="event.stopPropagation();openLesson(lessons_${i})">✏️ Practice</button>
+        </div>
       </div>${badge}`;
-    card.onclick=()=>openLesson(lesson);
+    // Store lesson ref for onclick
+    card.dataset.idx = i;
+    card.onclick = ()=>openLesson(lesson);
+    // Fix practice button to use correct lesson ref
+    card.querySelector(".btn-practice").onclick = (e)=>{ e.stopPropagation(); openLesson(lesson); };
+    card.querySelector(".btn-revise").onclick  = (e)=>{ e.stopPropagation(); openRevise(lesson); };
     grid.appendChild(card);
   });
 }
 
 // ═══════════════════════════════════════════════════════
+//  REVISE MODE
+// ═══════════════════════════════════════════════════════
+function openRevise(lesson){
+  currentLesson = lesson;
+  currentMode = "revise"; // prevent renderCurrentQuestion from overwriting
+  const ov = document.getElementById("quizOverlay");
+  ov.classList.add("visible");
+  ov.scrollTo(0,0);
+  document.getElementById("quizLessonTitle").textContent = lesson.title;
+  document.getElementById("quizPartLabel").textContent = `${currentSubject} › ${currentPart} › ${lesson.unit}`;
+  document.getElementById("summaryScreen").classList.remove("visible");
+  const mas=document.getElementById("mockAnswerSheet");
+  if(mas){ mas.classList.remove("visible"); mas.innerHTML=""; }
+  document.getElementById("qNavBar").style.display = "none";
+  document.getElementById("qtypeTabs").innerHTML = `<div style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--sage)">📖 Revision Notes — all questions &amp; answers</div>`;
+  const qTimerBar = document.querySelector(".q-timer-bar");
+  if(qTimerBar) qTimerBar.style.display = "none";
+  stopTimer();
+  const _qt2=document.getElementById("quizTimer"); if(_qt2) _qt2.textContent="";
+  renderRevise(lesson);
+}
+
+function renderRevise(lesson){
+  const body = document.getElementById("quizBody");
+  body.style.display = "block";
+  body.scrollTo(0,0);
+  document.getElementById("quizOverlay").scrollTo(0,0);
+
+  let html = `<div class="revise-body">`;
+
+  QTYPES.forEach(qt=>{
+    const qs = lesson.questions[qt.id]||[];
+    if(!qs.length) return;
+
+    html += `<div class="revise-qtype-section">
+      <div class="revise-qtype-heading">${qt.icon} ${qt.label}</div>`;
+
+    qs.forEach((q,i)=>{
+      html += `<div class="revise-card"><div class="revise-q-num">Q${i+1}</div>`;
+
+      if(qt.id==="mcq"){
+        // shuffle deterministically — show correct highlighted
+        html += `<div class="revise-q">${q.q}</div>`;
+        q.options.forEach((opt,oi)=>{
+          html += `<div class="revise-mcq-opt${oi===q.correct?" correct":""}">${String.fromCharCode(65+oi)}. ${opt}</div>`;
+        });
+
+      } else if(qt.id==="fill"){
+        let idx=0;
+        const filled = q.sentence.replace(/___/g,()=>{
+          const ans = q.answers[idx++]||"";
+          return `<span class="revise-blank">${ans}</span>`;
+        });
+        html += `<div class="revise-fill-sentence">${filled}</div>`;
+
+      } else if(qt.id==="match"){
+        html += `<div class="revise-q">Match the following</div>
+          <table class="revise-match-table">
+            <thead><tr><th>Column A</th><th>Column B</th></tr></thead>
+            <tbody>${q.left.map((l,li)=>`<tr><td>${l}</td><td>${q.right[q.correct[li]]}</td></tr>`).join("")}</tbody>
+          </table>`;
+
+      } else if(qt.id==="distinguish"){
+        const qText = q.q || `Distinguish between ${q.termA} and ${q.termB}`;
+        html += `<div class="revise-q">${qText}</div>
+          ${buildDistTable(q)}`;
+
+      } else if(qt.id==="truefalse"){
+        html += `<div class="revise-q">${q.statement||q.q}</div>
+          <div class="revise-mcq-opt correct">Answer: ${q.answer==="true"?"True ✓":"False ✗"}</div>
+          ${q.reason?`<div class="revise-answer" style="margin-top:8px">${q.reason}</div>`:""}`;
+
+      } else {
+        // brief, reasons, paragraph
+        html += `<div class="revise-q">${q.q}</div>
+          <div class="revise-answer">${(q.answer||"").replace(/</g,"&lt;")}</div>`;
+      }
+
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  body.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
 //  LESSON START (direct — no mode picker)
 // ═══════════════════════════════════════════════════════
-function openLesson(lesson){ startLesson(lesson); }
+function openLesson(lesson){ currentMode="study"; startLesson(lesson); }
 function startLesson(lesson){
   currentLesson = lesson;
   const firstWithQ=QTYPES.find(qt=>lesson.questions[qt.id]&&lesson.questions[qt.id].length>0);
@@ -1539,6 +1783,8 @@ function startLesson(lesson){
   document.getElementById("quizPartLabel").textContent=`${currentSubject} › ${currentPart} › ${lesson.unit}`;
   document.getElementById("summaryScreen").classList.remove("visible");
   document.getElementById("answerPaper").classList.remove("visible");
+  const _mas=document.getElementById("mockAnswerSheet");
+  if(_mas){ _mas.classList.remove("visible"); _mas.innerHTML=""; }
 
   renderQTypeTabs();
   startQTypeSession();
@@ -1575,12 +1821,16 @@ function startTimer(){
   _questionStart=Date.now();
   _questionTimes=[];
   _timerInterval=setInterval(()=>{
-    const el=document.getElementById("quizTimer");
-    if(el) el.textContent=fmtMs(Date.now()-_sessionStart);
+    const totalEl=document.getElementById("quizTimer");
+    const qEl=document.getElementById("qTimer");
+    if(totalEl) totalEl.textContent=fmtMs(Date.now()-_sessionStart);
+    if(qEl)     qEl.textContent="Q: "+fmtMs(Date.now()-_questionStart);
   },1000);
 }
 function stopTimer(){
   if(_timerInterval){ clearInterval(_timerInterval); _timerInterval=null; }
+  const qEl=document.getElementById("qTimer");
+  if(qEl) qEl.textContent="";
 }
 function stampQuestion(){
   const elapsed=Date.now()-_questionStart;
@@ -1614,6 +1864,8 @@ function startQTypeSession(){
   const total=(currentLesson.questions[currentQType]||[]).length;
   questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
   startTimer();
+  const qTimerBar = document.querySelector(".q-timer-bar");
+  if(qTimerBar) qTimerBar.style.display = "flex";
   renderNavBar();
   renderCurrentQuestion();
 }
@@ -1670,6 +1922,12 @@ function jumpToQuestion(idx){
 //  RENDER CURRENT QUESTION
 // ═══════════════════════════════════════════════════════
 function renderCurrentQuestion(){
+  if(currentMode==="revise") return;
+  if(currentLesson?.id==="__mock__") return; // mock exam uses renderMockQuestion directly
+  // Reset per-question timer
+  _questionStart=Date.now();
+  const qEl=document.getElementById("qTimer");
+  if(qEl) qEl.textContent="0:00";
   const qs=currentLesson.questions[currentQType]||[];
   const body=document.getElementById("quizBody");
   body.style.display="block";
@@ -1681,7 +1939,7 @@ function renderCurrentQuestion(){
 
   // update progress
   const total=qs.length;
-  document.getElementById("qCounter").textContent=total?`${currentQIndex+1} / ${total}`:"";
+  const _qcr=document.getElementById("qCounter"); if(_qcr) _qcr.textContent=total?`${currentQIndex+1} / ${total}`:"";
   document.getElementById("progressFill").style.width=total?`${(currentQIndex/total)*100}%`:"0%";
 
   if(!total){
@@ -1733,7 +1991,9 @@ function renderMCQ(q, qnum, isLast){
       <span>${o.text}</span>
     </div>`).join("");
 
-  const actionBtn = ``;
+  const actionBtn = currentMode==="exam"
+    ? `<button class="btn-next" id="examNextBtn" onclick="examNextMCQ(${newCorrect},${isLast})" disabled style="margin-bottom:24px">${isLast?"Finish ✓":"Next →"}</button>`
+    : ``;
 
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
@@ -1744,16 +2004,24 @@ function renderMCQ(q, qnum, isLast){
     </div>
     ${actionBtn}
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
 }
 function selectMCQ(idx, correctIdx, isLast){
-  // Prevent re-clicking after answer is revealed
-  if(document.getElementById("btnRow")?.style.display==="flex") return;
+  if(currentMode!=="exam" && document.getElementById("btnRow")?.style.display==="flex") return;
   mcqSelected=idx;
-  // Immediately show green/red on all options
+
+  if(currentMode==="exam"){
+    // Exam mode: just highlight selected, enable Next button
+    document.querySelectorAll(".mcq-option").forEach((el,i)=>el.classList.toggle("selected",i===idx));
+    const eb=document.getElementById("examNextBtn");
+    if(eb) eb.disabled=false;
+    return;
+  }
+
+  // Study mode: instant green/red
   document.querySelectorAll(".mcq-option").forEach((el,i)=>{
     el.onclick=null;
     if(i===correctIdx) el.classList.add("correct");
@@ -1767,13 +2035,14 @@ function selectMCQ(idx, correctIdx, isLast){
   showSimpleResult(pct,
     (idx===correctIdx?"Correct! Well done 🎉":"Incorrect. The correct answer is highlighted in green.")
     +` ${timeChip(elapsed)}`);
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 function examNextMCQ(correctIdx, isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
   const pct=mcqSelected===correctIdx?100:0;
   sessionResults.push({pct});
+  markMockAnswered(pct);
   // Read displayed text from the DOM (shuffled order)
   const selectedText = mcqSelected!==null
     ? document.querySelector(`#mcqopt${mcqSelected} span:last-child`)?.textContent || "(not answered)"
@@ -1784,7 +2053,10 @@ function examNextMCQ(correctIdx, isLast){
     userText: selectedText,
     modelText: correctText,
     pct,
-    qtype: currentQType
+    qtype: currentQType,
+    lessonTitle: currentLesson.title,
+    lessonId: currentLesson.id,
+    mockIdx: mockQIndex
   });
   if(isLast){ showMockResults(); return; }
   mcqSelected=null; nextQuestion();
@@ -1798,13 +2070,17 @@ function renderFill(q, qnum, isLast){
     `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false">`
   );
 
-  const peekBtn = `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
        <div class="peek-panel" id="peekPanel">
          <div class="peek-label">Answer</div>
          <div class="peek-text">${q.answers.join(" / ")}</div>
-       </div>`;
+       </div>` : "";
 
-  const actionBar = `<div class="answer-actions">
+  const actionBar = currentMode==="exam"
+    ? `<div class="answer-actions">
+        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM()">${isLast?"Finish ✓":"Next →"}</button>
+       </div>`
+    : `<div class="answer-actions">
         <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM()">Check Answer</button>
         <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>
        </div>`;
@@ -1818,10 +2094,10 @@ function renderFill(q, qnum, isLast){
     ${peekBtn}
     ${actionBar}
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
 }
 
 function toggleFillPeek(){
@@ -1841,7 +2117,9 @@ function toggleFillPeek(){
 function checkFillFromDOM(){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  checkFill(q.answers);
+  const isLast=currentQIndex>=qs.length-1;
+  if(currentMode==="exam") examNextFill(q.answers, isLast);
+  else checkFill(q.answers);
 }
 
 function checkFill(answers){
@@ -1880,7 +2158,7 @@ function checkFill(answers){
   logQuestion(pct,fillElapsed);
   renderNavBar();
   showSimpleResult(pct,`${correct} / ${answers.length} correct ${timeChip(fillElapsed)}`);
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 
 function examNextFill(answers, isLast){
@@ -1891,7 +2169,8 @@ function examNextFill(answers, isLast){
   answers.forEach((ans,i)=>{ if(levenshtein(userVals[i].toLowerCase(),ans.toLowerCase())<=1) correct++; });
   const pct=Math.round(100*correct/answers.length);
   sessionResults.push({pct});
-  examAnswers.push({q:q.sentence,userText:userVals.join(" / "),modelText:answers.join(" / "),pct,qtype:currentQType});
+  markMockAnswered(pct);
+  examAnswers.push({q:q.sentence,userText:userVals.join(" / "),modelText:answers.join(" / "),pct,qtype:currentQType,lessonTitle:currentLesson.title,lessonId:currentLesson.id,mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
@@ -1905,15 +2184,19 @@ function renderMatch(q, qnum, isLast){
     <div><select class="match-right-select" id="match${i}">
       <option value="">— Select —</option>${rightOpts}
     </select></div>`).join("");
-  const actionBar = `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
+  const actionBar = currentMode==="exam"
+    ? `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
+        <button class="btn-check" id="checkBtn" onclick="examNextMatchFromDOM(${isLast})" style="border-radius:0">${isLast?"Finish ✓":"Next →"}</button>
+       </div>`
+    : `<div class="answer-actions" style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px">
         <button class="btn-check" id="checkBtn" onclick="checkMatchFromDOM()" style="border-radius:0">Check Answer</button>
         <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>
        </div>`;
-  const peekBtn = `<button class="btn-peek" id="matchPeekBtn" onclick="toggleMatchPeek()">👁 View Answers before matching</button>
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" id="matchPeekBtn" onclick="toggleMatchPeek()">👁 View Answers before matching</button>
        <div class="peek-panel" id="peekPanel">
          <div class="peek-label">Correct Matches</div>
          ${q.left.map((l,i)=>`<div class="peek-text" style="margin-bottom:4px"><strong>${l}</strong> → ${q.right[q.correct[i]]}</div>`).join("")}
-       </div>`;
+       </div>` : "";
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Match the Following</div>
@@ -1923,10 +2206,10 @@ function renderMatch(q, qnum, isLast){
     ${peekBtn}
     ${actionBar}
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
 }
 function toggleMatchPeek(){
   const p=document.getElementById("peekPanel");
@@ -1970,7 +2253,7 @@ function checkMatchFromDOM(){
   hidePeek();
   document.getElementById("checkBtn").disabled=true;
   showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 function checkMatch(correctMap, count, isLast){
   checkMatchFromDOM();
@@ -1994,8 +2277,9 @@ function examNextMatch(correctMap, leftLabels, isLast){
   const modelPairs=leftLabels.map((l,i)=>`${l} → ${correctMap[i]}`);
   const pct=Math.round(100*correct/count);
   sessionResults.push({pct});
+  markMockAnswered(pct);
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
-  examAnswers.push({q:"Match: "+leftLabels.join(", "),userText:pairs.join("\n"),modelText:modelPairs.join("\n"),pct,qtype:currentQType});
+  examAnswers.push({q:"Match: "+leftLabels.join(", "),userText:pairs.join("\n"),modelText:modelPairs.join("\n"),pct,qtype:currentQType,lessonTitle:currentLesson.title,lessonId:currentLesson.id,mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
@@ -2016,7 +2300,7 @@ function checkMatch(correctMap, count, isLast){
   logQuestion(pct,matchElapsed);
   document.getElementById("checkBtn").disabled=true;
   showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 
 // ── TEXT ANSWER (brief / reasons / paragraph / detail) ──
@@ -2025,12 +2309,14 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   const label = labelMap[currentQType] || (isParagraph?"Answer in Paragraph / Detail":"Answer in Brief");
   const placeholder = isParagraph ? "Write a detailed answer…" : "Write your answer…";
   const minH = isParagraph ? 180 : 120;
-  const peekBtn = `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
          <div class="peek-label">Model Answer</div>
          <div class="peek-text">${q.answer.replace(/</g,"&lt;")}</div>
-       </div>`;
-  const actionBtns = `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
+       </div>` : "";
+  const actionBtns = currentMode==="exam"
+    ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
+    : `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
@@ -2044,39 +2330,55 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
       <div class="answer-actions">${actionBtns}</div>
     </div>
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
 }
 
 // ── TRUE OR FALSE ──
 function renderTrueFalse(q, qnum, isLast){
-  // q.statement, q.answer (true|false), q.reason (optional explanation)
-  const actionBtn = ``;
+  const actionBtn = currentMode==="exam"
+    ? `<button class="btn-next" id="examNextBtn" onclick="examNextTF('${q.answer}',${isLast})" disabled style="margin-bottom:24px">${isLast?"Finish ✓":"Next →"}</button>`
+    : ``;
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">True or False</div>
       <div class="q-num">${qnum}</div>
       <div class="q-text">${q.statement||q.q}</div>
       <div class="mcq-options" style="margin-top:14px">
-        <div class="mcq-option" id="tfopt0" onclick="selectTF('true','${q.answer}',${isLast},${JSON.stringify(q.reason||"")})">
+        <div class="mcq-option" id="tfopt0" data-val="true" data-correct="${q.answer}" data-reason="${(q.reason||"").replace(/"/g,"&quot;")}" onclick="selectTFFromEl(this,${isLast})">
           <span class="mcq-opt-letter">T</span><span>True</span>
         </div>
-        <div class="mcq-option" id="tfopt1" onclick="selectTF('false','${q.answer}',${isLast},${JSON.stringify(q.reason||"")})">
+        <div class="mcq-option" id="tfopt1" data-val="false" data-correct="${q.answer}" data-reason="${(q.reason||"").replace(/"/g,"&quot;")}" onclick="selectTFFromEl(this,${isLast})">
           <span class="mcq-opt-letter">F</span><span>False</span>
         </div>
       </div>
     </div>
     ${actionBtn}
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
+}
+function selectTFFromEl(el, isLast){
+  const selected = el.dataset.val;
+  const correct  = el.dataset.correct;
+  const reason   = el.dataset.reason||"";
+  selectTF(selected, correct, isLast, reason);
 }
 function selectTF(selected, correct, isLast, reason){
   if(document.getElementById("btnRow")?.style.display==="flex") return;
+
+  if(currentMode==="exam"){
+    // Exam mode: just highlight selected, enable Next
+    document.getElementById("tfopt0").classList.toggle("selected", selected==="true");
+    document.getElementById("tfopt1").classList.toggle("selected", selected==="false");
+    const eb=document.getElementById("examNextBtn");
+    if(eb){ eb.disabled=false; eb.dataset.sel=selected; }
+    return;
+  }
   const isCorrect = selected===correct;
   if(document.getElementById("btnRow")?.style.display==="flex") return;
   document.querySelectorAll(".mcq-option").forEach(el=>el.onclick=null);
@@ -2101,17 +2403,19 @@ function selectTF(selected, correct, isLast, reason){
     </div>
     ${reason?`<div class="result-section"><div class="result-section-title correct">Reason</div><div class="diff-answer-block model">${reason.replace(/</g,"&lt;")}</div></div>`:""}`;
   renderNavBar();
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 function examNextTF(correct, isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  const sel = document.querySelector(".mcq-option.selected span:last-child")?.textContent?.toLowerCase();
+  const eb=document.getElementById("examNextBtn");
+  const sel = eb?.dataset?.sel || (document.querySelector(".mcq-option.selected span:last-child")?.textContent?.toLowerCase());
   const pct = sel===correct?100:0;
   sessionResults.push({pct});
-  examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse"});
+  markMockAnswered(pct);
+  examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse", lessonTitle:currentLesson.title, lessonId:currentLesson.id});
   if(isLast){ showMockResults(); return; }
-  mcqSelected=null; nextQuestion();
+  nextQuestion();
 }
 function togglePeek(){
   const p=document.getElementById("peekPanel");
@@ -2136,7 +2440,8 @@ function examNextText(isLast){
   const userText=document.getElementById("answerInput").value.trim();
   const {pct}=scoreAnswer(userText||"", q.answer);
   sessionResults.push({pct});
-  examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType});
+  markMockAnswered(pct);
+  examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id});
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
@@ -2177,7 +2482,12 @@ function checkTextAnswer(){
   const skipBtn=document.getElementById("answerArea")?.querySelector(".btn-skip");
   if(skipBtn) skipBtn.disabled=true;
 
-  const {pct}=scoreAnswer(userText, q.answer);
+  const {pct, diff}=scoreAnswer(userText, q.answer);
+  // Collect spelling errors for session report
+  diff.forEach(d=>{
+    if(d.type==="misspelled")
+      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
+  });
   sessionResults.push({pct});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const txtElapsed=stampQuestion();
@@ -2199,16 +2509,18 @@ function checkTextAnswer(){
 
   document.getElementById("answerArea").style.display="none";
   hidePeek();
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 
 // ── DISTINGUISH BETWEEN ──
 function renderDistinguish(q, qnum, isLast){
-  const peekBtn = `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
          ${buildDistTable(q, true)}
-       </div>`;
-  const actionBtns = `<button class="btn-check" id="checkBtn" onclick="checkDistinguish()">Check Answer</button>
+       </div>` : "";
+  const actionBtns = currentMode==="exam"
+    ? `<button class="btn-check" id="checkBtn" onclick="examNextDistinguish(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
+    : `<button class="btn-check" id="checkBtn" onclick="checkDistinguish()">Check Answer</button>
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
 
   document.getElementById("quizBody").innerHTML=`
@@ -2232,10 +2544,10 @@ function renderDistinguish(q, qnum, isLast){
       <div class="answer-actions" style="padding:0 12px 12px">${actionBtns}</div>
     </div>
     <div class="result-panel" id="resultPanel"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
-    </div>`;
+    </div>`:""}`;
 }
 
 // Toggle peek for distinguish — disables BOTH textareas
@@ -2300,11 +2612,12 @@ function examNextDistinguish(isLast){
   const combined=userA+" "+userB;
   const {pct}=scoreAnswer(combined, q.answerA+" "+q.answerB);
   sessionResults.push({pct});
+  markMockAnswered(pct);
   examAnswers.push({
     q:`Distinguish: ${q.termA} vs ${q.termB}`,
     userText:`${q.termA}: ${userA}\n${q.termB}: ${userB}`,
     modelText:`${q.termA}:\n${q.answerA}\n\n${q.termB}:\n${q.answerB}`,
-    pct, qtype:currentQType
+    pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id
   });
   if(isLast){ showMockResults(); return; }
   nextQuestion();
@@ -2363,7 +2676,7 @@ function checkDistinguish(){
 
   document.getElementById("answerArea").style.display="none";
   hidePeek();
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 
 // ── SIMPLE RESULT (MCQ / FILL / MATCH) ──
@@ -2400,7 +2713,7 @@ function skipQuestion(isLast){
     if(el) el.disabled=true;
   });
   hidePeek();
-  document.getElementById("btnRow").style.display="flex";
+  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 
 // ── HIDE PEEK BUTTON & PANEL ──
@@ -2424,10 +2737,17 @@ function tryAgainQuestion(){
 function nextQuestion(){
   // Mock exam flow
   if(currentLesson.id==="__mock__"){
+    saveMockAnswer(mockQIndex);
+    // Mark as skipped if not already answered
+    if(mockExamStates[mockQIndex] && !mockExamStates[mockQIndex].answered){
+      mockExamStates[mockQIndex]={answered:false,skipped:true,pct:null};
+    }
     mockQIndex++;
     mcqSelected=null; matchAnswers={};
     document.getElementById("quizBody").style.display="block";
+    if(mockQIndex>=mockQuestions.length){ showMockResults(); return; }
     renderMockQuestion();
+    setTimeout(()=>restoreMockAnswer(mockQIndex),0);
     return;
   }
   const total=(currentLesson.questions[currentQType]||[]).length;
@@ -2440,7 +2760,8 @@ function nextQuestion(){
 // ═══════════════════════════════════════════════════════
 //  MOCK EXAM
 // ═══════════════════════════════════════════════════════
-let mockSubject   = "Science";
+let mockExamStates = []; // {answered, skipped, pct} per mock question index
+let mockSavedAnswers = []; // saved user answer per mock question index
 let mockSelected  = new Set();   // lesson ids
 let mockQTypes    = new Set(["mcq","fill","match","brief","truefalse","reasons","distinguish","paragraph"]);
 let mockQuestions = [];          // flat list of {q, qtype, lesson} objects
@@ -2530,8 +2851,10 @@ function updateMockCount(){
   let total = 0;
   mockSelected.forEach(id=>{
     const lesson = findLessonById(id);
-    if(lesson) Object.entries(lesson.questions).forEach(([qt,arr])=>{
-      if(mockQTypes.has(qt)) total += arr.length;
+    if(!lesson) return;
+    QTYPES.forEach(qt=>{
+      if(!mockQTypes.has(qt.id)) return;
+      total += (lesson.questions[qt.id]||[]).length;
     });
   });
   const countEl = document.getElementById("mockCount");
@@ -2564,6 +2887,8 @@ function startMockExam(){
     });
   });
   mockQIndex = 0;
+  mockExamStates = Array.from({length:mockQuestions.length},()=>({answered:false,skipped:false,pct:null}));
+  mockSavedAnswers = Array.from({length:mockQuestions.length},()=>null);
   closeMockExam();
   startTimer();
 
@@ -2576,13 +2901,15 @@ function startMockExam(){
   const ov = document.getElementById("quizOverlay");
   ov.classList.add("visible");
   ov.scrollTo(0,0);
-  document.getElementById("quizLessonTitle").textContent = `🎯 Mock Exam — ${mockSubject}`;
-  document.getElementById("quizPartLabel").textContent = `${mockSelected.size} lesson${mockSelected.size!==1?"s":""} · ${mockQuestions.length} questions`;
+  const _qlt=document.getElementById("quizLessonTitle"); if(_qlt) _qlt.textContent=`🎯 Mock Exam — ${mockSubject}`;
+  const _qpl2=document.getElementById("quizPartLabel"); if(_qpl2) _qpl2.textContent=`${mockSelected.size} lesson${mockSelected.size!==1?"s":""} · ${mockQuestions.length} questions`;
   document.getElementById("summaryScreen").classList.remove("visible");
   document.getElementById("answerPaper").classList.remove("visible");
-  document.getElementById("modeBadge").textContent = "Exam";
-  document.getElementById("modeBadge").className = "mode-badge exam";
+  const _mb=document.getElementById("modeBadge"); if(_mb) _mb.textContent="Exam";
+  const _mc=document.getElementById("modeBadge"); if(_mc) _mc.className="mode-badge exam";
   document.getElementById("progressFill").style.width = "0%";
+  const msb=document.getElementById("mockSubmitBar");
+  if(msb) msb.style.display="flex";
 
   // Set up a virtual lesson for mock mode
   currentLesson = {
@@ -2612,9 +2939,8 @@ function renderMockQuestion(){
 
   // Update UI
   document.getElementById("progressFill").style.width=`${(mockQIndex/total)*100}%`;
-  document.getElementById("qCounter").textContent=`${mockQIndex+1} / ${total}`;
-  document.getElementById("quizPartLabel").textContent=
-    `${item.lesson.unit} — ${item.lesson.title} · ${item.qtLabel}`;
+  const _qc=document.getElementById("qCounter"); if(_qc) _qc.textContent=`${mockQIndex+1} / ${total}`;
+  const _qpl=document.getElementById("quizPartLabel"); if(_qpl) _qpl.textContent=`${item.lesson.unit} — ${item.lesson.title} · ${item.qtLabel}`;
   const body=document.getElementById("quizBody");
   body.style.display="block";
   document.getElementById("summaryScreen").classList.remove("visible");
@@ -2624,100 +2950,547 @@ function renderMockQuestion(){
   currentQType=item.qtype;
   currentQIndex=0;
   mcqSelected=null; matchAnswers={};
+  currentMode="exam"; // ensure exam mode for every question render
+  // Reset per-question timer
+  _questionStart=Date.now();
+  const qEl=document.getElementById("qTimer");
+  if(qEl) qEl.textContent="0:00";
   const map={};
   QTYPES.forEach(qt=>{ map[qt.id]=[]; });
   map[item.qtype]=[item.q];
   currentLesson={ id:"__mock__", title:item.lesson.title, questions:map };
 
+  // Update submit bar progress
+  const answered=mockExamStates.filter(s=>s.answered).length;
+  const sp=document.getElementById("mockSubmitProgress");
+  if(sp) sp.textContent=`${answered} / ${mockQuestions.length} answered`;
+
   // Render mock nav bar
   renderMockNavBar();
 
+  // In mock exam, always pass isLast=false — end detection happens in nextQuestion()
+  const renderIsLast = false;
+
   // Render question
   switch(item.qtype){
-    case "mcq":        renderMCQ(item.q, qnum, isLast); break;
-    case "fill":       renderFill(item.q, qnum, isLast); break;
-    case "match":      renderMatch(item.q, qnum, isLast); break;
-    case "brief":      renderTextAnswer(item.q, qnum, isLast, false); break;
-    case "truefalse":  renderTrueFalse(item.q, qnum, isLast); break;
-    case "reasons":    renderTextAnswer(item.q, qnum, isLast, false); break;
-    case "distinguish":renderDistinguish(item.q, qnum, isLast); break;
-    case "paragraph":  renderTextAnswer(item.q, qnum, isLast, true); break;
+    case "mcq":        renderMCQ(item.q, qnum, renderIsLast); break;
+    case "fill":       renderFill(item.q, qnum, renderIsLast); break;
+    case "match":      renderMatch(item.q, qnum, renderIsLast); break;
+    case "brief":      renderTextAnswer(item.q, qnum, renderIsLast, false); break;
+    case "truefalse":  renderTrueFalse(item.q, qnum, renderIsLast); break;
+    case "reasons":    renderTextAnswer(item.q, qnum, renderIsLast, false); break;
+    case "distinguish":renderDistinguish(item.q, qnum, renderIsLast); break;
+    case "paragraph":  renderTextAnswer(item.q, qnum, renderIsLast, true); break;
   }
 }
 
 function renderMockNavBar(){
   const bar=document.getElementById("qNavBar");
+  if(!bar) return;
   bar.style.display="flex";
   bar.innerHTML="";
   const total=mockQuestions.length;
 
   // Prev button
   const prev=document.createElement("button");
-  prev.className="q-nav-prev"; prev.textContent="← Prev";
+  prev.className="q-nav-prev"; prev.textContent="‹";
+  prev.title="Previous";
   prev.disabled=mockQIndex===0;
   prev.onclick=()=>jumpMockQuestion(mockQIndex-1);
   bar.appendChild(prev);
 
-  // Scrollable dot container
+  // Scrollable dots
   const dotsWrap=document.createElement("div");
-  dotsWrap.style.cssText="display:flex;gap:5px;overflow-x:auto;flex:1;scrollbar-width:none;padding:2px 0";
+  dotsWrap.className="q-nav-dots-wrap";
 
   mockQuestions.forEach((_,i)=>{
     const dot=document.createElement("div");
     dot.className="q-nav-dot";
     dot.textContent=i+1;
-    if(i===mockQIndex) dot.classList.add("current");
-    else if(questionStates[i]?.answered){
-      const p=questionStates[i].pct;
+    if(i===mockQIndex){
+      dot.classList.add("current");
+    } else if(mockExamStates[i]?.answered){
+      const p=mockExamStates[i].pct;
       dot.classList.add(p>=80?"answered-good":p>=50?"answered-mid":"answered-poor");
+    } else if(mockExamStates[i]?.skipped){
+      dot.classList.add("skipped");
     }
     dot.onclick=()=>jumpMockQuestion(i);
     dotsWrap.appendChild(dot);
-    // Auto-scroll current dot into view
     if(i===mockQIndex) setTimeout(()=>dot.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),50);
   });
   bar.appendChild(dotsWrap);
 
   // Next button
   const next=document.createElement("button");
-  next.className="q-nav-next"; next.textContent="Next →";
+  next.className="q-nav-next"; next.textContent="›";
+  next.title="Next";
   next.disabled=mockQIndex>=total-1;
   next.onclick=()=>jumpMockQuestion(mockQIndex+1);
   bar.appendChild(next);
 }
 
+function markMockAnswered(pct){
+  if(!mockExamStates.length) return; // not in a mock exam
+  if(mockQIndex<0 || mockQIndex>=mockExamStates.length) return;
+  mockExamStates[mockQIndex]={answered:true,skipped:false,pct};
+  // Update submit bar progress
+  const answered=mockExamStates.filter(s=>s&&s.answered).length;
+  const sp=document.getElementById("mockSubmitProgress");
+  if(sp) sp.textContent=`${answered} / ${mockQuestions.length} answered`;
+  // Re-render nav dots
+  renderMockNavBar();
+}
+
+function saveMockAnswer(idx){
+  const item = mockQuestions[idx];
+  if(!item) return;
+  let saved = null;
+  if(item.qtype==="mcq"){
+    // Find which option is selected
+    const sel = document.querySelector(".mcq-option.selected");
+    if(sel) saved = {type:"mcq", selectedIdx: [...document.querySelectorAll(".mcq-option")].indexOf(sel)};
+  } else if(item.qtype==="truefalse"){
+    const sel = document.querySelector("#tfopt0.selected, #tfopt1.selected");
+    if(sel) saved = {type:"truefalse", val: sel.dataset.val};
+  } else if(item.qtype==="fill"){
+    const inputs = [...document.querySelectorAll(".blank-input")];
+    if(inputs.length) saved = {type:"fill", values: inputs.map(i=>i.value)};
+  } else if(item.qtype==="match"){
+    const sels = [...document.querySelectorAll(".match-right-select")];
+    if(sels.length) saved = {type:"match", values: sels.map(s=>s.value)};
+  } else if(item.qtype==="distinguish"){
+    const a = document.getElementById("distInputA")?.value||"";
+    const b = document.getElementById("distInputB")?.value||"";
+    if(a||b) saved = {type:"distinguish", a, b};
+  } else {
+    const ta = document.getElementById("answerInput")?.value||"";
+    if(ta) saved = {type:"text", value: ta};
+  }
+  mockSavedAnswers[idx] = saved;
+}
+
+function restoreMockAnswer(idx){
+  const saved = mockSavedAnswers[idx];
+  if(!saved) return;
+  if(saved.type==="mcq"){
+    const opts = document.querySelectorAll(".mcq-option");
+    if(opts[saved.selectedIdx]) opts[saved.selectedIdx].classList.add("selected");
+    const eb = document.getElementById("examNextBtn");
+    if(eb) eb.disabled = false;
+  } else if(saved.type==="truefalse"){
+    const el = document.getElementById(saved.val==="true"?"tfopt0":"tfopt1");
+    if(el) el.classList.add("selected");
+    const eb = document.getElementById("examNextBtn");
+    if(eb){ eb.disabled=false; eb.dataset.sel=saved.val; }
+  } else if(saved.type==="fill"){
+    saved.values.forEach((v,i)=>{ const inp=document.getElementById("blank"+i); if(inp) inp.value=v; });
+  } else if(saved.type==="match"){
+    saved.values.forEach((v,i)=>{ const sel=document.getElementById("match"+i); if(sel) sel.value=v; });
+  } else if(saved.type==="distinguish"){
+    const a=document.getElementById("distInputA"); if(a) a.value=saved.a;
+    const b=document.getElementById("distInputB"); if(b) b.value=saved.b;
+  } else if(saved.type==="text"){
+    const ta=document.getElementById("answerInput"); if(ta) ta.value=saved.value;
+    // Enable Next button since user has typed content
+    const cb=document.getElementById("checkBtn"); if(cb) cb.disabled=false;
+  }
+}
+
 function jumpMockQuestion(idx){
   if(idx<0||idx>=mockQuestions.length) return;
+  saveMockAnswer(mockQIndex);
+  scoreMockCurrentQuestion(); // score before leaving
   mockQIndex=idx;
   mcqSelected=null; matchAnswers={};
   renderMockQuestion();
+  setTimeout(()=>restoreMockAnswer(idx), 0);
+}
+
+function scoreMockCurrentQuestion(){
+  try{
+  if(!mockExamStates[mockQIndex] || mockExamStates[mockQIndex].answered) return;
+  const item = mockQuestions[mockQIndex];
+  if(!item) return;
+  let pct = null;
+  if(item.qtype==="mcq"){
+    const sel = document.querySelector(".mcq-option.selected");
+    if(!sel) return;
+    const opts = [...document.querySelectorAll(".mcq-option")];
+    const selIdx = opts.indexOf(sel);
+    const btn = document.getElementById("examNextBtn");
+    if(!btn) return;
+    const m = btn.getAttribute("onclick")?.match(/examNextMCQ\((\d+)/);
+    if(!m) return;
+    pct = selIdx===parseInt(m[1]) ? 100 : 0;
+  } else if(item.qtype==="truefalse"){
+    const sel = document.querySelector("#tfopt0.selected, #tfopt1.selected");
+    if(!sel) return;
+    pct = sel.dataset.val===item.q.answer ? 100 : 0;
+  } else if(item.qtype==="fill"){
+    const inputs = [...document.querySelectorAll(".blank-input")];
+    if(!inputs.length || inputs.every(i=>!i.value.trim())) return;
+    const answers = item.q.answers||[];
+    const correct = inputs.filter((inp,i)=>levenshtein(inp.value.trim().toLowerCase(),(answers[i]||"").toLowerCase())<=1).length;
+    pct = Math.round(100*correct/Math.max(inputs.length,1));
+  } else if(item.qtype==="match"){
+    const sels = [...document.querySelectorAll(".match-right-select")];
+    if(!sels.length || sels.every(s=>!s.value)) return;
+    const correct = sels.filter((s,i)=>s.value===item.q.right[item.q.correct[i]]).length;
+    pct = Math.round(100*correct/Math.max(sels.length,1));
+  } else if(item.qtype==="distinguish"){
+    const a = document.getElementById("distInputA")?.value?.trim()||"";
+    const b = document.getElementById("distInputB")?.value?.trim()||"";
+    if(!a && !b) return;
+    const {pct:pA}=scoreAnswer(a, item.q.answerA||"");
+    const {pct:pB}=scoreAnswer(b, item.q.answerB||"");
+    pct = Math.round((pA+pB)/2);
+  } else {
+    const userText = document.getElementById("answerInput")?.value?.trim()||"";
+    if(!userText) return;
+    const {pct:p}=scoreAnswer(userText, item.q.answer||"");
+    pct=p;
+  }
+  if(pct!==null){
+    sessionResults.push({pct});
+    // Build proper userText for answer sheet
+    let userText = "";
+    if(item.qtype==="mcq"){
+      const sel=document.querySelector(".mcq-option.selected span:last-child");
+      userText = sel?.textContent||"";
+    } else if(item.qtype==="truefalse"){
+      const sel=document.querySelector("#tfopt0.selected, #tfopt1.selected");
+      userText = sel?.dataset.val==="true"?"True":"False";
+    } else if(item.qtype==="fill"){
+      userText = [...document.querySelectorAll(".blank-input")].map(i=>i.value.trim()).join(" / ");
+    } else if(item.qtype==="match"){
+      userText = [...document.querySelectorAll(".match-right-select")].map((s,i)=>`${item.q.left[i]} → ${s.value||"(blank)"}`).join("\n");
+    } else if(item.qtype==="distinguish"){
+      const a=document.getElementById("distInputA")?.value?.trim()||"";
+      const b=document.getElementById("distInputB")?.value?.trim()||"";
+      userText = `${item.q.termA}:\n${a}\n\n${item.q.termB}:\n${b}`;
+    } else {
+      userText = document.getElementById("answerInput")?.value?.trim()||"";
+    }
+    const modelText = (()=>{
+      if(item.qtype==="mcq") return item.q.options[item.q.correct]||"";
+      if(item.qtype==="truefalse") return (item.q.answer==="true"?"True":"False")+(item.q.reason?"\nReason: "+item.q.reason:"");
+      if(item.qtype==="fill") return item.q.answers?.join(" / ")||"";
+      if(item.qtype==="match") return item.q.left.map((l,i)=>`${l} → ${item.q.right[item.q.correct[i]]}`).join("\n");
+      if(item.qtype==="distinguish") return `${item.q.termA}:\n${item.q.answerA}\n\n${item.q.termB}:\n${item.q.answerB}`;
+      return item.q.answer||"";
+    })();
+    examAnswers.push({
+      q: item.q.q||item.q.statement||item.q.sentence||"",
+      userText, modelText, pct,
+      qtype: item.qtype,
+      lessonTitle: item.lesson.title,
+      lessonId: item.lesson.id,
+      mockIdx: mockQIndex
+    });
+    markMockAnswered(pct);
+  }
+  } catch(e){ console.warn("scoreMock error:", e); }
 }
 
 function showMockResults(){
   stopTimer();
-  const totalMs=Date.now()-_sessionStart;
-  const avg=sessionResults.length
-    ? Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length):0;
+  const totalMs = Date.now()-_sessionStart;
+  const avg = sessionResults.length
+    ? Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length) : 0;
+  // Hide submit bar
+  const msb=document.getElementById("mockSubmitBar");
+  if(msb) msb.style.display="none";
+
+  // Hide everything else in the overlay
   document.getElementById("quizBody").style.display="none";
-  document.getElementById("answerPaper").classList.remove("visible");
-  const sum=document.getElementById("summaryScreen");
-  sum.classList.add("visible");
-  document.getElementById("summaryTrophy").textContent=avg>=80?"🏆":avg>=50?"📚":"💪";
-  setTeacherMark(
-    document.getElementById("teacherScore"),
-    document.getElementById("teacherTick"),
-    document.getElementById("teacherMark"),
-    document.getElementById("teacherMotivation"),
-    avg
-  );
-  document.getElementById("statCorrect").textContent=sessionResults.filter(r=>r.pct>=80).length;
-  document.getElementById("statPartial").textContent=sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
-  document.getElementById("statWrong").textContent  =sessionResults.filter(r=>r.pct<40).length;
-  document.getElementById("summaryTotalTime").textContent=`⏱ Total time: ${fmtMs(totalMs)} · ${mockQuestions.length} questions`;
+  document.getElementById("qNavBar").style.display="none";
+  document.getElementById("summaryScreen").classList.remove("visible");
+  document.getElementById("qtypeTabs").innerHTML="";
   document.getElementById("progressFill").style.width="100%";
+
+  // Build and show answer sheet
+  const sheet = document.getElementById("mockAnswerSheet");
+  sheet.innerHTML = buildMockAnswerSheet(avg, totalMs);
+  sheet.classList.add("visible");
+  // Scroll overlay to top
+  const ov = document.getElementById("quizOverlay");
+  ov.scrollTo(0,0);
+  setTimeout(()=>ov.scrollTo(0,0),50);
 }
 
-// ── MOTIVATION MESSAGES ──
+function buildMockAnswerSheet(avg, totalMs){
+  const {msg} = getMotivation(avg);
+  const cls = avg>=80?"great": avg>=50?"good":"";
+  const borderColor = avg>=80?"#4ccc8a": avg>=50?"#e8a020":"#e07b54";
+  const scoreColor  = avg>=80?"#4ccc8a": avg>=50?"#e8c060":"#e07b54";
+  const correct = sessionResults.filter(r=>r.pct>=80).length;
+  const partial = sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
+  const wrong   = sessionResults.filter(r=>r.pct<40).length;
+
+  // Build lookup: mockIdx → examAnswer
+  const eaByIdx = {};
+  examAnswers.forEach(ea=>{ if(ea.mockIdx!==undefined) eaByIdx[ea.mockIdx]=ea; });
+
+  // Collect spelling errors
+  const spellErrors = [];
+  Object.values(eaByIdx).forEach(ea=>{
+    if(ea.modelText && ea.qtype!=="mcq"&&ea.qtype!=="fill"&&ea.qtype!=="match"&&ea.qtype!=="truefalse"){
+      const {diff} = scoreAnswer(ea.userText||"", ea.modelText);
+      diff.forEach(d=>{
+        if(d.type==="misspelled") spellErrors.push({wrong:d.word, correct:d.correct, qNum:i+1, lesson:ea.lessonTitle||""});
+      });
+    }
+  });
+
+  // Build question cards — only answered questions
+  let qCards = "";
+  const notAttempted = [];
+
+  // Build a map of answered questions by mock index
+  // examAnswers may have fewer entries than mockQuestions if user skipped without answering
+  mockQuestions.forEach((item, i)=>{
+    const ea = eaByIdx[i];
+    const state = mockExamStates[i];
+    const wasSkipped = !state?.answered || !ea || !ea.userText || ea.userText==="(no answer)" || ea.userText==="(skipped)" || ea.userText==="";
+
+    if(wasSkipped){
+      notAttempted.push({q: ea?.q||item.q.q||item.q.statement||item.q.sentence||"", qtype: item.qtype, lessonTitle: item.lesson.title, num: i+1});
+      return;
+    }
+    const qCls = ea.pct>=80?"good": ea.pct>=50?"mid":"poor";
+    const qt = QTYPES.find(t=>t.id===ea.qtype)||{label:ea.qtype, icon:"📝"};
+    const qTime = _questionTimes[i] ? `⏱ ${fmtMs(_questionTimes[i])}` : "";
+
+    // Build annotated user answer
+    let userDisplay = ea.userText||"(no answer)";
+    if(ea.modelText && ea.qtype!=="mcq"&&ea.qtype!=="fill"&&ea.qtype!=="match"&&ea.qtype!=="truefalse"){
+      const {diff} = scoreAnswer(ea.userText||"", ea.modelText);
+      userDisplay = diff.map(d=>{
+        const w = (d.word||"").replace(/</g,"&lt;");
+        if(d.type==="ok")          return `<span class="word-ok">${w}</span>`;
+        if(d.type==="wrong")       return `<span class="word-wrong">${w}</span>`;
+        if(d.type==="misspelled")  return `<span class="word-wrong">${w}</span><span class="word-correction">→${(d.correct||"").replace(/</g,"&lt;")}</span>`;
+        if(d.type==="missing")     return `<span class="word-missing">[${w}]</span>`;
+        return w;
+      }).join(" ");
+    } else if(ea.qtype==="mcq"){
+      userDisplay = ea.pct===100
+        ? `<span class="word-ok">✓ ${ea.userText}</span>`
+        : `<span class="word-wrong">${ea.userText}</span>`;
+    }
+
+    const modelFormatted = (ea.modelText||"").replace(/</g,"&lt;").replace(/\n/g,"<br>");
+
+    qCards += `
+    <div class="mas-q-card ${qCls}">
+      <div class="mas-q-top">
+        <div class="mas-q-num">Q${i+1}</div>
+        <div class="mas-q-type">${qt.icon} ${qt.label}</div>
+        <div style="flex:1"></div>
+        <div class="mas-q-time">${qTime}</div>
+        <div class="mas-q-score ${qCls}">${ea.pct}%</div>
+      </div>
+      <div class="mas-q-text">${(ea.q||"").replace(/</g,"&lt;")}</div>
+      <div class="mas-section-lbl yours">Your Answer</div>
+      <div class="mas-your-ans">${userDisplay||"<em style='color:var(--muted)'>(skipped)</em>"}</div>
+      <div class="mas-section-lbl model">✅ Model Answer</div>
+      <div class="mas-model-ans">${modelFormatted}</div>
+    </div>`;
+  });
+
+  // Build spelling table
+  let spellHtml = "";
+  if(spellErrors.length){
+    const rows = spellErrors.map(e=>`
+      <tr>
+        <td>${e.qNum}</td>
+        <td><span class="spell-wrong">${e.wrong}</span><span class="spell-right">→ ${e.correct}</span></td>
+        <td>${e.lesson}</td>
+      </tr>`).join("");
+    spellHtml = `
+    <div class="mas-section-heading">✏️ Spelling to Learn (${spellErrors.length})</div>
+    <table class="spell-table">
+      <thead><tr><th>Q#</th><th>Correction</th><th>Lesson</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // Not Attempted section
+  let notAttemptedHtml = "";
+  if(notAttempted.length){
+    const rows = notAttempted.map(n=>`
+      <div class="improve-card" style="border-left-color:var(--muted)">
+        <div class="improve-lesson" style="color:var(--muted)">Q${n.num} · ${n.lessonTitle||""} · ${QTYPES.find(t=>t.id===n.qtype)?.label||n.qtype}</div>
+        <div class="improve-text">${(n.q||"").replace(/</g,"&lt;")}</div>
+      </div>`).join("");
+    notAttemptedHtml = `
+      <div class="mas-section-heading">⏭ Not Attempted (${notAttempted.length})</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Revise these topics and practise them in Study Mode.</div>
+      ${rows}`;
+  }
+
+  // Build improvement recommendations based on weak areas
+  const weakByLesson = {};
+  examAnswers.forEach(ea=>{
+    if(ea.pct<60){
+      const key = ea.lessonTitle||ea.lessonId||"General";
+      if(!weakByLesson[key]) weakByLesson[key]={count:0,qtypes:new Set()};
+      weakByLesson[key].count++;
+      weakByLesson[key].qtypes.add(ea.qtype);
+    }
+  });
+  let improveHtml = "";
+  if(Object.keys(weakByLesson).length){
+    const cards = Object.entries(weakByLesson).map(([lesson,data])=>{
+      const types = [...data.qtypes].map(qt=>QTYPES.find(t=>t.id===qt)?.label||qt).join(", ");
+      return `<div class="improve-card">
+        <div class="improve-lesson">📚 ${lesson}</div>
+        <div class="improve-text">Revise this lesson — especially <strong>${types}</strong> (${data.count} question${data.count!==1?"s":""} below 60%).</div>
+      </div>`;
+    }).join("");
+    improveHtml = `
+    <div class="mas-section-heading">💡 Topics to Improve</div>
+    ${cards}`;
+  }
+
+  return `
+  <div class="mas-header">
+    <div class="mas-title">🎯 Mock Exam — Answer Sheet</div>
+    <div class="mas-meta">${mockSubject} · ${mockQuestions.length} questions · ⏱ ${fmtMs(totalMs)}</div>
+    <div class="mas-mark-row">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="position:relative;width:120px;height:120px;border-radius:50%;border:4.5px solid ${borderColor};background:#1a2744;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-3deg);font-family:'Courier New',monospace;box-shadow:0 4px 20px rgba(0,0,0,.2)">
+          <div style="font-size:32px;font-weight:900;color:${scoreColor};line-height:1">${avg}</div>
+          <div style="width:55%;border-top:1.5px solid rgba(255,255,255,.3);margin:4px 0"></div>
+          <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.6)">100</div>
+          <div style="position:absolute;top:-16px;right:-10px;font-size:30px;transform:rotate(8deg)">${avg>=80?"✓✓":avg>=50?"✓":""}</div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-top:14px;font-style:italic;max-width:220px;text-align:center">"${msg}"</div>
+      </div>
+    </div>
+    <div class="mas-stats">
+      <div class="mas-stat"><div class="mas-stat-num green">${correct}</div><div class="mas-stat-label">Correct</div></div>
+      <div class="mas-stat"><div class="mas-stat-num amber">${partial}</div><div class="mas-stat-label">Partial</div></div>
+      <div class="mas-stat"><div class="mas-stat-num red">${wrong}</div><div class="mas-stat-label">Wrong</div></div>
+    </div>
+  </div>
+  ${qCards}
+  ${spellHtml}
+  ${improveHtml}
+  <div style="display:flex;gap:8px;margin-top:20px">
+    <button class="btn-back-lessons" style="flex:1" onclick="closeMockAnswerSheet()">← Back</button>
+    <button class="btn-back-lessons" style="flex:1;background:var(--navy);color:#fff;border-color:var(--navy)" onclick="downloadMockAnswerSheet()">⬇ Download</button>
+  </div>`;}
+
+function downloadMockAnswerSheet(){
+  const sheet = document.getElementById("mockAnswerSheet");
+  if(!sheet) return;
+  const dateStr = new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Mock Exam Answer Sheet — ${dateStr}</title>
+    <style>
+      body{font-family:system-ui,sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#1a2744}
+      .mas-q-card{border-radius:10px;padding:14px;margin-bottom:12px;border:1.5px solid #ddd}
+      .mas-q-card.good{border-color:#4caf82;background:#e6f7ef}
+      .mas-q-card.mid{border-color:#e8a020;background:#fdf3d0}
+      .mas-q-card.poor{border-color:#e05c5c;background:#fde8e8}
+      .word-ok{color:#4caf82}.word-wrong{text-decoration:line-through;color:#e05c5c}
+      .word-missing{background:#fdf3d0;color:#9a6c00;padding:0 4px;border-radius:3px}
+      .word-correction{color:#4caf82;font-weight:700;margin-left:3px}
+      .spell-wrong{text-decoration:line-through;color:#e05c5c;font-weight:700}
+      .spell-right{color:#4caf82;font-weight:700;margin-left:6px}
+      table{width:100%;border-collapse:collapse}th{background:#1a2744;color:#fff;padding:7px 10px;text-align:left}
+      td{padding:7px 10px;border-bottom:1px solid #ddd}.improve-card{background:#f4f0e8;border-left:3px solid #1a2744;border-radius:8px;padding:12px;margin-bottom:8px}
+      @media print{.no-print{display:none}}
+    </style></head><body>
+    ${sheet.innerHTML.replace(/onclick="[^"]*"/g,'').replace(/<button[^>]*>.*?<\/button>/gs,'')}
+    </body></html>`;
+  const blob = new Blob([html],{type:"text/html;charset=utf-8"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href=url; a.download=`MockExam_AnswerSheet_${dateStr.replace(/ /g,"_")}.html`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function submitMockExam(){
+  saveMockAnswer(mockQIndex);
+  if(mockExamStates[mockQIndex] && !mockExamStates[mockQIndex].answered){
+    const last=sessionResults[sessionResults.length-1];
+    if(last!==undefined) mockExamStates[mockQIndex]={answered:true,skipped:false,pct:last.pct};
+  }
+  const answered=mockExamStates.filter(s=>s.answered).length;
+  const unanswered=mockQuestions.length-answered;
+
+  // Show custom confirmation
+  const overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px";
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="font-size:36px;margin-bottom:12px">📋</div>
+      <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:8px">Submit Exam?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">
+        ${answered} of ${mockQuestions.length} questions answered
+      </div>
+      ${unanswered>0?`<div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:16px">⚠ ${unanswered} question${unanswered!==1?"s":""} not answered</div>`
+        :`<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:16px">✓ All questions answered</div>`}
+      <div style="display:flex;gap:10px">
+        <button onclick="this.closest('[style*=fixed]').remove()"
+          style="flex:1;padding:11px;background:var(--parchment);border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;font-family:inherit">
+          Continue
+        </button>
+        <button onclick="this.closest('[style*=fixed]').remove(); showMockResults();"
+          style="flex:1;padding:11px;background:var(--green);border:none;border-radius:10px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit">
+          Submit ✓
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function closeMockAnswerSheet(){
+  document.getElementById("mockAnswerSheet").classList.remove("visible");
+  document.getElementById("mockAnswerSheet").innerHTML="";
+  const msb=document.getElementById("mockSubmitBar");
+  if(msb) msb.style.display="none";
+  currentMode="study";
+  closeQuiz();
+}
+
+// ── KEYBOARD NAVIGATION ──
+document.addEventListener("keydown", function(e){
+  // Only in quiz overlay, not typing in inputs
+  const overlay = document.getElementById("quizOverlay");
+  if(!overlay?.classList.contains("visible")) return;
+  const tag = document.activeElement?.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+
+  if(currentLesson?.id==="__mock__"){
+    if(e.key==="ArrowLeft"||e.key==="ArrowUp"){
+      e.preventDefault();
+      jumpMockQuestion(mockQIndex-1);
+    } else if(e.key==="ArrowRight"||e.key==="ArrowDown"){
+      e.preventDefault();
+      // Only advance if current question has been answered
+      const nextBtn=document.getElementById("examNextBtn")||document.getElementById("checkBtn");
+      if(nextBtn && !nextBtn.disabled) nextBtn.click();
+      else jumpMockQuestion(mockQIndex+1);
+    }
+  } else {
+    // Study mode
+    if(e.key==="ArrowLeft") {
+      e.preventDefault();
+      jumpToQuestion(currentQIndex-1);
+    } else if(e.key==="ArrowRight") {
+      e.preventDefault();
+      const btnRow=document.getElementById("btnRow");
+      if(btnRow?.style.display==="flex"){
+        nextQuestion();
+      }
+    }
+  }
+});
 function getMotivation(avg){
   if(avg===100) return { msg:"Perfect score! You're a star! ⭐", tick:"✓✓" };
   if(avg>=90)   return { msg:"Outstanding work! Keep it up!", tick:"✓✓" };
@@ -2734,6 +3507,8 @@ function setTeacherMark(scoreEl, tickEl, wrapEl, motivationEl, avg){
   const cls = avg>=80?"great": avg>=50?"good":"";
   wrapEl.className = wrapEl.className.replace(/\bgreat\b|\bgood\b/g,"").trim() + (cls?" "+cls:"");
   const {msg, tick} = getMotivation(avg);
+  const verses=["Philippians 4:13 — \"I can do all things through Christ who strengthens me.\"","Proverbs 2:6 — \"For the LORD gives wisdom; from his mouth come knowledge and understanding.\""];
+  const verse=verses[Math.floor(Date.now()/86400000)%verses.length];
   tickEl.textContent = tick;
   motivationEl.textContent = `"${msg}"`;
 }
@@ -2981,6 +3756,19 @@ function renderReport(){
     });
     html+="</div>";
   });
+  // Spelling errors section
+  if(sessionSpellErrors.length){
+    const spellRows = sessionSpellErrors.map(e=>`
+      <div class="report-row">
+        <div style="flex:1"><span class="spell-wrong">${e.wrong}</span><span class="spell-right">→ ${e.correct}</span></div>
+        <div class="report-qtype">${e.lessonTitle}</div>
+      </div>`).join("");
+    html += `<div class="report-subject">
+      <div class="report-subject-name">✏️ Spelling to Learn (${sessionSpellErrors.length})</div>
+      ${spellRows}
+    </div>`;
+  }
+
   body.innerHTML=html;
 }
 
