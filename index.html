@@ -322,7 +322,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-.quiz-timer{font-size:13px;font-weight:700;color:var(--navy);background:var(--parchment);border:1.5px solid var(--border);border-radius:20px;padding:3px 9px;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
+.mode-toggle{display:flex;background:var(--parchment);border-radius:8px;padding:2px;gap:2px;flex-shrink:0}
+.mode-toggle-btn{padding:4px 8px;border:none;border-radius:6px;background:transparent;font-size:14px;cursor:pointer;transition:background .15s;line-height:1}
+.mode-toggle-btn.active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .q-timer-bar{display:flex;align-items:center;gap:6px;padding:4px 14px;background:var(--parchment);border-bottom:1px solid var(--border);font-size:12px}
 .q-timer-bar .q-timer-label{color:var(--muted);font-weight:500}
 .q-timer-bar .q-timer{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:12px}
@@ -676,6 +678,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
     <div class="quiz-title-wrap">
       <div class="quiz-lesson-title" id="quizLessonTitle"></div>
       <div class="quiz-part-label"   id="quizPartLabel"></div>
+    </div>
+    <div class="mode-toggle" id="modeToggle">
+      <button class="mode-toggle-btn" id="toggleRevise" onclick="openRevise(currentLesson)">📖</button>
+      <button class="mode-toggle-btn" id="togglePractice" onclick="openLesson(currentLesson)">✏️</button>
     </div>
     <div class="quiz-timer" id="quizTimer">0:00</div>
     <div class="q-counter" id="qCounter"></div>
@@ -1496,7 +1502,8 @@ function scoreAnswer(userText, refText){
   // Sørensen dice on token level
   const pct = Math.round(200*matched / (ref.length + user.length));
 
-  // Build a diff for display: walk ref tokens, mark matched/missing
+  // Apply minimum threshold — below 30% is likely noise (random common words)
+  const finalPct = pct < 30 ? 0 : pct;
   // also flag misspellings (close but not exact)
   const diff = [];
   let ui = 0;
@@ -1533,7 +1540,7 @@ function scoreAnswer(userText, refText){
   // remaining user words
   for(;ui<user.length;ui++) diff.push({type:"wrong",word:user[ui]});
 
-  return {pct: Math.min(100, pct), diff};
+  return {pct: Math.min(100, finalPct), diff};
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1694,9 +1701,9 @@ function openRevise(lesson){
   if(mas){ mas.classList.remove("visible"); mas.innerHTML=""; }
   document.getElementById("qNavBar").style.display = "none";
   document.getElementById("qtypeTabs").innerHTML = `<div style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--sage)">📖 Revision Notes — all questions &amp; answers</div>`;
-  const qTimerBar = document.querySelector(".q-timer-bar");
-  if(qTimerBar) qTimerBar.style.display = "none";
-  stopTimer();
+  document.getElementById("toggleRevise")?.classList.add("active");
+  document.getElementById("togglePractice")?.classList.remove("active");
+  document.getElementById("modeToggle").style.display="flex";
   const _qt2=document.getElementById("quizTimer"); if(_qt2) _qt2.textContent="";
   renderRevise(lesson);
 }
@@ -1787,6 +1794,9 @@ function startLesson(lesson){
   if(_mas){ _mas.classList.remove("visible"); _mas.innerHTML=""; }
 
   renderQTypeTabs();
+  document.getElementById("togglePractice")?.classList.add("active");
+  document.getElementById("toggleRevise")?.classList.remove("active");
+  document.getElementById("modeToggle").style.display="flex";
   startQTypeSession();
 }
 
@@ -1856,18 +1866,30 @@ function timeChip(ms){
   return `<span class="time-chip ${cls}">⏱ ${fmtMs(ms)}</span>`;
 }
 
+let studyAnswerCache = []; // cached {bodyHTML, resultHTML, answered, pct} per question index
+
 function startQTypeSession(){
   currentQIndex=0;
   sessionResults=[];
   matchAnswers={};
   mcqSelected=null;
+  studyAnswerCache=[];
   const total=(currentLesson.questions[currentQType]||[]).length;
   questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
+  studyAnswerCache=Array.from({length:total},()=>null);
   startTimer();
   const qTimerBar = document.querySelector(".q-timer-bar");
   if(qTimerBar) qTimerBar.style.display = "flex";
   renderNavBar();
   renderCurrentQuestion();
+}
+
+function saveStudyAnswer(pct){
+  if(!studyAnswerCache || currentLesson?.id==="__mock__") return;
+  const body=document.getElementById("quizBody");
+  if(body && studyAnswerCache[currentQIndex]===null){
+    studyAnswerCache[currentQIndex]={bodyHTML:body.innerHTML, pct};
+  }
 }
 
 // ── NAVIGATION BAR ──
@@ -1911,11 +1933,25 @@ function renderNavBar(){
 function jumpToQuestion(idx){
   const total=(currentLesson.questions[currentQType]||[]).length;
   if(idx<0||idx>=total) return;
+  // Save current body state before leaving
+  const body=document.getElementById("quizBody");
+  if(studyAnswerCache && studyAnswerCache[currentQIndex]===null){
+    // Not yet answered — don't cache
+  }
   currentQIndex=idx;
   mcqSelected=null;
   matchAnswers={};
   renderNavBar();
-  renderCurrentQuestion();
+  // Restore cached state if question was answered
+  if(studyAnswerCache && studyAnswerCache[idx]){
+    const cached=studyAnswerCache[idx];
+    body.innerHTML=cached.bodyHTML;
+    document.getElementById("resultPanel")?.classList.add("visible");
+    const br=document.getElementById("btnRow");
+    if(br) br.style.display="flex";
+  } else {
+    renderCurrentQuestion();
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2413,7 +2449,7 @@ function examNextTF(correct, isLast){
   const pct = sel===correct?100:0;
   sessionResults.push({pct});
   markMockAnswered(pct);
-  examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse", lessonTitle:currentLesson.title, lessonId:currentLesson.id});
+  examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse", lessonTitle:currentLesson.title, lessonId:currentLesson.id, mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
@@ -2438,10 +2474,15 @@ function examNextText(isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
   const userText=document.getElementById("answerInput").value.trim();
-  const {pct}=scoreAnswer(userText||"", q.answer);
+  const {pct, diff}=scoreAnswer(userText||"", q.answer);
+  // Log spelling errors to session report
+  diff.forEach(d=>{
+    if(d.type==="misspelled")
+      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
+  });
   sessionResults.push({pct});
   markMockAnswered(pct);
-  examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id});
+  examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id, mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
@@ -2506,6 +2547,7 @@ function checkTextAnswer(){
       <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div></div>
     </div>
     ${buildAnnotatedDiff(userText, q.answer)}`;
+  setTimeout(()=>saveStudyAnswer(pct),50);
 
   document.getElementById("answerArea").style.display="none";
   hidePeek();
@@ -2617,7 +2659,7 @@ function examNextDistinguish(isLast){
     q:`Distinguish: ${q.termA} vs ${q.termB}`,
     userText:`${q.termA}: ${userA}\n${q.termB}: ${userB}`,
     modelText:`${q.termA}:\n${q.answerA}\n\n${q.termB}:\n${q.answerB}`,
-    pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id
+    pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id, mockIdx:mockQIndex
   });
   if(isLast){ showMockResults(); return; }
   nextQuestion();
@@ -2681,7 +2723,6 @@ function checkDistinguish(){
 
 // ── SIMPLE RESULT (MCQ / FILL / MATCH) ──
 function showSimpleResult(pct, detail){
-  // Record state for nav dot (already pushed to sessionResults before calling this)
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   renderNavBar();
   const panel=document.getElementById("resultPanel");
@@ -2693,6 +2734,8 @@ function showSimpleResult(pct, detail){
       <div><div class="score-label">${pct>=80?"Correct! 🎉":pct>=50?"Partially correct":"Incorrect"}</div>
       <div class="score-detail">${detail}</div></div>
     </div>`;
+  // Cache the answered state for back-navigation
+  setTimeout(()=>saveStudyAnswer(pct), 50);
 }
 
 // ── SKIP ──
@@ -2737,8 +2780,9 @@ function tryAgainQuestion(){
 function nextQuestion(){
   // Mock exam flow
   if(currentLesson.id==="__mock__"){
+    // Score current question from DOM if not already recorded
+    scoreMockCurrentQuestion();
     saveMockAnswer(mockQIndex);
-    // Mark as skipped if not already answered
     if(mockExamStates[mockQIndex] && !mockExamStates[mockQIndex].answered){
       mockExamStates[mockQIndex]={answered:false,skipped:true,pct:null};
     }
@@ -2908,6 +2952,8 @@ function startMockExam(){
   const _mb=document.getElementById("modeBadge"); if(_mb) _mb.textContent="Exam";
   const _mc=document.getElementById("modeBadge"); if(_mc) _mc.className="mode-badge exam";
   document.getElementById("progressFill").style.width = "0%";
+  const _mt=document.getElementById("modeToggle");
+  if(_mt) _mt.style.display="none";
   const msb=document.getElementById("mockSubmitBar");
   if(msb) msb.style.display="flex";
 
@@ -3031,9 +3077,23 @@ function renderMockNavBar(){
 }
 
 function markMockAnswered(pct){
-  if(!mockExamStates.length) return; // not in a mock exam
+  if(!mockExamStates.length) return;
   if(mockQIndex<0 || mockQIndex>=mockExamStates.length) return;
   mockExamStates[mockQIndex]={answered:true,skipped:false,pct};
+  // Log to session report
+  const item=mockQuestions[mockQIndex];
+  if(item){
+    sessionLog.push({
+      subject: mockSubject,
+      part: item.lesson.part||"",
+      lessonId: item.lesson.id,
+      lessonTitle: item.lesson.title,
+      qtype: item.qtype,
+      pct, timeMs: Date.now()-_questionStart, ts: Date.now()
+    });
+    const btn=document.getElementById("reportBtn");
+    if(btn) btn.classList.add("visible");
+  }
   // Update submit bar progress
   const answered=mockExamStates.filter(s=>s&&s.answered).length;
   const sp=document.getElementById("mockSubmitProgress");
@@ -3114,15 +3174,26 @@ function scoreMockCurrentQuestion(){
   if(!item) return;
   let pct = null;
   if(item.qtype==="mcq"){
-    const sel = document.querySelector(".mcq-option.selected");
-    if(!sel) return;
-    const opts = [...document.querySelectorAll(".mcq-option")];
-    const selIdx = opts.indexOf(sel);
+    if(mcqSelected===null) return; // nothing selected
     const btn = document.getElementById("examNextBtn");
     if(!btn) return;
     const m = btn.getAttribute("onclick")?.match(/examNextMCQ\((\d+)/);
     if(!m) return;
-    pct = selIdx===parseInt(m[1]) ? 100 : 0;
+    const correctIdx = parseInt(m[1]);
+    pct = mcqSelected===correctIdx ? 100 : 0;
+    // Capture text from DOM
+    const selSpan = document.querySelector(`#mcqopt${mcqSelected} span:last-child`);
+    const corrSpan = document.querySelector(`#mcqopt${correctIdx} span:last-child`);
+    const userText = selSpan?.textContent||"";
+    const modelText = corrSpan?.textContent||item.q.options[item.q.correct]||"";
+    sessionResults.push({pct});
+    examAnswers.push({
+      q:item.q.q||"", userText, modelText, pct,
+      qtype:item.qtype, lessonTitle:item.lesson.title,
+      lessonId:item.lesson.id, mockIdx:mockQIndex
+    });
+    markMockAnswered(pct);
+    return;
   } else if(item.qtype==="truefalse"){
     const sel = document.querySelector("#tfopt0.selected, #tfopt1.selected");
     if(!sel) return;
@@ -3196,8 +3267,9 @@ function scoreMockCurrentQuestion(){
 function showMockResults(){
   stopTimer();
   const totalMs = Date.now()-_sessionStart;
-  const avg = sessionResults.length
-    ? Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length) : 0;
+  // Score = total points earned / total questions (unanswered = 0)
+  const totalPoints = mockExamStates.reduce((a,s)=>a+(s.answered?s.pct:0),0);
+  const avg = mockQuestions.length>0 ? Math.round(totalPoints/mockQuestions.length) : 0;
   // Hide submit bar
   const msb=document.getElementById("mockSubmitBar");
   if(msb) msb.style.display="none";
@@ -3224,9 +3296,11 @@ function buildMockAnswerSheet(avg, totalMs){
   const cls = avg>=80?"great": avg>=50?"good":"";
   const borderColor = avg>=80?"#4ccc8a": avg>=50?"#e8a020":"#e07b54";
   const scoreColor  = avg>=80?"#4ccc8a": avg>=50?"#e8c060":"#e07b54";
-  const correct = sessionResults.filter(r=>r.pct>=80).length;
-  const partial = sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
-  const wrong   = sessionResults.filter(r=>r.pct<40).length;
+  const answered = mockExamStates.filter(s=>s.answered).length;
+  const correct = mockExamStates.filter(s=>s.answered&&s.pct>=80).length;
+  const partial = mockExamStates.filter(s=>s.answered&&s.pct>=30&&s.pct<80).length;
+  const wrong   = mockExamStates.filter(s=>s.answered&&s.pct<30).length;
+  const skipped = mockQuestions.length - answered;
 
   // Build lookup: mockIdx → examAnswer
   const eaByIdx = {};
@@ -3357,7 +3431,7 @@ function buildMockAnswerSheet(avg, totalMs){
   return `
   <div class="mas-header">
     <div class="mas-title">🎯 Mock Exam — Answer Sheet</div>
-    <div class="mas-meta">${mockSubject} · ${mockQuestions.length} questions · ⏱ ${fmtMs(totalMs)}</div>
+    <div class="mas-meta">${mockSubject} · ${answered}/${mockQuestions.length} answered · ⏱ ${fmtMs(totalMs)}</div>
     <div class="mas-mark-row">
       <div style="display:flex;flex-direction:column;align-items:center">
         <div style="position:relative;width:120px;height:120px;border-radius:50%;border:4.5px solid ${borderColor};background:#1a2744;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-3deg);font-family:'Courier New',monospace;box-shadow:0 4px 20px rgba(0,0,0,.2)">
@@ -3370,9 +3444,10 @@ function buildMockAnswerSheet(avg, totalMs){
       </div>
     </div>
     <div class="mas-stats">
-      <div class="mas-stat"><div class="mas-stat-num green">${correct}</div><div class="mas-stat-label">Correct</div></div>
+      <div class="mas-stat"><div class="mas-stat-num green">${correct}</div><div class="mas-stat-label">Good</div></div>
       <div class="mas-stat"><div class="mas-stat-num amber">${partial}</div><div class="mas-stat-label">Partial</div></div>
       <div class="mas-stat"><div class="mas-stat-num red">${wrong}</div><div class="mas-stat-label">Wrong</div></div>
+      <div class="mas-stat"><div class="mas-stat-num" style="color:var(--muted)">${skipped}</div><div class="mas-stat-label">Skipped</div></div>
     </div>
   </div>
   ${qCards}
@@ -3416,10 +3491,7 @@ function downloadMockAnswerSheet(){
 }
 function submitMockExam(){
   saveMockAnswer(mockQIndex);
-  if(mockExamStates[mockQIndex] && !mockExamStates[mockQIndex].answered){
-    const last=sessionResults[sessionResults.length-1];
-    if(last!==undefined) mockExamStates[mockQIndex]={answered:true,skipped:false,pct:last.pct};
-  }
+  scoreMockCurrentQuestion(); // score whatever is currently on screen
   const answered=mockExamStates.filter(s=>s.answered).length;
   const unanswered=mockQuestions.length-answered;
 
