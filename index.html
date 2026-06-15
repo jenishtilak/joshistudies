@@ -377,7 +377,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .improve-card{background:var(--parchment);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--navy)}
 .improve-lesson{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px}
 .improve-text{font-size:13px;color:var(--text);line-height:1.6}
-.time-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--parchment);border:1px solid var(--border);border-radius:12px;padding:2px 8px;color:var(--muted);font-weight:600}
+.marks-chip{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;background:var(--navy);color:#fff;border-radius:10px;padding:2px 8px;letter-spacing:.3px}
 .time-chip.fast{background:var(--green-light);border-color:var(--green);color:var(--green)}
 .time-chip.slow{background:var(--gold-light);border-color:var(--gold);color:#8a5c00}
 /* ── LESSON CARD MODE BUTTONS ── */
@@ -767,15 +767,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 //  QUESTION TYPE CONSTANTS
 // ═══════════════════════════════════════════════════════
 const QTYPES = [
-  { id:"mcq",         label:"Choose Correct",          icon:"🔘" },
-  { id:"fill",        label:"Fill in the Blanks",       icon:"✏️"  },
-  { id:"match",       label:"Match the Following",      icon:"🔗"  },
-  { id:"brief",       label:"Answer in Brief",          icon:"📝"  },
-  { id:"truefalse",   label:"True or False",            icon:"✅"  },
-  { id:"reasons",     label:"Give Reasons",             icon:"💡"  },
-  { id:"distinguish", label:"Distinguish Between",      icon:"⚖️"  },
-  { id:"paragraph",   label:"Answer in Paragraph/Detail", icon:"📄" },
+  { id:"mcq",         label:"Choose Correct",             icon:"🔘", marks:1 },
+  { id:"fill",        label:"Fill in the Blanks",          icon:"✏️",  marks:1 },
+  { id:"match",       label:"Match the Following",         icon:"🔗",  marks:5 },
+  { id:"brief",       label:"Answer in Brief",             icon:"📝",  marks:2 },
+  { id:"truefalse",   label:"True or False",               icon:"✅",  marks:1 },
+  { id:"reasons",     label:"Give Reasons",                icon:"💡",  marks:2 },
+  { id:"distinguish", label:"Distinguish Between",         icon:"⚖️",  marks:3 },
+  { id:"paragraph",   label:"Answer in Paragraph/Detail",  icon:"📄",  marks:5 },
 ];
+
+// Get marks for a question type
+function getMarks(qtypeId){ return QTYPES.find(q=>q.id===qtypeId)?.marks||1; }
+
+// Weighted score: earned marks / total possible marks * 100
+function calcWeightedScore(results){
+  // results: [{qtype, pct}]
+  if(!results.length) return 0;
+  let earned=0, total=0;
+  results.forEach(r=>{
+    const m=getMarks(r.qtype||"mcq");
+    total+=m;
+    earned+=m*(r.pct/100);
+  });
+  return total>0 ? Math.round((earned/total)*100) : 0;
+}
 
 // ═══════════════════════════════════════════════════════
 //  DATA
@@ -918,7 +934,7 @@ const DATA = {
                 { q:"Assertion (A): Many of the Mesolithic sites are found nearby rivers and tanks. Reason (R): Irrigation management developed during Mesolithic period.", options:["A and R are correct and R explains A","A and R are correct but R doesn't explain A","A is correct but R is incorrect","A and R both are incorrect"], correct:1 },
               ],
               fill:[
-                { sentence:"Hand axes and cleavers are the important tool types of the ___ culture.", answers:["Acheulian"] },
+                { sentence:"Hand axes and cleavers are the important tool types of the ___ culture.", answers:["Lower Palaeolithic"] },
                 { sentence:"The methods and techniques involved in the production of stone tools are called ___ technology.", answers:["Lithic"] },
                 { sentence:"___ is known as the Middle Stone Age, as it is placed between the Palaeolithic and Neolithic.", answers:["Mesolithic"] },
               ],
@@ -931,6 +947,8 @@ const DATA = {
               ],
               brief:[
                 { q:"Discuss how the age of speculation made humans become conscious and knowledgeable.", answer:"Humans are the only species on earth concerned with understanding as well as explaining the world and the universe. In the course of evolution humans became conscious and knowledgeable." },
+                { q:"Examine the tool making technical skills of lower Palaeolithic people.", answer:"The human ancestors flaked large stone blocks and designed various tools including hand axes." },
+                { q:"The history of humans is closely related to the history of the earth. Elucidate.", answer:"The history of humans is closely related to the history of the earth. The earth contains geological, archaeological and biological records of historical times in its upper layers. They are important for reconstructing the history of the earth and various living organisms." },
               ], truefalse:[
                 { statement:"The concept 'survival of the fittest' contributed to the scientific understanding of human origins.", answer:"true", reason:"Charles Darwin's theory of natural selection and biological evolution helped explain human origins scientifically." },
                 { statement:"The book 'On the Origin of Species' was published by Herbert Spencer.", answer:"false", reason:"The book 'On the Origin of Species' was written and published by Charles Darwin, not Herbert Spencer." },
@@ -2086,7 +2104,7 @@ function selectMCQ(idx, correctIdx, isLast){
     else if(i===idx)   el.classList.add("wrong");
   });
   const pct = idx===correctIdx ? 100 : 0;
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const elapsed=stampQuestion();
   logQuestion(pct,elapsed);
@@ -2099,7 +2117,7 @@ function examNextMCQ(correctIdx, isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
   const pct=mcqSelected===correctIdx?100:0;
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   // Read displayed text from the DOM (shuffled order)
   const selectedText = mcqSelected!==null
@@ -2208,7 +2226,7 @@ function checkFill(answers){
     }
   });
   const pct=Math.round(100*correct/answers.length);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   document.getElementById("checkBtn").disabled=true;
   hidePeek();
@@ -2226,7 +2244,7 @@ function examNextFill(answers, isLast){
   let correct=0;
   answers.forEach((ans,i)=>{ if(levenshtein(userVals[i].toLowerCase(),ans.toLowerCase())<=1) correct++; });
   const pct=Math.round(100*correct/answers.length);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   examAnswers.push({q:q.sentence,userText:userVals.join(" / "),modelText:answers.join(" / "),pct,qtype:currentQType,lessonTitle:currentLesson.title,lessonId:currentLesson.id,mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
@@ -2304,7 +2322,7 @@ function checkMatchFromDOM(){
   });
   const count=q.left.length;
   const pct=Math.round(100*correct/count);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const matchElapsed=stampQuestion();
   logQuestion(pct,matchElapsed);
@@ -2334,7 +2352,7 @@ function examNextMatch(correctMap, leftLabels, isLast){
   });
   const modelPairs=leftLabels.map((l,i)=>`${l} → ${correctMap[i]}`);
   const pct=Math.round(100*correct/count);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   examAnswers.push({q:"Match: "+leftLabels.join(", "),userText:pairs.join("\n"),modelText:modelPairs.join("\n"),pct,qtype:currentQType,lessonTitle:currentLesson.title,lessonId:currentLesson.id,mockIdx:mockQIndex});
@@ -2352,7 +2370,7 @@ function checkMatch(correctMap, count, isLast){
     if(ok) correct++;
   }
   const pct=Math.round(100*correct/count);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const matchElapsed=stampQuestion();
   logQuestion(pct,matchElapsed);
@@ -2445,7 +2463,7 @@ function selectTF(selected, correct, isLast, reason){
   document.getElementById("tfopt1").classList.toggle("correct", correct==="false");
   document.getElementById("tfopt1").classList.toggle("wrong", selected==="false" && !isCorrect);
   const pct = isCorrect ? 100 : 0;
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const tfelapsed=stampQuestion();
   logQuestion(pct,tfelapsed);
@@ -2469,7 +2487,7 @@ function examNextTF(correct, isLast){
   const eb=document.getElementById("examNextBtn");
   const sel = eb?.dataset?.sel || (document.querySelector(".mcq-option.selected span:last-child")?.textContent?.toLowerCase());
   const pct = sel===correct?100:0;
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   examAnswers.push({q:q.statement||q.q, userText:sel||"(no answer)", modelText:correct, pct, qtype:"truefalse", lessonTitle:currentLesson.title, lessonId:currentLesson.id, mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
@@ -2502,7 +2520,7 @@ function examNextText(isLast){
     if(d.type==="misspelled")
       sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
   });
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   examAnswers.push({q:q.q, userText:userText||"(no answer)", modelText:q.answer, pct, qtype:currentQType, lessonTitle:currentLesson.title, lessonId:currentLesson.id, mockIdx:mockQIndex});
   if(isLast){ showMockResults(); return; }
@@ -2551,7 +2569,7 @@ function checkTextAnswer(){
     if(d.type==="misspelled")
       sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
   });
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const txtElapsed=stampQuestion();
   logQuestion(pct,txtElapsed);
@@ -2675,7 +2693,7 @@ function examNextDistinguish(isLast){
   const userB=(document.getElementById("distInputB")?.value||"").trim();
   const combined=userA+" "+userB;
   const {pct}=scoreAnswer(combined, q.answerA+" "+q.answerB);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
   examAnswers.push({
     q:`Distinguish: ${q.termA} vs ${q.termB}`,
@@ -2707,7 +2725,7 @@ function checkDistinguish(){
   const {pct:pctA}=scoreAnswer(userA, q.answerA);
   const {pct:pctB}=scoreAnswer(userB, q.answerB);
   const pct=Math.round((pctA+pctB)/2);
-  sessionResults.push({pct});
+  sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const distElapsed=stampQuestion();
   logQuestion(pct,distElapsed);
@@ -2750,19 +2768,23 @@ function showSimpleResult(pct, detail){
   const panel=document.getElementById("resultPanel");
   panel.classList.add("visible");
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
+  const m=getMarks(currentQType);
+  const earned=(m*(pct/100)).toFixed(m===1?0:1);
   panel.innerHTML=`
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
-      <div><div class="score-label">${pct>=80?"Correct! 🎉":pct>=50?"Partially correct":"Incorrect"}</div>
-      <div class="score-detail">${detail}</div></div>
+      <div>
+        <div class="score-label">${pct>=80?"Correct! 🎉":pct>=50?"Partially correct":"Incorrect"}</div>
+        <div class="score-detail">${detail}</div>
+        <div class="marks-chip">${earned}/${m} mark${m!==1?"s":""}</div>
+      </div>
     </div>`;
-  // Cache the answered state for back-navigation
   setTimeout(()=>saveStudyAnswer(pct), 50);
 }
 
 // ── SKIP ──
 function skipQuestion(isLast){
-  sessionResults.push({pct:0});
+  sessionResults.push({pct:0, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:false,skipped:true,pct:0};
   const skipElapsed=stampQuestion();
   logQuestion(0,skipElapsed);
@@ -3208,7 +3230,7 @@ function scoreMockCurrentQuestion(){
     const corrSpan = document.querySelector(`#mcqopt${correctIdx} span:last-child`);
     const userText = selSpan?.textContent||"";
     const modelText = corrSpan?.textContent||item.q.options[item.q.correct]||"";
-    sessionResults.push({pct});
+    sessionResults.push({pct, qtype:currentQType});
     examAnswers.push({
       q:item.q.q||"", userText, modelText, pct,
       qtype:item.qtype, lessonTitle:item.lesson.title,
@@ -3245,7 +3267,7 @@ function scoreMockCurrentQuestion(){
     pct=p;
   }
   if(pct!==null){
-    sessionResults.push({pct});
+    sessionResults.push({pct, qtype:currentQType});
     // Build proper userText for answer sheet
     let userText = "";
     if(item.qtype==="mcq"){
@@ -3290,8 +3312,9 @@ function showMockResults(){
   stopTimer();
   const totalMs = Date.now()-_sessionStart;
   // Score = total points earned / total questions (unanswered = 0)
-  const totalPoints = mockExamStates.reduce((a,s)=>a+(s.answered?s.pct:0),0);
-  const avg = mockQuestions.length>0 ? Math.round(totalPoints/mockQuestions.length) : 0;
+  // Weighted score across all mock questions
+  const mockResults = mockExamStates.map((s,i)=>({pct:s.answered?s.pct:0, qtype:mockQuestions[i]?.qtype||"mcq"}));
+  const avg = calcWeightedScore(mockResults);
   // Hide submit bar
   const msb=document.getElementById("mockSubmitBar");
   if(msb) msb.style.display="none";
@@ -3818,7 +3841,7 @@ function renderReport(){
   });
 
   const totalQ=sessionLog.length;
-  const avgPct=Math.round(sessionLog.reduce((a,e)=>a+e.pct,0)/totalQ);
+  const avgPct=Math.round(sessionLog.reduce((a,e)=>a+e.pct,0)/totalQ); // simple avg for report overview
   document.getElementById("reportSubtitle").textContent=
     `${totalQ} question${totalQ!==1?"s":""} answered · avg ${avgPct}% this session`;
 
@@ -3833,7 +3856,7 @@ function renderReport(){
       Object.entries(lessons).forEach(([lk, qtypes])=>{
         const [,lessonTitle]=lk.split("|");
         Object.entries(qtypes).forEach(([qt,data])=>{
-          const avg=Math.round(data.pcts.reduce((a,b)=>a+b,0)/data.pcts.length);
+          const marks=getMarks(qt); const avg=Math.round(data.pcts.reduce((a,b)=>a+b,0)/data.pcts.length);
           const avgTime=Math.round(data.times.reduce((a,b)=>a+b,0)/data.times.length);
           const n=data.pcts.length;
           html+=`<div class="report-row">
