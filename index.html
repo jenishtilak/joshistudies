@@ -1729,6 +1729,12 @@ function renderLessons(){
 //  REVISE MODE
 // ═══════════════════════════════════════════════════════
 function openRevise(lesson){
+  // If already revising this exact lesson, just toggle the buttons — no need to re-render
+  if(currentMode==="revise" && currentLesson?.id===lesson.id && document.getElementById("quizOverlay")?.classList.contains("visible")){
+    document.getElementById("toggleRevise")?.classList.add("active");
+    document.getElementById("togglePractice")?.classList.remove("active");
+    return;
+  }
   currentLesson = lesson;
   currentMode = "revise"; // prevent renderCurrentQuestion from overwriting
   const ov = document.getElementById("quizOverlay");
@@ -1817,7 +1823,16 @@ function renderRevise(lesson){
 // ═══════════════════════════════════════════════════════
 //  LESSON START (direct — no mode picker)
 // ═══════════════════════════════════════════════════════
-function openLesson(lesson){ currentMode="study"; startLesson(lesson); }
+function openLesson(lesson){
+  // If already viewing this lesson in practice mode, don't reset — just switch toggle state
+  if(currentMode==="study" && currentLesson?.id===lesson.id && document.getElementById("quizOverlay")?.classList.contains("visible")){
+    document.getElementById("togglePractice")?.classList.add("active");
+    document.getElementById("toggleRevise")?.classList.remove("active");
+    return;
+  }
+  currentMode="study";
+  startLesson(lesson);
+}
 function startLesson(lesson){
   currentLesson = lesson;
   const firstWithQ=QTYPES.find(qt=>lesson.questions[qt.id]&&lesson.questions[qt.id].length>0);
@@ -1853,7 +1868,13 @@ function renderQTypeTabs(){
     const t=document.createElement("div");
     t.className="qtype-tab"+(qt.id===currentQType?" active":"");
     t.innerHTML=`${qt.icon} ${qt.label}<span class="qt-count">${count}</span>`;
-    if(count) t.onclick=()=>{ currentQType=qt.id; renderQTypeTabs(); startQTypeSession(); };
+    if(count) t.onclick=()=>{
+      if(qt.id===currentQType) return; // already on this tab, no-op
+      saveCurrentQTypeSession();
+      currentQType=qt.id;
+      renderQTypeTabs();
+      startQTypeSession();
+    };
     wrap.appendChild(t);
     // Auto-scroll active tab into view
     if(qt.id===currentQType) setTimeout(()=>t.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),50);
@@ -1907,21 +1928,50 @@ function timeChip(ms){
 }
 
 let studyAnswerCache = []; // cached {bodyHTML, resultHTML, answered, pct} per question index
+let qtypeSessionState = {}; // key: lessonId+":"+qtype → {currentQIndex, sessionResults, questionStates, studyAnswerCache, mcqSelected, matchAnswers}
+
+function getQTypeSessionKey(){
+  return (currentLesson?.id||"")+":"+currentQType;
+}
+
+function saveCurrentQTypeSession(){
+  if(!currentLesson || currentLesson.id==="__mock__") return;
+  const key=getQTypeSessionKey();
+  qtypeSessionState[key]={
+    currentQIndex, sessionResults: [...sessionResults],
+    questionStates: questionStates.map(s=>({...s})),
+    studyAnswerCache: studyAnswerCache.map(c=>c?{...c}:null)
+  };
+}
+
+function loadQTypeSession(qtypeId){
+  const key=currentLesson.id+":"+qtypeId;
+  return qtypeSessionState[key]||null;
+}
 
 function startQTypeSession(){
-  currentQIndex=0;
-  sessionResults=[];
+  const total=(currentLesson.questions[currentQType]||[]).length;
+  const existing=loadQTypeSession(currentQType);
+  if(existing){
+    // Restore previous progress for this qtype
+    currentQIndex=existing.currentQIndex;
+    sessionResults=[...existing.sessionResults];
+    questionStates=existing.questionStates.map(s=>({...s}));
+    studyAnswerCache=existing.studyAnswerCache.map(c=>c?{...c}:null);
+  } else {
+    currentQIndex=0;
+    sessionResults=[];
+    questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
+    studyAnswerCache=Array.from({length:total},()=>null);
+  }
   matchAnswers={};
   mcqSelected=null;
-  studyAnswerCache=[];
-  const total=(currentLesson.questions[currentQType]||[]).length;
-  questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
-  studyAnswerCache=Array.from({length:total},()=>null);
   startTimer();
   const qTimerBar = document.querySelector(".q-timer-bar");
   if(qTimerBar) qTimerBar.style.display = "flex";
   renderNavBar();
-  renderCurrentQuestion();
+  // If this qtype was already answered fully, jump to its last position; else render current
+  jumpToQuestion(currentQIndex);
 }
 
 function saveStudyAnswer(pct){
@@ -1973,16 +2023,12 @@ function renderNavBar(){
 function jumpToQuestion(idx){
   const total=(currentLesson.questions[currentQType]||[]).length;
   if(idx<0||idx>=total) return;
-  // Save current body state before leaving
   const body=document.getElementById("quizBody");
-  if(studyAnswerCache && studyAnswerCache[currentQIndex]===null){
-    // Not yet answered — don't cache
-  }
   currentQIndex=idx;
   mcqSelected=null;
   matchAnswers={};
   renderNavBar();
-  // Restore cached state if question was answered
+  // Restore cached state if this question was already answered
   if(studyAnswerCache && studyAnswerCache[idx]){
     const cached=studyAnswerCache[idx];
     body.innerHTML=cached.bodyHTML;
@@ -2143,7 +2189,7 @@ function examNextMCQ(correctIdx, isLast){
 function renderFill(q, qnum, isLast){
   let idx=0;
   const html=q.sentence.replace(/___/g,()=>
-    `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false">`
+    `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false">`
   );
 
   const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
@@ -2154,10 +2200,10 @@ function renderFill(q, qnum, isLast){
 
   const actionBar = currentMode==="exam"
     ? `<div class="answer-actions">
-        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM()">${isLast?"Finish ✓":"Next →"}</button>
+        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM(${isLast})">${isLast?"Finish ✓":"Next →"}</button>
        </div>`
     : `<div class="answer-actions">
-        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM()">Check Answer</button>
+        <button class="btn-check" id="checkBtn" onclick="checkFillFromDOM(${isLast})">Check Answer</button>
         <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>
        </div>`;
 
@@ -2190,10 +2236,13 @@ function toggleFillPeek(){
   b.textContent=opening?"🙈 Hide Answer":"👁 View Answer before filling";
 }
 
-function checkFillFromDOM(){
+function checkFillFromDOM(isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  const isLast=currentQIndex>=qs.length-1;
+  // isLast is passed in from render time (correct for both study mode and mock exam).
+  // Recalculating it here from qs.length is wrong in mock exam, since the mock
+  // wrapper array always has length 1 regardless of position in the overall exam.
+  if(isLast===undefined) isLast = currentQIndex>=qs.length-1; // fallback for any old callers
   if(currentMode==="exam") examNextFill(q.answers, isLast);
   else checkFill(q.answers);
 }
@@ -2331,9 +2380,6 @@ function checkMatchFromDOM(){
   showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
-function checkMatch(correctMap, count, isLast){
-  checkMatchFromDOM();
-}
 function examNextMatchFromDOM(isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
@@ -2359,36 +2405,22 @@ function examNextMatch(correctMap, leftLabels, isLast){
   if(isLast){ showMockResults(); return; }
   nextQuestion();
 }
-function checkMatch(correctMap, count, isLast){
-  let correct=0;
-  for(let i=0;i<count;i++){
-    const sel=document.getElementById("match"+i);
-    const ok=sel.value===correctMap[i];
-    sel.disabled=true;
-    sel.style.borderColor=ok?"var(--green)":"var(--red)";
-    sel.style.color=ok?"var(--green)":"var(--red)";
-    if(ok) correct++;
-  }
-  const pct=Math.round(100*correct/count);
-  sessionResults.push({pct, qtype:currentQType});
-  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
-  const matchElapsed=stampQuestion();
-  logQuestion(pct,matchElapsed);
-  document.getElementById("checkBtn").disabled=true;
-  showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
-  const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
-}
-
 // ── TEXT ANSWER (brief / reasons / paragraph / detail) ──
 function renderTextAnswer(q, qnum, isLast, isParagraph){
   const labelMap = { brief:"Answer in Brief", reasons:"Give Reasons", paragraph:"Answer in Paragraph / Detail" };
   const label = labelMap[currentQType] || (isParagraph?"Answer in Paragraph / Detail":"Answer in Brief");
   const placeholder = isParagraph ? "Write a detailed answer…" : "Write your answer…";
   const minH = isParagraph ? 180 : 120;
+  const prevAttempt = previousAttempts[getPrevAttemptKey(currentQIndex)];
   const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="togglePeek()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
-         <div class="peek-label">Model Answer</div>
-         <div class="peek-text">${q.answer.replace(/</g,"&lt;")}</div>
+         ${prevAttempt && prevAttempt.type==="text" ? `
+           <div class="peek-label" style="color:var(--red)">Your Previous Attempt</div>
+           ${buildAnnotatedDiff(prevAttempt.userText, q.answer)}
+         ` : `
+           <div class="peek-label">Model Answer</div>
+           <div class="peek-text">${q.answer.replace(/</g,"&lt;")}</div>
+         `}
        </div>` : "";
   const actionBtns = currentMode==="exam"
     ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
@@ -2402,7 +2434,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
     </div>
     ${peekBtn}
     <div class="answer-area" id="answerArea">
-      <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px"></textarea>
+      <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
       <div class="answer-actions">${actionBtns}</div>
     </div>
     <div class="result-panel" id="resultPanel"></div>
@@ -2596,9 +2628,15 @@ function checkTextAnswer(){
 
 // ── DISTINGUISH BETWEEN ──
 function renderDistinguish(q, qnum, isLast){
+  const prevAttempt = previousAttempts[getPrevAttemptKey(currentQIndex)];
   const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="togglePeekDist()">👁 View Model Answer before writing</button>
        <div class="peek-panel" id="peekPanel">
-         ${buildDistTable(q, true)}
+         ${prevAttempt && prevAttempt.type==="distinguish" ? `
+           <div class="peek-label" style="color:var(--red)">Your Previous Attempt — ${q.termA}</div>
+           ${buildAnnotatedDiff(prevAttempt.userTextA, q.answerA)}
+           <div class="peek-label" style="margin-top:14px;color:var(--red)">Your Previous Attempt — ${q.termB}</div>
+           ${buildAnnotatedDiff(prevAttempt.userTextB, q.answerB)}
+         ` : buildDistTable(q, true)}
        </div>` : "";
   const actionBtns = currentMode==="exam"
     ? `<button class="btn-check" id="checkBtn" onclick="examNextDistinguish(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
@@ -2616,11 +2654,11 @@ function renderDistinguish(q, qnum, isLast){
       <div class="dist-input-grid">
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termA}</div>
-          <textarea class="dist-textarea" id="distInputA" placeholder="Write about ${q.termA}…"></textarea>
+          <textarea class="dist-textarea" id="distInputA" placeholder="Write about ${q.termA}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
         </div>
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termB}</div>
-          <textarea class="dist-textarea" id="distInputB" placeholder="Write about ${q.termB}…"></textarea>
+          <textarea class="dist-textarea" id="distInputB" placeholder="Write about ${q.termB}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
         </div>
       </div>
       <div class="answer-actions" style="padding:0 12px 12px">${actionBtns}</div>
@@ -2812,28 +2850,58 @@ function hidePeek(){
 }
 
 // ── TRY AGAIN (single question) ──
+let previousAttempts = {}; // key: lessonId+":"+qtype+":"+qIndex → {type, userText/userTextA/userTextB}
+
+function getPrevAttemptKey(idx){
+  return (currentLesson?.id||"")+":"+currentQType+":"+idx;
+}
+
 function tryAgainQuestion(){
+  // Save the previous attempt (with mistakes) before clearing, so it can be shown
+  // alongside the model answer when the student tries again.
+  const cached = studyAnswerCache && studyAnswerCache[currentQIndex];
+  const key = getPrevAttemptKey(currentQIndex);
+  if(cached){
+    const ta = document.getElementById("answerInput");
+    const da = document.getElementById("distInputA");
+    if(ta){
+      previousAttempts[key] = { type:"text", userText: ta.value||"" };
+    } else if(da){
+      const db = document.getElementById("distInputB");
+      previousAttempts[key] = { type:"distinguish", userTextA: da.value||"", userTextB: db?.value||"" };
+    }
+  }
   // Remove the last result so retry replaces it (not adds to it)
   if(sessionResults.length > currentQIndex) sessionResults.splice(currentQIndex, 1);
+  if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:false,skipped:false,pct:null};
+  if(studyAnswerCache && studyAnswerCache[currentQIndex]!==undefined) studyAnswerCache[currentQIndex]=null;
   mcqSelected=null;
   matchAnswers={};
   renderCurrentQuestion();
 }
 
 // ── NEXT ──
+let _mockNavLock = false;
 function nextQuestion(){
   // Mock exam flow
   if(currentLesson.id==="__mock__"){
+    if(_mockNavLock) return;
+    _mockNavLock = true;
+    setTimeout(()=>{ _mockNavLock=false; }, 300);
     // Score current question from DOM if not already recorded
     scoreMockCurrentQuestion();
     saveMockAnswer(mockQIndex);
     if(mockExamStates[mockQIndex] && !mockExamStates[mockQIndex].answered){
       mockExamStates[mockQIndex]={answered:false,skipped:true,pct:null};
     }
+    if(mockQIndex>=mockQuestions.length-1){
+      // Reached the last question — don't auto-submit, ask for confirmation
+      submitMockExam();
+      return;
+    }
     mockQIndex++;
     mcqSelected=null; matchAnswers={};
     document.getElementById("quizBody").style.display="block";
-    if(mockQIndex>=mockQuestions.length){ showMockResults(); return; }
     renderMockQuestion();
     setTimeout(()=>restoreMockAnswer(mockQIndex),0);
     return;
@@ -3036,6 +3104,11 @@ function renderMockQuestion(){
   document.getElementById("summaryScreen").classList.remove("visible");
   document.getElementById("answerPaper").classList.remove("visible");
   document.getElementById("quizOverlay").scrollTo(0,0);
+  // Clear any leftover result feedback from the previous question
+  const _rp=document.getElementById("resultPanel");
+  if(_rp){ _rp.classList.remove("visible"); _rp.innerHTML=""; }
+  const _br=document.getElementById("btnRow");
+  if(_br) _br.style.display="none";
 
   currentQType=item.qtype;
   currentQIndex=0;
@@ -3180,6 +3253,7 @@ function restoreMockAnswer(idx){
   if(saved.type==="mcq"){
     const opts = document.querySelectorAll(".mcq-option");
     if(opts[saved.selectedIdx]) opts[saved.selectedIdx].classList.add("selected");
+    mcqSelected = saved.selectedIdx; // restore JS state, not just DOM class
     const eb = document.getElementById("examNextBtn");
     if(eb) eb.disabled = false;
   } else if(saved.type==="truefalse"){
@@ -3203,6 +3277,9 @@ function restoreMockAnswer(idx){
 
 function jumpMockQuestion(idx){
   if(idx<0||idx>=mockQuestions.length) return;
+  if(_mockNavLock) return;
+  _mockNavLock = true;
+  setTimeout(()=>{ _mockNavLock=false; }, 300);
   saveMockAnswer(mockQIndex);
   scoreMockCurrentQuestion(); // score before leaving
   mockQIndex=idx;
@@ -3575,13 +3652,68 @@ function closeMockAnswerSheet(){
   closeQuiz();
 }
 
+// Check if the currently displayed mock question has any answer entered
+function mockQuestionHasAnswer(){
+  const item = mockQuestions[mockQIndex];
+  if(!item) return false;
+  if(item.qtype==="mcq"){
+    return mcqSelected!==null;
+  } else if(item.qtype==="truefalse"){
+    return !!document.querySelector("#tfopt0.selected, #tfopt1.selected");
+  } else if(item.qtype==="fill"){
+    const inputs=[...document.querySelectorAll(".blank-input")];
+    return inputs.length>0 && inputs.some(i=>i.value.trim());
+  } else if(item.qtype==="match"){
+    const sels=[...document.querySelectorAll(".match-right-select")];
+    return sels.length>0 && sels.some(s=>s.value);
+  } else if(item.qtype==="distinguish"){
+    const a=document.getElementById("distInputA")?.value?.trim()||"";
+    const b=document.getElementById("distInputB")?.value?.trim()||"";
+    return !!(a||b);
+  } else {
+    const ta=document.getElementById("answerInput")?.value?.trim()||"";
+    return !!ta;
+  }
+}
+
+// ── DISABLE COPY/PASTE/CUT/RIGHT-CLICK ON ANSWER INPUTS ──
+// Applies to all answer textboxes (fill blanks, brief/paragraph/reasons, distinguish)
+// so students can't paste in answers from elsewhere or copy questions out easily.
+const _noCopyPasteSelectors = ".blank-input, .answer-textarea, .dist-textarea";
+["copy","cut","paste","contextmenu"].forEach(evt=>{
+  document.addEventListener(evt, function(e){
+    if(e.target.closest && e.target.closest(_noCopyPasteSelectors)){
+      e.preventDefault();
+    }
+  });
+});
+// Also block right-click anywhere inside the quiz overlay (questions, model answers, etc.)
+document.addEventListener("contextmenu", function(e){
+  if(e.target.closest && e.target.closest("#quizOverlay")){
+    e.preventDefault();
+  }
+});
+// Block drag-and-drop text into textboxes (another paste vector)
+document.addEventListener("drop", function(e){
+  if(e.target.closest && e.target.closest(_noCopyPasteSelectors)){
+    e.preventDefault();
+  }
+});
+
 // ── KEYBOARD NAVIGATION ──
+let _navKeyLock = false;
 document.addEventListener("keydown", function(e){
   // Only in quiz overlay, not typing in inputs
   const overlay = document.getElementById("quizOverlay");
   if(!overlay?.classList.contains("visible")) return;
   const tag = document.activeElement?.tagName;
   if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+  if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) return;
+
+  // Debounce: ignore repeat keydowns within 350ms to prevent double-advance
+  if(_navKeyLock) { e.preventDefault(); return; }
+  _navKeyLock = true;
+  setTimeout(()=>{ _navKeyLock=false; }, 350);
 
   if(currentLesson?.id==="__mock__"){
     if(e.key==="ArrowLeft"||e.key==="ArrowUp"){
@@ -3589,10 +3721,17 @@ document.addEventListener("keydown", function(e){
       jumpMockQuestion(mockQIndex-1);
     } else if(e.key==="ArrowRight"||e.key==="ArrowDown"){
       e.preventDefault();
-      // Only advance if current question has been answered
+      const hasAnswer = mockQuestionHasAnswer();
       const nextBtn=document.getElementById("examNextBtn")||document.getElementById("checkBtn");
-      if(nextBtn && !nextBtn.disabled) nextBtn.click();
-      else jumpMockQuestion(mockQIndex+1);
+      if(hasAnswer && nextBtn && !nextBtn.disabled){
+        // Real answer present — submit it via the actual exam button (scores + advances)
+        nextBtn.click();
+      } else if(mockQIndex<mockQuestions.length-1){
+        // No answer yet — just move to next question without scoring as blank
+        jumpMockQuestion(mockQIndex+1);
+      }
+      // If already on the last question with nothing answered, arrow-right does nothing —
+      // user must explicitly press Submit to end the exam.
     }
   } else {
     // Study mode
@@ -3634,8 +3773,11 @@ function setTeacherMark(scoreEl, tickEl, wrapEl, motivationEl, avg){
 function showSummary(){
   stopTimer();
   const totalMs=Date.now()-_sessionStart;
-  const avg=sessionResults.length
-    ?Math.round(sessionResults.reduce((a,r)=>a+r.pct,0)/sessionResults.length):0;
+  // Use questionStates (correctly indexed per question) instead of sessionResults
+  // (sessionResults can be out of order due to Prev/Next navigation and retries)
+  const answeredStates = questionStates.filter(s=>s.answered);
+  const resultsForScoring = answeredStates.map(s=>({pct:s.pct, qtype:currentQType}));
+  const avg = calcWeightedScore(resultsForScoring);
   scores[currentLesson.id+":"+currentQType]=avg;
   document.getElementById("quizBody").style.display="none";
   document.getElementById("answerPaper").classList.remove("visible");
@@ -3649,9 +3791,9 @@ function showSummary(){
     document.getElementById("teacherMotivation"),
     avg
   );
-  document.getElementById("statCorrect").textContent=sessionResults.filter(r=>r.pct>=80).length;
-  document.getElementById("statPartial").textContent=sessionResults.filter(r=>r.pct>=40&&r.pct<80).length;
-  document.getElementById("statWrong").textContent=sessionResults.filter(r=>r.pct<40).length;
+  document.getElementById("statCorrect").textContent=answeredStates.filter(r=>r.pct>=80).length;
+  document.getElementById("statPartial").textContent=answeredStates.filter(r=>r.pct>=40&&r.pct<80).length;
+  document.getElementById("statWrong").textContent=answeredStates.filter(r=>r.pct<40).length;
   document.getElementById("summaryTotalTime").textContent=`⏱ Total time: ${fmtMs(totalMs)}`;
   document.getElementById("progressFill").style.width="100%";
   renderSidebar(); renderLessons();
