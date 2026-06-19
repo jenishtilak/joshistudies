@@ -561,7 +561,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .paper-actions{display:flex;gap:10px;margin-top:20px}
 .paper-actions .btn-retry{flex:1;margin-bottom:0}
 .paper-actions .btn-back-lessons{flex:1}
+#adminMirrorPanel{display:none}
+#adminMirrorPanel.visible{display:block}
 </style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, addDoc, collection,
+    onSnapshot, serverTimestamp, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiokEAyAhr58wI2-eVIqIq0HXb8-R6lPU",
+    authDomain: "study-buddy-joshi.firebaseapp.com",
+    projectId: "study-buddy-joshi",
+    storageBucket: "study-buddy-joshi.firebasestorage.app",
+    messagingSenderId: "424607114715",
+    appId: "1:424607114715:web:054822935d0b7a9f4df3fe"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+
+  // Expose to the rest of the app (loaded as a classic script, not a module)
+  window._fb = { db, doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, query, orderBy };
+</script>
 </head>
 <body>
 
@@ -1352,8 +1376,22 @@ const DATA = {
                   correct:1
                 },
               ],
-              fill:[],
-              match:[],
+              fill:[
+                { sentence:"The Constitution of India was finally adopted on ___.", answers:["26 November 1949"] },
+                { sentence:"The two types of democracy are ___ and ___.", answers:["Direct democracy and Indirect (representative) democracy"] },
+                { sentence:"An example for direct democracy is ___.", answers:["Ancient Greek city-states","Switzerland"] },
+                { sentence:"India has a ___ form of democracy.", answers:["Parliamentary"] },
+                { sentence:"___ was the first Prime Minister of independent India.", answers:["Jawaharlal Nehru"] },
+                { sentence:"The first general elections were held in British India in the year ___.", answers:["1920"] },
+                { sentence:"The Parliament House in India was designed by ___ and ___.", answers:["Edwin Lutyens and Herbert Baker"] },
+              ],
+              match:[
+                {
+                  left:["Autocracy","Right to vote","Chanakya","Theocracy"],
+                  right:["18","Arthashastra","Vatican","North Korea"],
+                  correct:[3,0,1,2]
+                }
+              ],
               brief:[
                 {
                   q:"Give Abraham Lincoln's definition for democracy.",
@@ -1622,6 +1660,12 @@ let sessionLog = [];
 let sessionSpellErrors = []; // {wrong, correct, lessonTitle, qtype}
 let currentMode = "study";  // always study — exam mode removed
 let examAnswers = [];       // used by mock exam tracking
+// Mirror every exam answer to Firestore the moment it's recorded, without touching every call site.
+const _examAnswersPush = examAnswers.push.bind(examAnswers);
+examAnswers.push = function(entry){
+  fbLogEntry("examAnswers", entry);
+  return _examAnswersPush(entry);
+};
 let pendingLesson = null;   // stub - not used // {subject, part, lesson, qtype, pct, timeMs, ts}
 
 // In exam mode we store full answer text per question index
@@ -1929,15 +1973,17 @@ function stampQuestion(){
   return elapsed;
 }
 function logQuestion(pct, elapsed){
-  sessionLog.push({
+  const entry = {
     subject: currentSubject||'',
     part: currentPart||'',
     lessonId: currentLesson?.id||'',
     lessonTitle: currentLesson?.title||'',
     qtype: currentQType||'',
-    qIndex: currentQIndex, // identifies the specific question within lesson+qtype, for unique-question counting
-    pct, timeMs: elapsed, ts: Date.now()
-  });
+    qIndex: currentQIndex,
+    pct, timeMs: elapsed
+  };
+  sessionLog.push({...entry, ts: Date.now()});
+  fbLogEntry("logs", entry);
   const btn=document.getElementById('reportBtn');
   if(btn) btn.classList.add('visible');
 }
@@ -3230,15 +3276,17 @@ function markMockAnswered(pct){
   // Log to session report
   const item=mockQuestions[mockQIndex];
   if(item){
-    sessionLog.push({
+    const entry = {
       subject: mockSubject,
       part: item.lesson.part||"",
       lessonId: item.lesson.id,
       lessonTitle: item.lesson.title,
       qtype: item.qtype,
-      qIndex: "mock:"+mockQIndex, // unique within mock session
-      pct, timeMs: Date.now()-_questionStart, ts: Date.now()
-    });
+      qIndex: "mock:"+mockQIndex,
+      pct, timeMs: Date.now()-_questionStart
+    };
+    sessionLog.push({...entry, ts: Date.now()});
+    fbLogEntry("logs", entry);
     const btn=document.getElementById("reportBtn");
     if(btn) btn.classList.add("visible");
   }
@@ -4094,14 +4142,21 @@ function scrollToLessons(){
 // ═══════════════════════════════════════════════════════
 //  PASSCODE GATE
 // ═══════════════════════════════════════════════════════
-const PASSCODE = "9865280639";
+const STUDENT_PHONE = "9865280639";
+const ADMIN_PHONE   = "9962680639";
+
+let currentUserPhone = null;
+let isAdminUser = false;
 
 function checkPasscode(){
   const val = document.getElementById("passcodeInput").value.trim();
-  if(val === PASSCODE){
+  if(val === STUDENT_PHONE || val === ADMIN_PHONE){
+    currentUserPhone = (val === ADMIN_PHONE) ? STUDENT_PHONE : STUDENT_PHONE; // admin always mirrors the student's data path
+    isAdminUser = (val === ADMIN_PHONE);
     const ws = document.getElementById("welcomeScreen");
     ws.classList.add("fade-out");
     setTimeout(()=>ws.classList.add("gone"), 420);
+    if(isAdminUser) showAdminBar();
   } else {
     const inp = document.getElementById("passcodeInput");
     const err = document.getElementById("wlError");
@@ -4111,6 +4166,127 @@ function checkPasscode(){
     setTimeout(()=>inp.classList.remove("error"), 400);
     inp.focus();
   }
+}
+
+// Write one log entry to Firestore under the student's phone number,
+// regardless of whether the student or admin is the one currently driving the session.
+function fbLogEntry(kind, data){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, addDoc, collection, serverTimestamp } = window._fb;
+  addDoc(collection(db, "sessions", currentUserPhone, kind), {
+    ...data,
+    ts: serverTimestamp(),
+    loggedBy: isAdminUser ? "admin" : "student"
+  }).catch(err => console.warn("Firestore write failed:", err));
+}
+
+// Admin-only: show a small floating bar with a live mirror + download button
+function showAdminBar(){
+  if(!window._fb) return;
+  const bar = document.createElement("div");
+  bar.id = "adminBar";
+  bar.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1a2744;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;z-index:99999;display:flex;align-items:center;justify-content:space-between;gap:10px";
+  bar.innerHTML = `
+    <span>👁 Admin Mode — mirroring ${STUDENT_PHONE}</span>
+    <button onclick="openAdminMirror()" style="background:#fff;color:#1a2744;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:12px;cursor:pointer">Open Live Report</button>`;
+  document.body.appendChild(bar);
+  document.body.style.paddingTop = "36px";
+}
+
+// Opens a live-updating panel showing the student's session logs and exam answers in real time.
+function openAdminMirror(){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, collection, onSnapshot, query, orderBy } = window._fb;
+
+  let panel = document.getElementById("adminMirrorPanel");
+  if(panel){ panel.classList.add("visible"); return; }
+
+  panel = document.createElement("div");
+  panel.id = "adminMirrorPanel";
+  panel.style.cssText = "position:fixed;inset:0;background:#fff;z-index:99998;overflow-y:auto;padding:50px 16px 24px";
+  panel.innerHTML = `
+    <button onclick="document.getElementById('adminMirrorPanel').classList.remove('visible')"
+      style="position:fixed;top:8px;right:12px;background:#e05c5c;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;z-index:99999">✕ Close</button>
+    <h2 style="font-family:Georgia,serif;color:#1a2744">📊 Live Mirror — ${STUDENT_PHONE}</h2>
+    <div id="adminLogList" style="font-size:13px"></div>
+    <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers</h3>
+    <div id="adminExamList" style="font-size:13px"></div>
+    <button onclick="downloadAdminMirror()" style="margin-top:20px;padding:10px 20px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download Full Report</button>
+  `;
+  document.body.appendChild(panel);
+  panel.classList.add("visible");
+  panel.style.display = "block";
+
+  // Live listener — logs
+  const logsQ = query(collection(db, "sessions", currentUserPhone, "logs"), orderBy("ts", "desc"));
+  onSnapshot(logsQ, snap => {
+    const list = document.getElementById("adminLogList");
+    if(!list) return;
+    if(snap.empty){ list.innerHTML = "<p style='color:#999'>No session activity yet.</p>"; return; }
+    list.innerHTML = snap.docs.map(d=>{
+      const e = d.data();
+      return `<div style="padding:8px 10px;border-bottom:1px solid #eee">
+        <b>${e.lessonTitle||"—"}</b> · ${e.qtype||""} · ${e.pct!==undefined?e.pct+"%":""}
+        <span style="color:#999;float:right">${e.ts?.toDate?e.ts.toDate().toLocaleString():"..."}</span>
+      </div>`;
+    }).join("");
+  });
+
+  // Live listener — exam answers
+  const examQ = query(collection(db, "sessions", currentUserPhone, "examAnswers"), orderBy("ts", "desc"));
+  onSnapshot(examQ, snap => {
+    const list = document.getElementById("adminExamList");
+    if(!list) return;
+    if(snap.empty){ list.innerHTML = "<p style='color:#999'>No mock exam activity yet.</p>"; return; }
+    list.innerHTML = snap.docs.map(d=>{
+      const e = d.data();
+      return `<div style="padding:8px 10px;border-bottom:1px solid #eee">
+        <b>${(e.q||"").slice(0,80)}</b><br>
+        <span style="color:#666">Answer: ${(e.userText||"").slice(0,100)}</span>
+        <span style="color:#999;float:right">${e.pct!==undefined?e.pct+"%":""}</span>
+      </div>`;
+    }).join("");
+  });
+}
+
+// Pull both collections once and assemble a downloadable HTML report (admin only)
+async function downloadAdminMirror(){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, collection, query, orderBy } = window._fb;
+  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+  const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","desc")));
+  const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","desc")));
+
+  let html = `<html><head><meta charset="utf-8"><title>Study Buddy Mirror Report</title>
+    <style>body{font-family:Georgia,serif;padding:24px;color:#222}h2{color:#1a2744}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}</style>
+    </head><body>
+    <h1>📊 Study Buddy — Admin Mirror Report</h1>
+    <p>Student: ${STUDENT_PHONE} · Generated: ${new Date().toLocaleString()}</p>
+    <h2>Session Logs (${logsSnap.size})</h2>
+    <table><tr><th>Lesson</th><th>Type</th><th>Score</th><th>Time</th></tr>`;
+  logsSnap.forEach(d=>{
+    const e = d.data();
+    html += `<tr><td>${e.lessonTitle||"—"}</td><td>${e.qtype||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td><td>${e.ts?.toDate?e.ts.toDate().toLocaleString():""}</td></tr>`;
+  });
+  html += `</table><h2>Mock Exam Answers (${examSnap.size})</h2>
+    <table><tr><th>Question</th><th>Your Answer</th><th>Score</th></tr>`;
+  examSnap.forEach(d=>{
+    const e = d.data();
+    html += `<tr><td>${e.q||""}</td><td>${e.userText||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td></tr>`;
+  });
+  html += `</table></body></html>`;
+
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `StudyBuddy_AdminMirror_${Date.now()}.html`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function togglePasscodeVisibility(){
