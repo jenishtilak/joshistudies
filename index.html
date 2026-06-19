@@ -568,7 +568,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
     getFirestore, doc, setDoc, addDoc, collection,
-    onSnapshot, serverTimestamp, query, orderBy
+    onSnapshot, serverTimestamp, query, orderBy, getDocs
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -584,7 +584,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   const db = getFirestore(fbApp);
 
   // Expose to the rest of the app (loaded as a classic script, not a module)
-  window._fb = { db, doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, query, orderBy };
+  window._fb = { db, doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, query, orderBy, getDocs };
 </script>
 </head>
 <body>
@@ -1676,6 +1676,10 @@ let _sessionStart  = 0;
 let _questionStart = 0;
 let _questionTimes = [];  // ms per question
 
+// A "session" = one continuous period the app was open. Used to group
+// scoreboard stats (unique questions, attempts, time spent) per visit.
+const currentSessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
+
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
@@ -2150,6 +2154,7 @@ function renderCurrentQuestion(){
     qIndex: currentQIndex,
     qTotal: total,
     questionText: (qs[currentQIndex]?.q || qs[currentQIndex]?.sentence || qs[currentQIndex]?.statement || ""),
+    correctAnswer: (qs[currentQIndex]?.answer || (qs[currentQIndex]?.answers||[]).join(" / ") || ""),
     currentAnswer: "",
     answered: false
   });
@@ -2224,9 +2229,10 @@ function renderMCQ(q, qnum, isLast){
 function selectMCQ(idx, correctIdx, isLast){
   if(currentMode!=="exam" && document.getElementById("btnRow")?.style.display==="flex") return;
   mcqSelected=idx;
-  const selText = document.querySelector(`.mcq-option:nth-child(${idx+1}) span:last-child`)?.textContent
-    || document.querySelectorAll(".mcq-option")[idx]?.textContent || "";
-  fbLiveState({ currentAnswer: selText, typing:false });
+  const opts = document.querySelectorAll(".mcq-option");
+  const selText = opts[idx]?.querySelector("span:last-child")?.textContent || opts[idx]?.textContent || "";
+  const correctText = opts[correctIdx]?.querySelector("span:last-child")?.textContent || opts[correctIdx]?.textContent || "";
+  fbLiveState({ currentAnswer: selText, correctAnswer: correctText, isCorrect: idx===correctIdx, typing:false });
 
   if(currentMode==="exam"){
     // Exam mode: just highlight selected, enable Next button
@@ -2571,7 +2577,12 @@ function selectTFFromEl(el, isLast){
 }
 function selectTF(selected, correct, isLast, reason){
   if(document.getElementById("btnRow")?.style.display==="flex") return;
-  fbLiveState({ currentAnswer: selected==="true"?"True":"False", typing:false });
+  fbLiveState({
+    currentAnswer: selected==="true"?"True":"False",
+    correctAnswer: correct==="true"?"True":"False",
+    isCorrect: selected===correct,
+    typing:false
+  });
 
   if(currentMode==="exam"){
     // Exam mode: just highlight selected, enable Next
@@ -3217,6 +3228,7 @@ function renderMockQuestion(){
     qIndex: mockQIndex,
     qTotal: total,
     questionText: item.q?.q || item.q?.sentence || item.q?.statement || "",
+    correctAnswer: item.q?.answer || (item.q?.answers||[]).join(" / ") || "",
     currentAnswer: "",
     answered: mockExamStates[mockQIndex]?.answered || false
   });
@@ -4205,6 +4217,7 @@ function fbLogEntry(kind, data){
   const { db, addDoc, collection, serverTimestamp } = window._fb;
   addDoc(collection(db, "sessions", currentUserPhone, kind), {
     ...data,
+    sessionId: currentSessionId,
     ts: serverTimestamp(),
     loggedBy: isAdminUser ? "admin" : "student"
   }).catch(err => console.warn("Firestore write failed:", err));
@@ -4254,19 +4267,36 @@ function openAdminMirror(){
     <button onclick="document.getElementById('adminMirrorPanel').classList.remove('visible')"
       style="position:fixed;top:8px;right:12px;background:#e05c5c;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;z-index:99999">✕ Close</button>
     <h2 style="font-family:Georgia,serif;color:#1a2744">📊 Live Mirror — ${STUDENT_PHONE}</h2>
-    <div id="adminLiveNow" style="background:#1a2744;color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px">
-      <div style="opacity:.7;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔴 Right now</div>
-      <div id="adminLiveNowBody">Waiting for activity…</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="showAdminTab('live')" id="tabBtnLive" class="admin-tab-btn active">🔴 Live</button>
+      <button onclick="showAdminTab('scoreboard')" id="tabBtnScoreboard" class="admin-tab-btn">🏆 Scoreboard</button>
     </div>
-    <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity</h3>
-    <div id="adminLogList" style="font-size:13px"></div>
-    <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers</h3>
-    <div id="adminExamList" style="font-size:13px"></div>
-    <button onclick="downloadAdminMirror()" style="margin-top:20px;padding:10px 20px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download Full Report</button>
+
+    <div id="adminTabLive">
+      <div id="adminLiveNow" style="background:#1a2744;color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px">
+        <div style="opacity:.7;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔴 Right now</div>
+        <div id="adminLiveNowBody">Waiting for activity…</div>
+      </div>
+      <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity</h3>
+      <div id="adminLogList" style="font-size:13px"></div>
+      <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers</h3>
+      <div id="adminExamList" style="font-size:13px"></div>
+      <button onclick="downloadAdminMirror()" style="margin-top:20px;padding:10px 20px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download Full Report</button>
+    </div>
+
+    <div id="adminTabScoreboard" style="display:none">
+      <div id="scoreboardTotal" style="background:#1a2744;color:#fff;border-radius:12px;padding:16px;margin-bottom:20px"></div>
+      <div id="scoreboardSessions"></div>
+    </div>
   `;
   document.body.appendChild(panel);
   panel.classList.add("visible");
   panel.style.display = "block";
+
+  const styleTag = document.createElement("style");
+  styleTag.textContent = `.admin-tab-btn{padding:8px 16px;border:1.5px solid #ddd;border-radius:8px;background:#fff;font-weight:700;font-size:13px;cursor:pointer}
+    .admin-tab-btn.active{background:#1a2744;color:#fff;border-color:#1a2744}`;
+  panel.appendChild(styleTag);
 
   // Live listener — what the student is doing RIGHT NOW
   onSnapshot(doc(db, "sessions", currentUserPhone, "live", "current"), snap => {
@@ -4282,7 +4312,10 @@ function openAdminMirror(){
         ${s.typing ? "⌨️ typing: " : s.currentAnswer ? "✓ selected: " : "…not answered yet"}
         <b>${(s.currentAnswer||"").slice(0,150)}</b>
       </div>
-      ${s.answered ? `<div style="margin-top:6px;color:#7ee787">✓ Answered — ${s.lastScore??""}%</div>` : ""}
+      ${s.correctAnswer ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(126,231,135,.15);border-radius:8px;border-left:3px solid #7ee787">
+        ✓ Correct answer: <b>${(s.correctAnswer||"").slice(0,150)}</b>
+      </div>` : ""}
+      ${s.answered ? `<div style="margin-top:6px;color:${s.isCorrect?'#7ee787':'#ffa07a'}">${s.isCorrect?"✓":"✗"} Answered — ${s.lastScore??""}%</div>` : ""}
     `;
   });
 
@@ -4309,41 +4342,133 @@ function openAdminMirror(){
     if(snap.empty){ list.innerHTML = "<p style='color:#999'>No mock exam activity yet.</p>"; return; }
     list.innerHTML = snap.docs.map(d=>{
       const e = d.data();
+      const isOk = (e.pct||0) >= 80;
       return `<div style="padding:8px 10px;border-bottom:1px solid #eee">
         <b>${(e.q||"").slice(0,80)}</b><br>
-        <span style="color:#666">Answer: ${(e.userText||"").slice(0,100)}</span>
-        <span style="color:#999;float:right">${e.pct!==undefined?e.pct+"%":""}</span>
+        <span style="color:#666">Student's answer: ${(e.userText||"").slice(0,100)}</span><br>
+        <span style="color:#2a9d5c">Correct answer: ${(e.modelText||"").slice(0,100)}</span>
+        <span style="color:${isOk?'#2a9d5c':'#c0392b'};float:right;font-weight:700">${e.pct!==undefined?e.pct+"%":""}</span>
       </div>`;
     }).join("");
   });
 }
 
+function showAdminTab(tab){
+  document.getElementById("adminTabLive").style.display = tab==="live" ? "block" : "none";
+  document.getElementById("adminTabScoreboard").style.display = tab==="scoreboard" ? "block" : "none";
+  document.getElementById("tabBtnLive").classList.toggle("active", tab==="live");
+  document.getElementById("tabBtnScoreboard").classList.toggle("active", tab==="scoreboard");
+  if(tab==="scoreboard") buildScoreboard();
+}
+
+async function buildScoreboard(){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, collection, query, orderBy, getDocs } = window._fb;
+  const totalBox = document.getElementById("scoreboardTotal");
+  const sessBox = document.getElementById("scoreboardSessions");
+  totalBox.innerHTML = "Loading…";
+  sessBox.innerHTML = "";
+
+  const snap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
+  if(snap.empty){
+    totalBox.innerHTML = "<p style='margin:0'>No sessions recorded yet.</p>";
+    return;
+  }
+
+  // Group entries by sessionId
+  const bySession = {};
+  const allUnique = new Set();
+  let grandAttempts = 0, grandTimeMs = 0;
+
+  snap.forEach(d=>{
+    const e = d.data();
+    const sid = e.sessionId || "unknown";
+    if(!bySession[sid]) bySession[sid] = { entries:[], firstTs:null, lastTs:null };
+    bySession[sid].entries.push(e);
+    const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : Date.now();
+    if(!bySession[sid].firstTs || tsMs < bySession[sid].firstTs) bySession[sid].firstTs = tsMs;
+    if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
+
+    const uniqueKey = `${e.lessonId}|${e.qtype}|${e.qIndex}`;
+    allUnique.add(uniqueKey);
+    grandAttempts++;
+    grandTimeMs += e.timeMs || 0;
+  });
+
+  // Grand total box
+  totalBox.innerHTML = `
+    <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏆 All-Time Total (across ${Object.keys(bySession).length} session${Object.keys(bySession).length!==1?"s":""})</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div><div style="font-size:24px;font-weight:800">${allUnique.size}</div><div style="font-size:11px;opacity:.8">Unique Questions Learnt</div></div>
+      <div><div style="font-size:24px;font-weight:800">${grandAttempts}</div><div style="font-size:11px;opacity:.8">Total Attempts</div></div>
+      <div><div style="font-size:24px;font-weight:800">${fmtMs(grandTimeMs)}</div><div style="font-size:11px;opacity:.8">Total Time Spent</div></div>
+    </div>`;
+
+  // Per-session breakdown, most recent first
+  const sessionIds = Object.keys(bySession).sort((a,b)=>bySession[b].firstTs - bySession[a].firstTs);
+  sessBox.innerHTML = sessionIds.map(sid=>{
+    const s = bySession[sid];
+    const uniqueInSession = new Set(s.entries.map(e=>`${e.lessonId}|${e.qtype}|${e.qIndex}`));
+    const attemptsInSession = s.entries.length;
+    const timeInSession = s.entries.reduce((a,e)=>a+(e.timeMs||0),0);
+    const dateLabel = new Date(s.firstTs).toLocaleString();
+    const durationMs = s.lastTs - s.firstTs;
+    return `
+      <div style="border:1.5px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-weight:700;font-size:13px;color:#1a2744">${dateLabel}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">Session length: ${fmtMs(durationMs)}</div>
+        <div style="display:flex;gap:18px;margin-top:8px;font-size:12px">
+          <div><b>${uniqueInSession.size}</b> unique</div>
+          <div><b>${attemptsInSession}</b> attempts</div>
+          <div><b>${fmtMs(timeInSession)}</b> spent</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
 // Pull both collections once and assemble a downloadable HTML report (admin only)
 async function downloadAdminMirror(){
   if(!window._fb || !currentUserPhone) return;
-  const { db, collection, query, orderBy } = window._fb;
-  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const { db, collection, query, orderBy, getDocs } = window._fb;
 
   const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","desc")));
   const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","desc")));
 
+  // Build scoreboard summary for the download too
+  const bySession = {}; const allUnique = new Set();
+  let grandAttempts = 0, grandTimeMs = 0;
+  logsSnap.forEach(d=>{
+    const e = d.data();
+    const sid = e.sessionId || "unknown";
+    if(!bySession[sid]) bySession[sid] = [];
+    bySession[sid].push(e);
+    allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
+    grandAttempts++; grandTimeMs += e.timeMs||0;
+  });
+
   let html = `<html><head><meta charset="utf-8"><title>Study Buddy Mirror Report</title>
     <style>body{font-family:Georgia,serif;padding:24px;color:#222}h2{color:#1a2744}
-    table{width:100%;border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}</style>
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}
+    .ok{color:#2a9d5c;font-weight:700}.bad{color:#c0392b;font-weight:700}</style>
     </head><body>
     <h1>📊 Study Buddy — Admin Mirror Report</h1>
     <p>Student: ${STUDENT_PHONE} · Generated: ${new Date().toLocaleString()}</p>
+
+    <h2>🏆 Scoreboard</h2>
+    <p><b>${allUnique.size}</b> unique questions learnt across <b>${Object.keys(bySession).length}</b> session(s) ·
+       <b>${grandAttempts}</b> total attempts · <b>${fmtMs(grandTimeMs)}</b> total time spent</p>
+
     <h2>Session Logs (${logsSnap.size})</h2>
-    <table><tr><th>Lesson</th><th>Type</th><th>Score</th><th>Time</th></tr>`;
+    <table><tr><th>Lesson</th><th>Type</th><th>Score</th><th>Time taken</th><th>When</th></tr>`;
   logsSnap.forEach(d=>{
     const e = d.data();
-    html += `<tr><td>${e.lessonTitle||"—"}</td><td>${e.qtype||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td><td>${e.ts?.toDate?e.ts.toDate().toLocaleString():""}</td></tr>`;
+    html += `<tr><td>${e.lessonTitle||"—"}</td><td>${e.qtype||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td><td>${e.timeMs?fmtMs(e.timeMs):""}</td><td>${e.ts?.toDate?e.ts.toDate().toLocaleString():""}</td></tr>`;
   });
   html += `</table><h2>Mock Exam Answers (${examSnap.size})</h2>
-    <table><tr><th>Question</th><th>Your Answer</th><th>Score</th></tr>`;
+    <table><tr><th>Question</th><th>Student's Answer</th><th>Correct Answer</th><th>Score</th></tr>`;
   examSnap.forEach(d=>{
     const e = d.data();
-    html += `<tr><td>${e.q||""}</td><td>${e.userText||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td></tr>`;
+    html += `<tr><td>${e.q||""}</td><td>${e.userText||""}</td><td>${e.modelText||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td></tr>`;
   });
   html += `</table></body></html>`;
 
