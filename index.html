@@ -1984,6 +1984,7 @@ function logQuestion(pct, elapsed){
   };
   sessionLog.push({...entry, ts: Date.now()});
   fbLogEntry("logs", entry);
+  fbLiveState({ answered:true, lastScore: pct });
   const btn=document.getElementById('reportBtn');
   if(btn) btn.classList.add('visible');
 }
@@ -2140,6 +2141,19 @@ function renderCurrentQuestion(){
   const _qcr=document.getElementById("qCounter"); if(_qcr) _qcr.textContent=total?`${currentQIndex+1} / ${total}`:"";
   document.getElementById("progressFill").style.width=total?`${(currentQIndex/total)*100}%`:"0%";
 
+  // Tell the admin mirror what the student is currently looking at
+  fbLiveState({
+    mode: "study",
+    lessonId: currentLesson?.id||"",
+    lessonTitle: currentLesson?.title||"",
+    qtype: currentQType,
+    qIndex: currentQIndex,
+    qTotal: total,
+    questionText: (qs[currentQIndex]?.q || qs[currentQIndex]?.sentence || qs[currentQIndex]?.statement || ""),
+    currentAnswer: "",
+    answered: false
+  });
+
   if(!total){
     body.innerHTML=`<div class="no-questions">
       <div class="nq-icon">📭</div>
@@ -2210,6 +2224,9 @@ function renderMCQ(q, qnum, isLast){
 function selectMCQ(idx, correctIdx, isLast){
   if(currentMode!=="exam" && document.getElementById("btnRow")?.style.display==="flex") return;
   mcqSelected=idx;
+  const selText = document.querySelector(`.mcq-option:nth-child(${idx+1}) span:last-child`)?.textContent
+    || document.querySelectorAll(".mcq-option")[idx]?.textContent || "";
+  fbLiveState({ currentAnswer: selText, typing:false });
 
   if(currentMode==="exam"){
     // Exam mode: just highlight selected, enable Next button
@@ -2265,7 +2282,7 @@ function examNextMCQ(correctIdx, isLast){
 function renderFill(q, qnum, isLast){
   let idx=0;
   const html=q.sentence.replace(/___/g,()=>
-    `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false">`
+    `<input class="blank-input" id="blank${idx++}" placeholder="type answer..." autocomplete="off" spellcheck="false" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:[...document.querySelectorAll('.blank-input')].map(i=>i.value).join(' / '), typing:true})">`
   );
 
   const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
@@ -2510,7 +2527,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
     </div>
     ${peekBtn}
     <div class="answer-area" id="answerArea">
-      <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
+      <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:this.value, typing:true})"></textarea>
       <div class="answer-actions">${actionBtns}</div>
     </div>
     <div class="result-panel" id="resultPanel"></div>
@@ -2554,6 +2571,7 @@ function selectTFFromEl(el, isLast){
 }
 function selectTF(selected, correct, isLast, reason){
   if(document.getElementById("btnRow")?.style.display==="flex") return;
+  fbLiveState({ currentAnswer: selected==="true"?"True":"False", typing:false });
 
   if(currentMode==="exam"){
     // Exam mode: just highlight selected, enable Next
@@ -2730,11 +2748,11 @@ function renderDistinguish(q, qnum, isLast){
       <div class="dist-input-grid">
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termA}</div>
-          <textarea class="dist-textarea" id="distInputA" placeholder="Write about ${q.termA}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
+          <textarea class="dist-textarea" id="distInputA" placeholder="Write about ${q.termA}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:'A: '+this.value, typing:true})"></textarea>
         </div>
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termB}</div>
-          <textarea class="dist-textarea" id="distInputB" placeholder="Write about ${q.termB}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
+          <textarea class="dist-textarea" id="distInputB" placeholder="Write about ${q.termB}…" onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:'B: '+this.value, typing:true})"></textarea>
         </div>
       </div>
       <div class="answer-actions" style="padding:0 12px 12px">${actionBtns}</div>
@@ -3190,6 +3208,18 @@ function renderMockQuestion(){
   currentQIndex=0;
   mcqSelected=null; matchAnswers={};
   currentMode="exam"; // ensure exam mode for every question render
+
+  fbLiveState({
+    mode: "mock",
+    lessonId: item.lesson.id,
+    lessonTitle: item.lesson.title,
+    qtype: item.qtype,
+    qIndex: mockQIndex,
+    qTotal: total,
+    questionText: item.q?.q || item.q?.sentence || item.q?.statement || "",
+    currentAnswer: "",
+    answered: mockExamStates[mockQIndex]?.answered || false
+  });
   // Reset per-question timer
   _questionStart=Date.now();
   const qEl=document.getElementById("qTimer");
@@ -4180,6 +4210,22 @@ function fbLogEntry(kind, data){
   }).catch(err => console.warn("Firestore write failed:", err));
 }
 
+// Continuously overwrite a single "live" document with whatever the student is
+// currently doing — current question, what's selected/typed so far, navigation.
+// This is what makes the admin view feel like watching over their shoulder.
+let _liveStateTimer = null;
+function fbLiveState(patch){
+  if(!window._fb || !currentUserPhone || isAdminUser) return; // admin never overwrites the student's live state
+  clearTimeout(_liveStateTimer);
+  _liveStateTimer = setTimeout(()=>{
+    const { db, doc, setDoc, serverTimestamp } = window._fb;
+    setDoc(doc(db, "sessions", currentUserPhone, "live", "current"), {
+      ...patch,
+      updatedAt: serverTimestamp()
+    }, { merge: true }).catch(err => console.warn("Live state write failed:", err));
+  }, 250); // debounce so fast typing doesn't spam writes
+}
+
 // Admin-only: show a small floating bar with a live mirror + download button
 function showAdminBar(){
   if(!window._fb) return;
@@ -4196,7 +4242,7 @@ function showAdminBar(){
 // Opens a live-updating panel showing the student's session logs and exam answers in real time.
 function openAdminMirror(){
   if(!window._fb || !currentUserPhone) return;
-  const { db, collection, onSnapshot, query, orderBy } = window._fb;
+  const { db, doc, collection, onSnapshot, query, orderBy } = window._fb;
 
   let panel = document.getElementById("adminMirrorPanel");
   if(panel){ panel.classList.add("visible"); return; }
@@ -4208,6 +4254,11 @@ function openAdminMirror(){
     <button onclick="document.getElementById('adminMirrorPanel').classList.remove('visible')"
       style="position:fixed;top:8px;right:12px;background:#e05c5c;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;z-index:99999">✕ Close</button>
     <h2 style="font-family:Georgia,serif;color:#1a2744">📊 Live Mirror — ${STUDENT_PHONE}</h2>
+    <div id="adminLiveNow" style="background:#1a2744;color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px">
+      <div style="opacity:.7;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔴 Right now</div>
+      <div id="adminLiveNowBody">Waiting for activity…</div>
+    </div>
+    <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity</h3>
     <div id="adminLogList" style="font-size:13px"></div>
     <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers</h3>
     <div id="adminExamList" style="font-size:13px"></div>
@@ -4216,6 +4267,24 @@ function openAdminMirror(){
   document.body.appendChild(panel);
   panel.classList.add("visible");
   panel.style.display = "block";
+
+  // Live listener — what the student is doing RIGHT NOW
+  onSnapshot(doc(db, "sessions", currentUserPhone, "live", "current"), snap => {
+    const box = document.getElementById("adminLiveNowBody");
+    if(!box) return;
+    if(!snap.exists()){ box.textContent = "Waiting for activity…"; return; }
+    const s = snap.data();
+    const modeLabel = s.mode==="mock" ? "🎯 Mock Exam" : "📖 Practice Mode";
+    box.innerHTML = `
+      <div>${modeLabel} · ${s.lessonTitle||""} · ${s.qtype||""} · Q${(s.qIndex??0)+1}/${s.qTotal||"?"}</div>
+      <div style="margin-top:6px;opacity:.85;font-style:italic">"${(s.questionText||"").slice(0,120)}"</div>
+      <div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.1);border-radius:8px">
+        ${s.typing ? "⌨️ typing: " : s.currentAnswer ? "✓ selected: " : "…not answered yet"}
+        <b>${(s.currentAnswer||"").slice(0,150)}</b>
+      </div>
+      ${s.answered ? `<div style="margin-top:6px;color:#7ee787">✓ Answered — ${s.lastScore??""}%</div>` : ""}
+    `;
+  });
 
   // Live listener — logs
   const logsQ = query(collection(db, "sessions", currentUserPhone, "logs"), orderBy("ts", "desc"));
