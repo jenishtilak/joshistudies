@@ -1677,7 +1677,7 @@ let examAnswers = [];       // used by mock exam tracking
 // Mirror every exam answer to Firestore the moment it's recorded, without touching every call site.
 const _examAnswersPush = examAnswers.push.bind(examAnswers);
 examAnswers.push = function(entry){
-  fbLogEntry("examAnswers", entry);
+  fbLogEntry("examAnswers", { ...entry, mockExamId: currentMockExamId });
   return _examAnswersPush(entry);
 };
 let pendingLesson = null;   // stub - not used // {subject, part, lesson, qtype, pct, timeMs, ts}
@@ -1693,6 +1693,9 @@ let _questionTimes = [];  // ms per question
 // A "session" = one continuous period the app was open. Used to group
 // scoreboard stats (unique questions, attempts, time spent) per visit.
 const currentSessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
+// A "mock exam attempt" = one full run through Start Mock Exam → Submit.
+// Separate from currentSessionId so multiple exams in one sitting don't merge together.
+let currentMockExamId = null;
 
 // ═══════════════════════════════════════════════════════
 //  INIT
@@ -3164,6 +3167,9 @@ function startMockExam(){
   mockQIndex = 0;
   mockExamStates = Array.from({length:mockQuestions.length},()=>({answered:false,skipped:false,pct:null}));
   mockSavedAnswers = Array.from({length:mockQuestions.length},()=>null);
+  // Each mock exam attempt gets its own ID, separate from the page-load sessionId —
+  // otherwise multiple exams taken in one sitting would collapse into a single group.
+  currentMockExamId = "exam_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
   closeMockExam();
   startTimer();
 
@@ -4710,16 +4716,17 @@ async function buildMockExamsList(){
     return;
   }
 
-  // Group by sessionId — each group is one exam attempt
+  // Group by mockExamId (one group = one full exam attempt). Older entries written
+  // before this field existed fall back to sessionId so they still show up.
   const byExam = {};
   examSnap.forEach(d=>{
     const e = d.data();
-    const sid = e.sessionId || "unknown";
-    if(!byExam[sid]) byExam[sid] = { answers:[], firstTs:null, lastTs:null };
-    byExam[sid].answers.push(e);
+    const eid = e.mockExamId || e.sessionId || "unknown";
+    if(!byExam[eid]) byExam[eid] = { answers:[], firstTs:null, lastTs:null };
+    byExam[eid].answers.push(e);
     const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : Date.now();
-    if(!byExam[sid].firstTs || tsMs < byExam[sid].firstTs) byExam[sid].firstTs = tsMs;
-    if(!byExam[sid].lastTs  || tsMs > byExam[sid].lastTs)  byExam[sid].lastTs  = tsMs;
+    if(!byExam[eid].firstTs || tsMs < byExam[eid].firstTs) byExam[eid].firstTs = tsMs;
+    if(!byExam[eid].lastTs  || tsMs > byExam[eid].lastTs)  byExam[eid].lastTs  = tsMs;
   });
   _mockExamsCache = byExam;
 
