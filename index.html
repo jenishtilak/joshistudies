@@ -455,9 +455,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 /* ── MODEL ANSWER PEEK (study mode) ── */
 .btn-peek{width:100%;padding:11px;background:transparent;color:var(--sage);font-size:13px;font-weight:600;border:1.5px dashed var(--sage);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
-.btn-hint{width:100%;padding:9px;background:var(--gold-light);color:#8a6500;font-size:12.5px;font-weight:700;border:1.5px solid var(--gold);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-top:8px;transition:all .2s}
-.btn-hint:disabled{opacity:.55;cursor:default}
-.btn-hint:not(:disabled):hover{background:var(--gold);color:#fff}
+.hint-zone{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.btn-hint{width:100%;padding:10px 12px;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;gap:8px;text-align:left}
+.btn-hint:disabled{opacity:.5;cursor:default}
+.btn-hint:not(:disabled):hover{background:var(--gold);box-shadow:0 2px 8px rgba(232,184,75,.4)}
+.btn-hint:not(:disabled):hover .hint-text,.btn-hint:not(:disabled):hover .hint-meta{color:#fff}
+.hint-icon{font-size:18px;flex-shrink:0}
+.hint-text{font-size:13px;font-weight:700;color:#8a6500;flex-shrink:0}
+.hint-meta{font-size:11px;color:#a07d2a;margin-left:auto;text-align:right}
 .btn-peek:hover{background:var(--green-light);border-color:var(--green);color:var(--green)}
 .peek-panel{background:var(--green-light);border-left:3px solid var(--green);border-radius:0 var(--radius) var(--radius) 0;padding:12px;margin-bottom:10px;display:none}
 .peek-panel.visible{display:block}
@@ -509,8 +514,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 /* ── SESSION REPORT ── */
 .report-btn{position:fixed;bottom:76px;right:16px;z-index:200;background:var(--navy);color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:18px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-family:inherit}
 @media(min-width:820px){.report-btn{bottom:20px;right:20px}}
-.spelling-btn{position:fixed;bottom:136px;right:16px;z-index:200;background:var(--green);color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:18px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-family:inherit}
-@media(min-width:820px){.spelling-btn{bottom:80px;right:20px}}
 .report-panel{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;padding:0}
 .report-panel.visible{display:flex}
 .report-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 40px}
@@ -625,7 +628,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <nav class="sidebar-nav" id="sidebarNav"></nav>
   <div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)">
     <button onclick="openReport()" style="width:100%;padding:9px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📊 Session Report</button>
-    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🎯 Mock Exam</button>
+    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🎯 Mock Exam</button>
+    <button onclick="openSpellingPanel()" style="width:100%;padding:9px;background:rgba(76,204,138,.15);color:var(--green);border:1px solid rgba(76,204,138,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🔤 Spelling Game</button>
   </div>
 </aside>
 
@@ -654,7 +658,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 <!-- SESSION REPORT BUTTON -->
 <button class="report-btn" id="reportBtn" onclick="openReport()" title="Session Report">📊</button>
-<button class="spelling-btn" id="spellingBtn" onclick="openSpellingPanel()" title="Spelling Game">🔤</button>
 
 <!-- SPELLING GAME PANEL (standalone floating) -->
 <div class="report-panel" id="spellingPanel" onclick="if(event.target===this)closeSpellingPanel()">
@@ -735,7 +738,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 <nav class="bottom-nav">
   <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📖</span>Lessons</div>
   <div class="nav-item"        onclick="setNav(this);openReport()"><span class="nav-icon">📊</span>Report</div>
-  <div class="nav-item"        onclick="setNav(this)"><span class="nav-icon">🎯</span>Mock Exam</div>
+  <div class="nav-item"        onclick="setNav(this);openMockExam()"><span class="nav-icon">🎯</span>Mock Exam</div>
+  <div class="nav-item"        onclick="setNav(this);openSpellingPanel()"><span class="nav-icon">🔤</span>Spelling</div>
 </nav>
 
 <!-- QUIZ OVERLAY -->
@@ -1629,6 +1633,47 @@ function levenshtein(a,b){
   for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
     dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
   return dp[m][n];
+}
+
+// Builds a conceptual nudge — asks the student to think, rather than handing over
+// the answer outright. This is the first tier of help, used before any literal
+// word or phrase is revealed. Deliberately generic (no hand-authored hints per
+// question), built from signals available in the model answer and question itself:
+// how much is missing, roughly where, and what kind of question it is.
+function buildHintNudge(userText, refText, qtype){
+  const ref = tokenise(refText);
+  const userSet = new Set(tokenise(userText||""));
+  const missingCount = ref.filter(w=>!HINT_STOPWORDS.has(w) && !userSet.has(w)).length;
+  const totalContentWords = ref.filter(w=>!HINT_STOPWORDS.has(w)).length;
+  const fractionMissing = totalContentWords>0 ? missingCount/totalContentWords : 1;
+
+  // How far in (roughly) is the first gap — lets the nudge say "near the start" vs "further along."
+  let firstGapPos = null;
+  for(let i=0;i<ref.length;i++){
+    if(!HINT_STOPWORDS.has(ref[i]) && !userSet.has(ref[i])){ firstGapPos = i/ref.length; break; }
+  }
+  const positionHint = firstGapPos===null ? "" :
+    firstGapPos < 0.3 ? " right at the start of your answer" :
+    firstGapPos < 0.7 ? " partway through your answer" :
+    " near the end of your answer";
+
+  if(!userText || !userText.trim()){
+    const starters = {
+      brief: "Start by recalling the key term or idea this question is really asking about — what's the one concept everything else builds on?",
+      reasons: "Think about cause and effect here — what happened, and why did it happen that way?",
+      paragraph: "Before writing, jot down 2-3 key points you want to cover — what's the main idea, and what details support it?",
+      distinguish: "Think about what makes these two things different — focus on one clear contrast first."
+    };
+    return starters[qtype] || "Try recalling the main idea first, then build your answer around it.";
+  }
+
+  if(fractionMissing >= 0.6){
+    return `You're missing quite a bit${positionHint} — try re-reading the question and thinking about the main concept it's testing, then add a few more key points.`;
+  }
+  if(fractionMissing >= 0.3){
+    return `You're on the right track, but there's an important idea missing${positionHint}. Think about what naturally comes next in your explanation.`;
+  }
+  return `Very close! There's just one key term or detail missing${positionHint} — re-read what you've written and think about what word would complete the thought.`;
 }
 
 // Common words that aren't worth spending a hint on — only meaningful content
@@ -2613,11 +2658,14 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
          `}
        </div>` : "";
   const nextHintCost = HINT_PENALTY_SCHEDULE[hintsUsed] || HINT_PENALTY_SCHEDULE[HINT_PENALTY_SCHEDULE.length-1];
+  const hintsLeft = MAX_HINTS - hintsUsed;
   const hintBtn = currentMode!=="exam" ? `
-       <button class="btn-hint" id="hintBtn" onclick="useHint()" ${hintsUsed>=MAX_HINTS?"disabled":""}>
-         💡 Stuck? Get a clue (${MAX_HINTS-hintsUsed} left, next one −${nextHintCost}%)
-       </button>
-       <div id="hintDisplay">${hintsUsed>0?renderHintChips(hintsUsed):""}</div>` : "";
+       <div class="hint-zone" id="hintZone">
+         <div id="hintDisplay">${hintsUsed>0?renderHintChips(hintsUsed):""}</div>
+         <button class="btn-hint" id="hintBtn" onclick="useHint()" ${hintsLeft<=0?"disabled":""}>
+           ${buildHintBtnInner("No clues left", hintsLeft, nextHintCost, null, hintsUsed)}
+         </button>
+       </div>` : "";
   const actionBtns = currentMode==="exam"
     ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
     : `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Answer</button>
@@ -2646,11 +2694,22 @@ function renderHintChips(count, explicitKey){
   const key = explicitKey || getPrevAttemptKey(currentQIndex);
   const hints = hintWordsByQuestion[key] || [];
   if(!hints.length) return "";
-  return `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
-    ${hints.map((h,i)=>`
-      <div style="background:var(--gold-light);border:1px solid var(--gold);border-radius:8px;padding:6px 10px;font-size:12.5px;color:#8a6500">
-        <b>Clue ${i+1}:</b> <span style="font-style:italic">${(h.phrase||h.word||"").replace(/【(.+?)】/g,"<b style='text-decoration:underline'>$1</b>")}</span>
-      </div>`).join("")}
+  return `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+    ${hints.map((h,i)=>{
+      const isNudge = h.type==="nudge";
+      const icon = isNudge ? "🤔" : "💡";
+      const bg = isNudge ? "var(--sage-light,#eef3ea)" : "var(--gold-light)";
+      const border = isNudge ? "var(--sage,#7a9b6e)" : "var(--gold)";
+      const textColor = isNudge ? "#3d5c34" : "#7a5c00";
+      const body = isNudge
+        ? h.text
+        : (h.phrase||h.word||"").replace(/【(.+?)】/g,"<b style='color:#5a4200;text-decoration:underline'>$1</b>");
+      return `
+      <div style="display:flex;align-items:flex-start;gap:8px;background:${bg};border-left:3px solid ${border};border-radius:0 8px 8px 0;padding:7px 10px">
+        <span style="font-size:14px;flex-shrink:0;margin-top:1px">${icon}</span>
+        <span style="font-size:12.5px;color:${textColor};line-height:1.5">${body}</span>
+      </div>`;
+    }).join("")}
   </div>`;
 }
 
@@ -2659,6 +2718,22 @@ let hintWordsByQuestion = {}; // key: same as previousAttempts → array of reve
 // Reveals the next meaningful word the student hasn't written anywhere yet,
 // shown with a short phrase of context. Each use costs marks (deducted at
 // scoring time) and is capped at MAX_HINTS per question.
+// Builds the inner content of a hint button — used both at initial render and
+// when refreshing after a clue is used, so the icon/text/meta structure is never lost.
+// `prefix` lets Distinguish-Between show which term the clue is for.
+function buildHintBtnInner(label, hintsLeft, nextCost, prefix, hintsUsedSoFar){
+  if(hintsLeft<=0){
+    return `<span class="hint-icon">💡</span><span class="hint-text">${label}</span>`;
+  }
+  // First press = a thinking nudge (🤔). Every press after that = a literal reveal (💡).
+  const isFirstPress = !hintsUsedSoFar;
+  const icon = isFirstPress ? "🤔" : "💡";
+  const text = isFirstPress
+    ? (prefix ? `Stuck on ${prefix}? Get a nudge` : "Stuck? Get a thinking nudge")
+    : (prefix ? `Reveal a word for ${prefix}?` : "Reveal a word?");
+  return `<span class="hint-icon">${icon}</span><span class="hint-text">${text}</span><span class="hint-meta">${hintsLeft} left · next costs −${nextCost}%</span>`;
+}
+
 function useHint(){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
@@ -2667,29 +2742,65 @@ function useHint(){
   if(used >= MAX_HINTS) return;
 
   const userText = document.getElementById("answerInput")?.value || "";
-  const hint = findNextHintWord(userText, q.answer);
-  if(!hint){
-    // Nothing left to hint — every meaningful word is already somewhere in their answer.
-    const btn = document.getElementById("hintBtn");
-    if(btn){ btn.disabled = true; btn.textContent = "💡 No more clues needed — you've covered it all!"; }
+
+  // Tier 1 (first hint): a conceptual nudge — asks the student to think rather
+  // than handing over a word. No tracking of "which concept" needed here since
+  // nothing concrete has been revealed yet.
+  if(used === 0){
+    const nudge = buildHintNudge(userText, q.answer, currentQType);
+    recordHintConcept(key, currentLesson?.title, currentQType, q.q);
+    advanceHint(key, { type:"nudge", text: nudge }, "hintBtn", "hintDisplay");
     return;
   }
 
+  // Tier 2+: literal word/phrase reveal, same as before.
+  const hint = findNextHintWord(userText, q.answer);
+  if(!hint){
+    const btn = document.getElementById("hintBtn");
+    if(btn){ btn.disabled = true; btn.innerHTML = buildHintBtnInner("You've covered it all!", 0); }
+    return;
+  }
+  advanceHint(key, { type:"word", word:hint.word, phrase:hint.phrase }, "hintBtn", "hintDisplay");
+}
+
+// Shared bookkeeping for revealing a hint (nudge or word) — updates counters,
+// the stored hint list, and refreshes the button + chip display.
+function advanceHint(key, hintEntry, btnId, displayId){
+  const used = hintsUsedByQuestion[key] || 0;
   hintsUsedByQuestion[key] = used + 1;
   if(!hintWordsByQuestion[key]) hintWordsByQuestion[key] = [];
-  hintWordsByQuestion[key].push(hint);
+  hintWordsByQuestion[key].push(hintEntry);
 
   const remaining = MAX_HINTS - hintsUsedByQuestion[key];
   const nextCost = HINT_PENALTY_SCHEDULE[hintsUsedByQuestion[key]] || HINT_PENALTY_SCHEDULE[HINT_PENALTY_SCHEDULE.length-1];
-  const btn = document.getElementById("hintBtn");
+  const btn = document.getElementById(btnId);
   if(btn){
-    btn.textContent = remaining>0
-      ? `💡 Stuck? Get a clue (${remaining} left, next one −${nextCost}%)`
-      : `💡 No clues left for this question`;
+    btn.innerHTML = buildHintBtnInner("No clues left", remaining, nextCost, null, hintsUsedByQuestion[key]);
     if(remaining<=0) btn.disabled = true;
   }
-  const display = document.getElementById("hintDisplay");
-  if(display) display.innerHTML = renderHintChips(hintsUsedByQuestion[key]);
+  const display = document.getElementById(displayId);
+  if(display) display.innerHTML = renderHintChips(hintsUsedByQuestion[key], key);
+}
+
+// Tracks which concepts/questions needed help, the same way sessionSpellErrors
+// tracks spelling mistakes — so struggling areas become visible later instead
+// of disappearing once the question is answered.
+const hintConceptsNeeded = []; // const — never reassign, only clear via .length=0 if ever needed
+const _hintConceptsPush = hintConceptsNeeded.push.bind(hintConceptsNeeded);
+hintConceptsNeeded.push = function(entry){
+  fbLogEntry("hintConcepts", entry);
+  return _hintConceptsPush(entry);
+};
+function recordHintConcept(key, lessonTitle, qtype, questionText){
+  // Only log once per question per attempt — repeated hints on the same question
+  // don't need to spam multiple "needed help" entries.
+  if(hintConceptsNeeded.some(c=>c._key===key)) return;
+  hintConceptsNeeded.push({
+    _key: key,
+    lessonTitle: lessonTitle||"",
+    qtype: qtype||"",
+    questionText: (questionText||"").slice(0,200)
+  });
 }
 
 // ── TRUE OR FALSE ──
@@ -2917,12 +3028,20 @@ function renderDistinguish(q, qnum, isLast){
   const hintBtnsHTML = currentMode!=="exam" ? `
     <div class="dist-input-grid" style="margin-top:-4px">
       <div class="dist-input-col">
-        <button class="btn-hint" id="hintBtnA" onclick="useHintDist('A')" ${hintsA>=MAX_HINTS?"disabled":""}>💡 Clue for ${q.termA} (${MAX_HINTS-hintsA} left, next −${nextCostA}%)</button>
-        <div id="hintDisplayA">${hintsA>0?renderHintChips(hintsA, keyA):""}</div>
+        <div class="hint-zone" style="margin-top:0">
+          <div id="hintDisplayA">${hintsA>0?renderHintChips(hintsA, keyA):""}</div>
+          <button class="btn-hint" id="hintBtnA" onclick="useHintDist('A')" ${hintsA>=MAX_HINTS?"disabled":""}>
+            ${buildHintBtnInner(`No clues left for ${q.termA}`, MAX_HINTS-hintsA, nextCostA, q.termA, hintsA)}
+          </button>
+        </div>
       </div>
       <div class="dist-input-col">
-        <button class="btn-hint" id="hintBtnB" onclick="useHintDist('B')" ${hintsB>=MAX_HINTS?"disabled":""}>💡 Clue for ${q.termB} (${MAX_HINTS-hintsB} left, next −${nextCostB}%)</button>
-        <div id="hintDisplayB">${hintsB>0?renderHintChips(hintsB, keyB):""}</div>
+        <div class="hint-zone" style="margin-top:0">
+          <div id="hintDisplayB">${hintsB>0?renderHintChips(hintsB, keyB):""}</div>
+          <button class="btn-hint" id="hintBtnB" onclick="useHintDist('B')" ${hintsB>=MAX_HINTS?"disabled":""}>
+            ${buildHintBtnInner(`No clues left for ${q.termB}`, MAX_HINTS-hintsB, nextCostB, q.termB, hintsB)}
+          </button>
+        </div>
       </div>
     </div>` : "";
 
@@ -2964,29 +3083,40 @@ function useHintDist(side){
 
   const inputId = side==="A" ? "distInputA" : "distInputB";
   const refText = side==="A" ? q.answerA : q.answerB;
+  const termLabel = side==="A" ? q.termA : q.termB;
   const userText = document.getElementById(inputId)?.value || "";
-  const hint = findNextHintWord(userText, refText);
-
   const btn = document.getElementById("hintBtn"+side);
-  if(!hint){
-    if(btn){ btn.disabled = true; btn.textContent = "💡 No more clues needed for this side!"; }
+
+  // Tier 1: conceptual nudge, no word revealed yet.
+  if(used === 0){
+    const nudge = buildHintNudge(userText, refText, "distinguish");
+    recordHintConcept(key, currentLesson?.title, "distinguish", `Distinguish: ${termLabel}`);
+    advanceHintDist(key, { type:"nudge", text: nudge }, btn, termLabel, "hintDisplay"+side);
     return;
   }
 
+  // Tier 2+: literal phrase/word reveal.
+  const hint = findNextHintWord(userText, refText);
+  if(!hint){
+    if(btn){ btn.disabled = true; btn.innerHTML = buildHintBtnInner(`No clues left for ${termLabel}`, 0); }
+    return;
+  }
+  advanceHintDist(key, { type:"word", word:hint.word, phrase:hint.phrase }, btn, termLabel, "hintDisplay"+side);
+}
+
+function advanceHintDist(key, hintEntry, btn, termLabel, displayId){
+  const used = hintsUsedByQuestion[key] || 0;
   hintsUsedByQuestion[key] = used + 1;
   if(!hintWordsByQuestion[key]) hintWordsByQuestion[key] = [];
-  hintWordsByQuestion[key].push(hint);
+  hintWordsByQuestion[key].push(hintEntry);
 
   const remaining = MAX_HINTS - hintsUsedByQuestion[key];
   const nextCost = HINT_PENALTY_SCHEDULE[hintsUsedByQuestion[key]] || HINT_PENALTY_SCHEDULE[HINT_PENALTY_SCHEDULE.length-1];
-  const termLabel = side==="A" ? q.termA : q.termB;
   if(btn){
-    btn.textContent = remaining>0
-      ? `💡 Clue for ${termLabel} (${remaining} left, next −${nextCost}%)`
-      : `💡 No clues left for ${termLabel}`;
+    btn.innerHTML = buildHintBtnInner(`No clues left for ${termLabel}`, remaining, nextCost, termLabel, hintsUsedByQuestion[key]);
     if(remaining<=0) btn.disabled = true;
   }
-  const display = document.getElementById("hintDisplay"+side);
+  const display = document.getElementById(displayId);
   if(display) display.innerHTML = renderHintChips(hintsUsedByQuestion[key], key);
 }
 
@@ -4597,6 +4727,13 @@ function downloadReport(){
     html += `<h2>✏️ Spelling to Learn (${sessionSpellErrors.length})</h2>
       <table><tr><th>You wrote</th><th>Correct spelling</th><th>Lesson</th></tr>${spellRows}</table>`;
   }
+  // Concepts that needed a hint this session
+  if(hintConceptsNeeded.length){
+    const conceptRows = hintConceptsNeeded.map(c=>`
+      <tr><td>${c.questionText||""}</td><td>${c.qtype||""}</td><td>${c.lessonTitle||"—"}</td></tr>`).join("");
+    html += `<h2>🤔 Concepts to Revisit (${hintConceptsNeeded.length})</h2>
+      <table><tr><th>Question</th><th>Type</th><th>Lesson</th></tr>${conceptRows}</table>`;
+  }
 
   html+=`<p style="font-size:11px;color:#999;margin-top:32px;text-align:center">Generated by Study Buddy · joshistudies.in</p></body></html>`;
 
@@ -4681,6 +4818,19 @@ function renderReport(){
     html += `<div class="report-subject">
       <div class="report-subject-name">✏️ Spelling to Learn (${sessionSpellErrors.length})</div>
       ${spellRows}
+    </div>`;
+  }
+  // Concepts that needed a hint this session — surfaces struggling areas instead
+  // of letting them disappear once the question is answered.
+  if(hintConceptsNeeded.length){
+    const conceptRows = hintConceptsNeeded.map(c=>`
+      <div class="report-row">
+        <div style="flex:1">${(c.questionText||"").slice(0,80)}</div>
+        <div class="report-qtype">${c.lessonTitle}</div>
+      </div>`).join("");
+    html += `<div class="report-subject">
+      <div class="report-subject-name">🤔 Concepts to Revisit (${hintConceptsNeeded.length})</div>
+      ${conceptRows}
     </div>`;
   }
 
@@ -5423,6 +5573,7 @@ async function downloadAdminMirror(){
   const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","desc")));
   const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","desc")));
   const spellSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","desc")));
+  const hintSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"hintConcepts"), orderBy("ts","desc")));
 
   // Build scoreboard summary for the download too
   const bySession = {}; const allUnique = new Set();
@@ -5467,6 +5618,13 @@ async function downloadAdminMirror(){
   spellSnap.forEach(d=>{
     const e = d.data();
     html += `<tr><td class="wrong-word">${e.wrong||""}</td><td class="right-word">${e.correct||""}</td><td>${e.lessonTitle||"—"}</td></tr>`;
+  });
+  html += `</table>
+    <h2>🤔 Concepts ${STUDENT_NAME} Needed Help With (${hintSnap.size})</h2>
+    <table><tr><th>Question</th><th>Type</th><th>Lesson</th></tr>`;
+  hintSnap.forEach(d=>{
+    const e = d.data();
+    html += `<tr><td>${e.questionText||""}</td><td>${e.qtype||""}</td><td>${e.lessonTitle||"—"}</td></tr>`;
   });
   html += `</table></body></html>`;
 
