@@ -3399,6 +3399,19 @@ function findLessonById(id){
   return null;
 }
 
+// Counts every individual question across the entire syllabus, regardless of subject/unit.
+// Used as the denominator for the "coverage" component of the Growth Score — this is what
+// actually rewards trying new material over re-doing the same few easy questions.
+function countTotalAvailableQuestions(){
+  let total = 0;
+  for(const subj of Object.values(DATA))
+    for(const part of Object.values(subj.parts))
+      for(const lesson of part.lessons)
+        for(const qtype of Object.keys(lesson.questions||{}))
+          total += (lesson.questions[qtype]||[]).length;
+  return total;
+}
+
 function startMockExam(){
   // Build flat question list from all selected lessons + qtypes IN ORDER
   mockQuestions = [];
@@ -4317,8 +4330,8 @@ async function buildStudentScoreboard(){
     return;
   }
 
-  const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats } = aggregateScoreboardData(logsSnap, examSnap);
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats);
+  const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
+  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries);
 }
 
 // Shared aggregation logic used by both the student's and admin's scoreboard views.
@@ -4368,24 +4381,118 @@ function aggregateScoreboardData(logsSnap, examSnap){
     avgScore: mockScoreCount ? Math.round(mockScoreSum/mockScoreCount) : null
   };
 
-  return { bySession, allUnique, grandAttempts, grandTimeMs, mockStats };
+  // Flat list of every scored entry (study + mock combined) — used by the Growth Score
+  // calculation for mastery-weighting and the improvement trend, independent of how
+  // sessions/mock exams happen to be grouped.
+  const allScoredEntries = [];
+  logsSnap.forEach(d=>{
+    const e = d.data();
+    if(typeof e.pct === "number"){
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: e.ts?.toDate ? e.ts.toDate().getTime() : Date.now() });
+    }
+  });
+  examSnap.forEach(d=>{
+    const e = d.data();
+    if(typeof e.pct === "number"){
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: e.ts?.toDate ? e.ts.toDate().getTime() : Date.now() });
+    }
+  });
+  allScoredEntries.sort((a,b)=>a.ts-b.ts);
+
+  return { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries };
 }
 
-function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats){
+// ═══════════════════════════════════════════════════════
+//  GROWTH SCORE — rewards breadth + harder questions + improving, not just being "good"
+// ═══════════════════════════════════════════════════════
+//
+// Three components, each 0-100, combined with weights:
+//   1. Coverage (40%)  — % of the ENTIRE syllabus ever attempted at least once.
+//                         Directly rewards trying new material over re-doing known questions.
+//   2. Mastery   (40%)  — accuracy weighted by question difficulty (using the same marks
+//                         weightage already used for exam scoring — Paragraph/Distinguish
+//                         count for more than MCQ). Rewards tackling harder question types well,
+//                         not just racking up easy correct answers.
+//   3. Trend     (20%)  — average score in the most recent half of attempts vs the earlier half.
+//                         Rewards genuinely improving over time, not just staying comfortable.
+//
+// The result is a single 0-100 "Growth Score" that a student can't inflate just by
+// repeating questions they already know.
+function calcGrowthScore(allUnique, allScoredEntries){
+  const totalAvailable = countTotalAvailableQuestions();
+  const coverage = totalAvailable>0 ? Math.min(100, Math.round((allUnique.size/totalAvailable)*100)) : 0;
+
+  let mastery = 0;
+  if(allScoredEntries.length){
+    let earned=0, possible=0;
+    allScoredEntries.forEach(e=>{
+      const m = getMarks(e.qtype||"mcq");
+      possible += m;
+      earned += m*(e.pct/100);
+    });
+    mastery = possible>0 ? Math.round((earned/possible)*100) : 0;
+  }
+
+  let trend = 50; // neutral default until there's enough data to compare
+  if(allScoredEntries.length >= 6){
+    const mid = Math.floor(allScoredEntries.length/2);
+    const earlier = allScoredEntries.slice(0, mid);
+    const recent  = allScoredEntries.slice(mid);
+    const avg = arr => arr.reduce((a,e)=>a+e.pct,0)/arr.length;
+    const earlierAvg = avg(earlier), recentAvg = avg(recent);
+    // Map the improvement delta onto a 0-100 trend score: no change = 50,
+    // +20 points of improvement or more = 100, -20 or worse = 0.
+    const delta = recentAvg - earlierAvg;
+    trend = Math.max(0, Math.min(100, Math.round(50 + delta*2.5)));
+  }
+
+  const growthScore = Math.round(coverage*0.4 + mastery*0.4 + trend*0.2);
+  return { growthScore, coverage, mastery, trend, totalAvailable };
+}
+
+function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries){
   const sessionCount = Object.keys(bySession).length;
+  const { growthScore, coverage, mastery, trend, totalAvailable } = calcGrowthScore(allUnique, allScoredEntries||[]);
+
+  const growthLabel = growthScore>=80 ? "🌟 Excellent growth!" : growthScore>=60 ? "📈 Good progress!" : growthScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
+  const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
+  const trendColor = trend>60 ? "#7ee787" : trend<40 ? "#ffa07a" : "#d8d8d8";
+
   return `
-    <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏆 ${STUDENT_NAME}'s Grand Total (${sessionCount} session${sessionCount!==1?"s":""})</div>
-    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:${mockStats.attempts?'12px':'0'}">
-      <div><div style="font-size:22px;font-weight:800">${allUnique.size}</div><div style="font-size:11px;opacity:.8">Unique Questions Learnt</div></div>
-      <div><div style="font-size:22px;font-weight:800">${grandAttempts}</div><div style="font-size:11px;opacity:.8">Total Attempts</div></div>
-      <div><div style="font-size:22px;font-weight:800">${fmtMs(grandTimeMs)}</div><div style="font-size:11px;opacity:.8">Total Time Spent</div></div>
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Score</div>
+      <div style="font-size:42px;font-weight:900;margin:4px 0">${growthScore}</div>
+      <div style="font-size:13px;font-weight:700">${growthLabel}</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
+        <div style="font-size:17px;font-weight:800">${coverage}%</div>
+        <div style="font-size:10px;opacity:.8">📚 Syllabus Covered</div>
+        <div style="font-size:9px;opacity:.6">${allUnique.size}/${totalAvailable} questions tried</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
+        <div style="font-size:17px;font-weight:800">${mastery}%</div>
+        <div style="font-size:10px;opacity:.8">🎯 Mastery (weighted)</div>
+        <div style="font-size:9px;opacity:.6">harder questions count more</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
+        <div style="font-size:17px;font-weight:800;color:${trendColor}">${trendArrow}</div>
+        <div style="font-size:10px;opacity:.8">📊 Recent Trend</div>
+        <div style="font-size:9px;opacity:.6">vs earlier attempts</div>
+      </div>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:10px;display:flex;gap:20px;flex-wrap:wrap">
+      <div><div style="font-size:18px;font-weight:800">${allUnique.size}</div><div style="font-size:11px;opacity:.8">Unique Questions Learnt</div></div>
+      <div><div style="font-size:18px;font-weight:800">${grandAttempts}</div><div style="font-size:11px;opacity:.8">Total Attempts</div></div>
+      <div><div style="font-size:18px;font-weight:800">${fmtMs(grandTimeMs)}</div><div style="font-size:11px;opacity:.8">Total Time Spent</div></div>
     </div>
     ${mockStats.attempts ? `
-    <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:10px;display:flex;gap:20px;flex-wrap:wrap">
+    <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:10px;margin-top:10px;display:flex;gap:20px;flex-wrap:wrap">
       <div><div style="font-size:18px;font-weight:800">🎯 ${mockStats.uniqueCount}</div><div style="font-size:11px;opacity:.8">Mock Exam Questions</div></div>
       <div><div style="font-size:18px;font-weight:800">${mockStats.attempts}</div><div style="font-size:11px;opacity:.8">Mock Exam Attempts</div></div>
       <div><div style="font-size:18px;font-weight:800">${mockStats.avgScore!==null?mockStats.avgScore+'%':'—'}</div><div style="font-size:11px;opacity:.8">Mock Exam Avg Score</div></div>
-    </div>` : ""}`;
+    </div>` : ""}
+    <div style="font-size:11px;opacity:.65;margin-top:10px;text-align:center">${sessionCount} session${sessionCount!==1?"s":""} so far</div>`;
 }
 
 function renderScoreboardSessionsHTML(bySession){
@@ -4833,8 +4940,8 @@ async function buildScoreboard(){
     return;
   }
 
-  const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats } = aggregateScoreboardData(logsSnap, examSnap);
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats);
+  const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
+  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries);
   sessBox.innerHTML = renderScoreboardSessionsHTML(bySession);
 }
 
