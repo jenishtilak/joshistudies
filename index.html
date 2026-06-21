@@ -1635,47 +1635,6 @@ function levenshtein(a,b){
   return dp[m][n];
 }
 
-// Builds a conceptual nudge — asks the student to think, rather than handing over
-// the answer outright. This is the first tier of help, used before any literal
-// word or phrase is revealed. Deliberately generic (no hand-authored hints per
-// question), built from signals available in the model answer and question itself:
-// how much is missing, roughly where, and what kind of question it is.
-function buildHintNudge(userText, refText, qtype){
-  const ref = tokenise(refText);
-  const userSet = new Set(tokenise(userText||""));
-  const missingCount = ref.filter(w=>!HINT_STOPWORDS.has(w) && !userSet.has(w)).length;
-  const totalContentWords = ref.filter(w=>!HINT_STOPWORDS.has(w)).length;
-  const fractionMissing = totalContentWords>0 ? missingCount/totalContentWords : 1;
-
-  // How far in (roughly) is the first gap — lets the nudge say "near the start" vs "further along."
-  let firstGapPos = null;
-  for(let i=0;i<ref.length;i++){
-    if(!HINT_STOPWORDS.has(ref[i]) && !userSet.has(ref[i])){ firstGapPos = i/ref.length; break; }
-  }
-  const positionHint = firstGapPos===null ? "" :
-    firstGapPos < 0.3 ? " right at the start of your answer" :
-    firstGapPos < 0.7 ? " partway through your answer" :
-    " near the end of your answer";
-
-  if(!userText || !userText.trim()){
-    const starters = {
-      brief: "Start by recalling the key term or idea this question is really asking about — what's the one concept everything else builds on?",
-      reasons: "Think about cause and effect here — what happened, and why did it happen that way?",
-      paragraph: "Before writing, jot down 2-3 key points you want to cover — what's the main idea, and what details support it?",
-      distinguish: "Think about what makes these two things different — focus on one clear contrast first."
-    };
-    return starters[qtype] || "Try recalling the main idea first, then build your answer around it.";
-  }
-
-  if(fractionMissing >= 0.6){
-    return `You're missing quite a bit${positionHint} — try re-reading the question and thinking about the main concept it's testing, then add a few more key points.`;
-  }
-  if(fractionMissing >= 0.3){
-    return `You're on the right track, but there's an important idea missing${positionHint}. Think about what naturally comes next in your explanation.`;
-  }
-  return `Very close! There's just one key term or detail missing${positionHint} — re-read what you've written and think about what word would complete the thought.`;
-}
-
 // Common words that aren't worth spending a hint on — only meaningful content
 // words should ever become a clue.
 const HINT_STOPWORDS = new Set([
@@ -1691,24 +1650,37 @@ const HINT_STOPWORDS = new Set([
 // Deliberately NOT strict-order matching: a student who skips one word but gets
 // everything else right shouldn't get stuck seeing the same hint forever just
 // because later correct words come "out of sequence" relative to a positional walk.
-function findNextHintWord(userText, refText){
+// Finds the next useful word from the model answer that the student hasn't written
+// anywhere yet, and returns it together with a short phrase of surrounding context
+// so the hint teaches sentence structure, not just an isolated word.
+//
+// Deliberately NOT strict-order matching: a student who skips one word but gets
+// everything else right shouldn't get stuck seeing the same hint forever just
+// because later correct words come "out of sequence" relative to a positional walk.
+//
+// `alreadyHinted` is the set of words already revealed as a clue this attempt —
+// without this, asking for a second hint after ignoring the first would just
+// show the exact same word again, which is confusing ("didn't I already see this?").
+function findNextHintWord(userText, refText, alreadyHinted){
   const ref  = tokenise(refText);
   const userSet = new Set(tokenise(userText||""));
+  const hintedSet = alreadyHinted instanceof Set ? alreadyHinted : new Set(alreadyHinted||[]);
   if(!ref.length) return null;
 
   for(let ri=0; ri<ref.length; ri++){
     const rw = ref[ri];
     if(HINT_STOPWORDS.has(rw)) continue;       // never spend a hint on a stopword
     if(userSet.has(rw)) continue;              // already written somewhere — skip it
-    // Found the earliest still-missing content word. Build a short phrase of
-    // context around it from the model answer for a more teachable hint.
+    if(hintedSet.has(rw)) continue;            // already revealed as a hint — don't repeat it
+    // Found the earliest still-missing, not-yet-hinted content word. Build a short
+    // phrase of context around it from the model answer for a more teachable hint.
     const start = Math.max(0, ri-2);
     const end   = Math.min(ref.length, ri+3);
     const phraseWords = ref.slice(start, end).map((w,i)=> (start+i===ri) ? `【${w}】` : w);
     const phrase = (start>0 ? "…" : "") + phraseWords.join(" ") + (end<ref.length ? "…" : "");
     return { word: rw, phrase };
   }
-  return null; // every meaningful word is already present somewhere in their answer
+  return null; // every meaningful word is already present somewhere in their answer or already hinted
 }
 
 function scoreAnswer(userText, refText){
@@ -2696,18 +2668,11 @@ function renderHintChips(count, explicitKey){
   if(!hints.length) return "";
   return `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
     ${hints.map((h,i)=>{
-      const isNudge = h.type==="nudge";
-      const icon = isNudge ? "🤔" : "💡";
-      const bg = isNudge ? "var(--sage-light,#eef3ea)" : "var(--gold-light)";
-      const border = isNudge ? "var(--sage,#7a9b6e)" : "var(--gold)";
-      const textColor = isNudge ? "#3d5c34" : "#7a5c00";
-      const body = isNudge
-        ? h.text
-        : (h.phrase||h.word||"").replace(/【(.+?)】/g,"<b style='color:#5a4200;text-decoration:underline'>$1</b>");
+      const body = (h.phrase||h.word||"").replace(/【(.+?)】/g,"<b style='color:#5a4200;text-decoration:underline'>$1</b>");
       return `
-      <div style="display:flex;align-items:flex-start;gap:8px;background:${bg};border-left:3px solid ${border};border-radius:0 8px 8px 0;padding:7px 10px">
-        <span style="font-size:14px;flex-shrink:0;margin-top:1px">${icon}</span>
-        <span style="font-size:12.5px;color:${textColor};line-height:1.5">${body}</span>
+      <div style="display:flex;align-items:flex-start;gap:8px;background:var(--gold-light);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:7px 10px">
+        <span style="font-size:14px;flex-shrink:0;margin-top:1px">💡</span>
+        <span style="font-size:12.5px;color:#7a5c00;line-height:1.5">${body}</span>
       </div>`;
     }).join("")}
   </div>`;
@@ -2725,13 +2690,8 @@ function buildHintBtnInner(label, hintsLeft, nextCost, prefix, hintsUsedSoFar){
   if(hintsLeft<=0){
     return `<span class="hint-icon">💡</span><span class="hint-text">${label}</span>`;
   }
-  // First press = a thinking nudge (🤔). Every press after that = a literal reveal (💡).
-  const isFirstPress = !hintsUsedSoFar;
-  const icon = isFirstPress ? "🤔" : "💡";
-  const text = isFirstPress
-    ? (prefix ? `Stuck on ${prefix}? Get a nudge` : "Stuck? Get a thinking nudge")
-    : (prefix ? `Reveal a word for ${prefix}?` : "Reveal a word?");
-  return `<span class="hint-icon">${icon}</span><span class="hint-text">${text}</span><span class="hint-meta">${hintsLeft} left · next costs −${nextCost}%</span>`;
+  const text = prefix ? `Reveal a word for ${prefix}?` : "Reveal a word?";
+  return `<span class="hint-icon">💡</span><span class="hint-text">${text}</span><span class="hint-meta">${hintsLeft} left · next costs −${nextCost}%</span>`;
 }
 
 function useHint(){
@@ -2742,24 +2702,16 @@ function useHint(){
   if(used >= MAX_HINTS) return;
 
   const userText = document.getElementById("answerInput")?.value || "";
-
-  // Tier 1 (first hint): a conceptual nudge — asks the student to think rather
-  // than handing over a word. No tracking of "which concept" needed here since
-  // nothing concrete has been revealed yet.
-  if(used === 0){
-    const nudge = buildHintNudge(userText, q.answer, currentQType);
-    recordHintConcept(key, currentLesson?.title, currentQType, q.q);
-    advanceHint(key, { type:"nudge", text: nudge }, "hintBtn", "hintDisplay");
-    return;
-  }
-
-  // Tier 2+: literal word/phrase reveal, same as before.
-  const hint = findNextHintWord(userText, q.answer);
+  // Exclude words already revealed as a hint this attempt — otherwise asking for
+  // a second hint after ignoring the first would just show the same word again.
+  const alreadyHinted = new Set((hintWordsByQuestion[key]||[]).map(h=>h.word).filter(Boolean));
+  const hint = findNextHintWord(userText, q.answer, alreadyHinted);
   if(!hint){
     const btn = document.getElementById("hintBtn");
     if(btn){ btn.disabled = true; btn.innerHTML = buildHintBtnInner("You've covered it all!", 0); }
     return;
   }
+  if(used === 0) recordHintConcept(key, currentLesson?.title, currentQType, q.q);
   advanceHint(key, { type:"word", word:hint.word, phrase:hint.phrase }, "hintBtn", "hintDisplay");
 }
 
@@ -3087,20 +3039,15 @@ function useHintDist(side){
   const userText = document.getElementById(inputId)?.value || "";
   const btn = document.getElementById("hintBtn"+side);
 
-  // Tier 1: conceptual nudge, no word revealed yet.
-  if(used === 0){
-    const nudge = buildHintNudge(userText, refText, "distinguish");
-    recordHintConcept(key, currentLesson?.title, "distinguish", `Distinguish: ${termLabel}`);
-    advanceHintDist(key, { type:"nudge", text: nudge }, btn, termLabel, "hintDisplay"+side);
-    return;
-  }
-
-  // Tier 2+: literal phrase/word reveal.
-  const hint = findNextHintWord(userText, refText);
+  // Exclude words already revealed as a hint this attempt — otherwise asking for
+  // a second hint after ignoring the first would just show the same word again.
+  const alreadyHinted = new Set((hintWordsByQuestion[key]||[]).map(h=>h.word).filter(Boolean));
+  const hint = findNextHintWord(userText, refText, alreadyHinted);
   if(!hint){
     if(btn){ btn.disabled = true; btn.innerHTML = buildHintBtnInner(`No clues left for ${termLabel}`, 0); }
     return;
   }
+  if(used === 0) recordHintConcept(key, currentLesson?.title, "distinguish", `Distinguish: ${termLabel}`);
   advanceHintDist(key, { type:"word", word:hint.word, phrase:hint.phrase }, btn, termLabel, "hintDisplay"+side);
 }
 
