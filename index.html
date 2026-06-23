@@ -2035,7 +2035,7 @@ function stampQuestion(){
   _questionStart=Date.now();
   return elapsed;
 }
-function logQuestion(pct, elapsed){
+function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   const entry = {
     subject: currentSubject||'',
     part: currentPart||'',
@@ -2047,7 +2047,9 @@ function logQuestion(pct, elapsed){
   };
   sessionLog.push({...entry, ts: Date.now()});
   fbLogEntry("logs", entry);
-  fbLiveState({ answered:true, lastScore: pct });
+  // Forward the SAME feedback the student is looking at — not just a number —
+  // so the admin's live view genuinely mirrors what the student sees on screen.
+  fbLiveState({ answered:true, lastScore: pct, isCorrect: !!isCorrect, feedbackHTML: feedbackHTML||"" });
   const btn=document.getElementById('reportBtn');
   if(btn) btn.classList.add('visible');
 }
@@ -2215,7 +2217,9 @@ function renderCurrentQuestion(){
     questionText: (qs[currentQIndex]?.q || qs[currentQIndex]?.sentence || qs[currentQIndex]?.statement || ""),
     correctAnswer: (qs[currentQIndex]?.answer || (qs[currentQIndex]?.answers||[]).join(" / ") || ""),
     currentAnswer: "",
-    answered: false
+    answered: false,
+    isCorrect: false,
+    peeksUsedThisQuestion: 0 // fresh question — clear any peek flag left over from the previous one
   });
 
   if(!total){
@@ -2842,6 +2846,9 @@ function recordPeekUsed(){
     if(q) recordHintConcept(key, currentLesson?.title, currentQType, q.q);
   }
   hintsUsedByQuestion[key] = used + 1;
+  // Let the admin's live view know right away that a peek was used — this is
+  // exactly the kind of moment worth seeing live, not just after the fact.
+  fbLiveState({ peeksUsedThisQuestion: hintsUsedByQuestion[key] });
 }
 
 // Tracks which concepts/questions needed help, the same way sessionSpellErrors
@@ -2930,13 +2937,15 @@ function selectTF(selected, correct, isLast, reason){
   panel.classList.add("visible");
   const cls=isCorrect?"perfect":"poor";
   const correctLabel = correct==="true" ? "True" : "False";
-  panel.innerHTML=`
+  const tfFeedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div><div class="score-label">${isCorrect?"Correct! 🎉":"Incorrect — it is "+correctLabel}</div>
       <div style="margin-top:4px">${timeChip(tfelapsed)}</div></div>
     </div>
     ${reason?`<div class="result-section"><div class="result-section-title correct">Reason</div><div class="diff-answer-block model">${reason.replace(/</g,"&lt;")}</div></div>`:""}`;
+  panel.innerHTML = tfFeedbackHTML;
+  fbLiveState({ answered:true, lastScore:pct, isCorrect, feedbackHTML: tfFeedbackHTML });
   renderNavBar();
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
@@ -3058,11 +3067,7 @@ function checkTextAnswer(){
   sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const txtElapsed=stampQuestion();
-  logQuestion(pct,txtElapsed);
-  renderNavBar();
 
-  const panel=document.getElementById("resultPanel");
-  panel.classList.add("visible");
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const lbl=pct>=80?"Great answer!":pct>=50?"Good effort — almost there!":"Keep practising!";
   const hintPenaltyApplied = rawPct - pct;
@@ -3070,7 +3075,7 @@ function checkTextAnswer(){
     ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${hintsUsed} time${hintsUsed!==1?"s":""} — score capped at ${HINT_SCORE_CAP[hintsUsed-1]}% = ${pct}%</div>`
     : "";
 
-  panel.innerHTML=`
+  const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div><div class="score-label">${lbl} ${timeChip(txtElapsed)}</div>
@@ -3078,11 +3083,27 @@ function checkTextAnswer(){
       ${hintNote}</div>
     </div>
     ${buildAnnotatedDiff(userText, q.answer)}`;
+
+  logQuestion(pct, txtElapsed, feedbackHTML, pct>=80);
+  renderNavBar();
+
+  const panel=document.getElementById("resultPanel");
+  panel.classList.add("visible");
+  panel.innerHTML = feedbackHTML;
   setTimeout(()=>saveStudyAnswer(pct),50);
 
   document.getElementById("answerArea").style.display="none";
   hidePeek();
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
+}
+
+// Combines both Distinguish textareas into a single readable currentAnswer for
+// the live admin view — otherwise typing in box B would silently overwrite
+// whatever box A showed, hiding half of what the student has written.
+function reportDistLiveState(){
+  const a = document.getElementById("distInputA")?.value || "";
+  const b = document.getElementById("distInputB")?.value || "";
+  fbLiveState({ currentAnswer: `[Term A] ${a}\n\n[Term B] ${b}`, typing:true });
 }
 
 // ── DISTINGUISH BETWEEN ──
@@ -3111,6 +3132,21 @@ function renderDistinguish(q, qnum, isLast){
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
 
   const distPlaceholder = currentMode==="exam" ? null : "Tap 👁 above, then close it to start writing…";
+
+  fbLiveState({
+    mode: currentLesson?.id==="__mock__" ? "mock" : "study",
+    lessonId: currentLesson?.id||"",
+    lessonTitle: currentLesson?.title||"",
+    qtype: currentQType,
+    qIndex: currentQIndex,
+    questionText: q.q || `Distinguish between ${q.termA} and ${q.termB}.`,
+    correctAnswer: `${q.termA}: ${q.answerA}\n\n${q.termB}: ${q.answerB}`,
+    currentAnswer: "",
+    answered: false,
+    isCorrect: false,
+    peeksUsedThisQuestion: 0
+  });
+
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Distinguish Between</div>
@@ -3122,11 +3158,11 @@ function renderDistinguish(q, qnum, isLast){
       <div class="dist-input-grid">
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termA}</div>
-          <textarea class="dist-textarea" id="distInputA" placeholder="${distPlaceholder||`Write about ${q.termA}…`}" ${currentMode!=="exam"?"disabled":""} onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:'A: '+this.value, typing:true})"></textarea>
+          <textarea class="dist-textarea" id="distInputA" placeholder="${distPlaceholder||`Write about ${q.termA}…`}" ${currentMode!=="exam"?"disabled":""} onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="reportDistLiveState()"></textarea>
         </div>
         <div class="dist-input-col">
           <div class="dist-input-label">${q.termB}</div>
-          <textarea class="dist-textarea" id="distInputB" placeholder="${distPlaceholder||`Write about ${q.termB}…`}" ${currentMode!=="exam"?"disabled":""} onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:'B: '+this.value, typing:true})"></textarea>
+          <textarea class="dist-textarea" id="distInputB" placeholder="${distPlaceholder||`Write about ${q.termB}…`}" ${currentMode!=="exam"?"disabled":""} onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="reportDistLiveState()"></textarea>
         </div>
       </div>
       <div class="answer-actions" style="padding:0 12px 12px">${actionBtns}</div>
@@ -3258,16 +3294,12 @@ function checkDistinguish(){
   sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const distElapsed=stampQuestion();
-  logQuestion(pct,distElapsed);
-  renderNavBar();
 
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const hintNote = peeksUsed>0
     ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${peeksUsed} time${peeksUsed!==1?"s":""} — score capped above</div>`
     : "";
-  const panel=document.getElementById("resultPanel");
-  panel.classList.add("visible");
-  panel.innerHTML=`
+  const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div>
@@ -3290,6 +3322,13 @@ function checkDistinguish(){
     <div class="result-section-title correct" style="margin:10px 0 4px">✅ Model Answer</div>
     ${buildDistTable(q)}`;
 
+  logQuestion(pct, distElapsed, feedbackHTML, pct>=80);
+  renderNavBar();
+
+  const panel=document.getElementById("resultPanel");
+  panel.classList.add("visible");
+  panel.innerHTML = feedbackHTML;
+
   document.getElementById("answerArea").style.display="none";
   hidePeek();
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
@@ -3304,7 +3343,7 @@ function showSimpleResult(pct, detail){
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const m=getMarks(currentQType);
   const earned=(m*(pct/100)).toFixed(m===1?0:1);
-  panel.innerHTML=`
+  const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
       <div>
@@ -3313,6 +3352,10 @@ function showSimpleResult(pct, detail){
         <div class="marks-chip">${earned}/${m} mark${m!==1?"s":""}</div>
       </div>
     </div>`;
+  panel.innerHTML = feedbackHTML;
+  // Mirror the exact same feedback to the admin's live view, in addition to
+  // whatever fbLiveState call already ran when the answer was selected.
+  fbLiveState({ answered:true, lastScore:pct, isCorrect: pct>=80, feedbackHTML });
   setTimeout(()=>saveStudyAnswer(pct), 50);
 }
 
@@ -3656,7 +3699,8 @@ function renderMockQuestion(){
     questionText: item.q?.q || item.q?.sentence || item.q?.statement || "",
     correctAnswer: item.q?.answer || (item.q?.answers||[]).join(" / ") || "",
     currentAnswer: "",
-    answered: mockExamStates[mockQIndex]?.answered || false
+    answered: mockExamStates[mockQIndex]?.answered || false,
+    peeksUsedThisQuestion: 0
   });
   // Reset per-question timer
   _questionStart=Date.now();
@@ -4807,16 +4851,21 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:12px;font-weight:700">⏰ Study Sessions Today</div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
-        <div style="flex:1;background:${sessionGoals.morningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.morningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:8px;text-align:center">
-          <div style="font-size:18px">${sessionGoals.earlyDone?'🌅':sessionGoals.lateDone?'🌤️':'🌙'}</div>
-          <div style="font-size:11px;font-weight:700;margin-top:2px">${sessionGoals.morningDone?'Morning ✓':'Morning'}</div>
-          <div style="font-size:9px;opacity:.7">${sessionGoals.earlyDone?'6-7am · best!':sessionGoals.lateDone?'7-8am':'6-8am goal'}</div>
+      <div style="display:flex;gap:6px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
+        <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.earlyDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
+          <div style="font-size:16px">🌅</div>
+          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
+          <div style="font-size:8px;opacity:.7">+15 best!</div>
         </div>
-        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:8px;text-align:center">
-          <div style="font-size:18px">🌙</div>
-          <div style="font-size:11px;font-weight:700;margin-top:2px">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:9px;opacity:.7">anytime else</div>
+        <div style="flex:1;background:${sessionGoals.lateDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.lateDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
+          <div style="font-size:16px">🌤️</div>
+          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
+          <div style="font-size:8px;opacity:.7">+8</div>
+        </div>
+        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
+          <div style="font-size:16px">🌙</div>
+          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
+          <div style="font-size:8px;opacity:.7">+5</div>
         </div>
       </div>
       ${sessionGoals.bothDone ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Studied twice today! +5 bonus</div>` : ""}
@@ -5175,6 +5224,33 @@ async function showWelcomeBackPopup(){
       <div style="font-size:11.5px;color:#8a6500;margin-top:2px">Answer ${MIN_QUESTIONS_FOR_SESSION} questions in the next ${60-new Date().getMinutes()} min to lock in ${currentHour===6?"the big morning bonus":"your morning session"}.</div>
     </div>` : "";
 
+  // Always show all three session goals, regardless of what time it is right
+  // now — not just a nudge during the morning window. Lets him see at a glance
+  // what he's already locked in today and what's still open.
+  const sessionGoalsHTML = `
+    <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">⏰ Study Sessions Today</div>
+      <div style="display:flex;gap:5px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
+        <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.earlyDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
+          <div style="font-size:15px">🌅</div>
+          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
+          <div style="font-size:8px;color:var(--muted)">+15</div>
+        </div>
+        <div style="flex:1;background:${sessionGoals.lateDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.lateDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
+          <div style="font-size:15px">🌤️</div>
+          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
+          <div style="font-size:8px;color:var(--muted)">+8</div>
+        </div>
+        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.eveningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
+          <div style="font-size:15px">🌙</div>
+          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
+          <div style="font-size:8px;color:var(--muted)">+5</div>
+        </div>
+      </div>
+      ${sessionGoals.bothDone ? `<div style="font-size:11.5px;color:var(--green);font-weight:700">🎉 Studied twice today!</div>` : ""}
+      ${sessionGoals.morningStreak>0 ? `<div style="font-size:11.5px;color:#b8860b;font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
+    </div>`;
+
   const checklistHTML = dailyGoal.checklist.map(c=>`
     <div style="display:flex;align-items:center;gap:5px;background:${c.done?'rgba(76,204,138,.15)':'var(--parchment)'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:7px;padding:4px 8px">
       <span style="font-size:12px">${c.done?'✅':c.icon}</span>
@@ -5192,6 +5268,7 @@ async function showWelcomeBackPopup(){
     </div>
 
     ${morningNudgeHTML}
+    ${sessionGoalsHTML}
 
     <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -5347,12 +5424,24 @@ function openAdminMirror(){
         <div class="peek-text" style="white-space:pre-wrap">${s.correctAnswer||""}</div>
       </div>` : "";
 
+    // Flag clearly when the student has used a peek/clue on this question —
+    // worth seeing live, not just buried in the score breakdown afterward.
+    const peekUsedHTML = s.peeksUsedThisQuestion>0 ? `
+      <div style="margin-top:8px;padding:8px 10px;background:rgba(232,184,75,.15);border-left:3px solid var(--gold,#e8b84b);border-radius:0 8px 8px 0;font-size:12px;color:#8a6500;font-weight:700">
+        👁 Used ${s.peeksUsedThisQuestion} peek${s.peeksUsedThisQuestion>1?"s":""} on this question
+      </div>` : "";
+
     box.innerHTML = `
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${modeLabel} · ${s.lessonTitle||""} · ${s.qtype||""} · Q${(s.qIndex??0)+1}/${s.qTotal||"?"}</div>
       <div class="q-text" style="margin-bottom:10px;white-space:pre-wrap">${s.questionText||""}</div>
-      ${answerBlockHTML}
-      ${peekHTML}
-      ${s.answered ? `<div style="margin-top:8px;font-size:12px;font-weight:700;color:${s.isCorrect?'var(--green)':'var(--red)'}">${s.isCorrect?"✓ Correct":"✗ Incorrect"} — scored ${s.lastScore??""}%</div>` : ""}
+      ${s.answered && s.feedbackHTML ? `
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">📋 ${STUDENT_NAME}'s result (same view they see):</div>
+        ${s.feedbackHTML}
+      ` : `
+        ${answerBlockHTML}
+        ${peekHTML}
+        ${peekUsedHTML}
+      `}
     `;
   });
 
