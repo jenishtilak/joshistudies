@@ -620,6 +620,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="sidebar-logo"><h1>📚 Study Buddy</h1><p>Class 9 · Science &amp; Social Science</p></div>
   <nav class="sidebar-nav" id="sidebarNav"></nav>
   <div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)">
+    <button onclick="openScoreboardPanel()" style="width:100%;padding:9px;background:rgba(184,134,11,.15);color:#b8860b;border:1px solid rgba(184,134,11,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🏆 Scoreboard</button>
     <button onclick="openReport()" style="width:100%;padding:9px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📊 Session Report</button>
     <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🎯 Mock Exam</button>
     <button onclick="openSpellingPanel()" style="width:100%;padding:9px;background:rgba(76,204,138,.15);color:var(--green);border:1px solid rgba(76,204,138,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🔤 Spelling Game</button>
@@ -662,6 +663,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   </div>
 </div>
 
+<!-- SCOREBOARD PANEL (standalone floating) -->
+<div class="report-panel" id="scoreboardPanel" onclick="if(event.target===this)closeScoreboardPanel()">
+  <div class="report-sheet">
+    <div class="report-handle"></div>
+    <div class="report-title">🏆 Scoreboard</div>
+    <div id="studentScoreboardTotal" style="background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;margin:10px 0;font-size:13px"></div>
+    <button class="report-close" style="width:100%;margin-top:10px" onclick="closeScoreboardPanel()">Done</button>
+  </div>
+</div>
+
 <!-- SESSION REPORT PANEL -->
 <div class="report-panel" id="reportPanel" onclick="if(event.target===this)closeReport()">
   <div class="report-sheet">
@@ -673,7 +684,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
       <button class="report-tab-btn active" id="reportTabBtnTopics" onclick="showReportTab('topics')">This Session</button>
       <button class="report-tab-btn" id="reportTabBtnPast" onclick="showReportTab('past')">📂 Past Sessions</button>
       <button class="report-tab-btn" id="reportTabBtnMock" onclick="showReportTab('mockexams')">🎯 Mock Exams</button>
-      <button class="report-tab-btn" id="reportTabBtnScoreboard" onclick="showReportTab('scoreboard')">🏆 Scoreboard</button>
     </div>
 
     <div id="reportTabTopics"><div id="reportBody"></div></div>
@@ -687,10 +697,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every mock exam you've taken.</p>
       <div id="studentMockExamsList"></div>
       <button id="studentMockExamsLoadMore" onclick="loadMoreStudentMockExams()" style="display:none;width:100%;margin-top:10px;padding:10px;background:var(--parchment);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;color:var(--navy)">Load older exams ↓</button>
-    </div>
-
-    <div id="reportTabScoreboard" style="display:none">
-      <div id="studentScoreboardTotal" style="background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px"></div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -730,6 +736,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📖</span>Lessons</div>
+  <div class="nav-item"        onclick="setNav(this);openScoreboardPanel()"><span class="nav-icon">🏆</span>Scoreboard</div>
   <div class="nav-item"        onclick="setNav(this);openReport()"><span class="nav-icon">📊</span>Report</div>
   <div class="nav-item"        onclick="setNav(this);openMockExam()"><span class="nav-icon">🎯</span>Mock Exam</div>
   <div class="nav-item"        onclick="setNav(this);openSpellingPanel()"><span class="nav-icon">🔤</span>Spelling</div>
@@ -4242,6 +4249,33 @@ document.addEventListener("drop", function(e){
 
 // ── KEYBOARD NAVIGATION ──
 let _navKeyLock = false;
+// Shared "go to previous / go to next" logic — used by both arrow-key navigation
+// and swipe gestures, so the rules stay identical (e.g. can't swipe forward past
+// an unanswered question, mock exam submits via the real button not a shortcut).
+function navigatePrev(){
+  if(currentLesson?.id==="__mock__"){
+    jumpMockQuestion(mockQIndex-1);
+  } else {
+    jumpToQuestion(currentQIndex-1);
+  }
+}
+function navigateNext(){
+  if(currentLesson?.id==="__mock__"){
+    const hasAnswer = mockQuestionHasAnswer();
+    const nextBtn=document.getElementById("examNextBtn")||document.getElementById("checkBtn");
+    if(hasAnswer && nextBtn && !nextBtn.disabled){
+      nextBtn.click();
+    } else if(mockQIndex<mockQuestions.length-1){
+      jumpMockQuestion(mockQIndex+1);
+    }
+  } else {
+    const btnRow=document.getElementById("btnRow");
+    if(btnRow?.style.display==="flex"){
+      nextQuestion();
+    }
+  }
+}
+
 document.addEventListener("keydown", function(e){
   // Only in quiz overlay, not typing in inputs
   const overlay = document.getElementById("quizOverlay");
@@ -4255,38 +4289,70 @@ document.addEventListener("keydown", function(e){
   _navKeyLock = true;
   setTimeout(()=>{ _navKeyLock=false; }, 350);
 
-  if(currentLesson?.id==="__mock__"){
-    if(e.key==="ArrowLeft"||e.key==="ArrowUp"){
-      e.preventDefault();
-      jumpMockQuestion(mockQIndex-1);
-    } else if(e.key==="ArrowRight"||e.key==="ArrowDown"){
-      e.preventDefault();
-      const hasAnswer = mockQuestionHasAnswer();
-      const nextBtn=document.getElementById("examNextBtn")||document.getElementById("checkBtn");
-      if(hasAnswer && nextBtn && !nextBtn.disabled){
-        // Real answer present — submit it via the actual exam button (scores + advances)
-        nextBtn.click();
-      } else if(mockQIndex<mockQuestions.length-1){
-        // No answer yet — just move to next question without scoring as blank
-        jumpMockQuestion(mockQIndex+1);
-      }
-      // If already on the last question with nothing answered, arrow-right does nothing —
-      // user must explicitly press Submit to end the exam.
-    }
-  } else {
-    // Study mode
-    if(e.key==="ArrowLeft") {
-      e.preventDefault();
-      jumpToQuestion(currentQIndex-1);
-    } else if(e.key==="ArrowRight") {
-      e.preventDefault();
-      const btnRow=document.getElementById("btnRow");
-      if(btnRow?.style.display==="flex"){
-        nextQuestion();
-      }
-    }
+  if(e.key==="ArrowLeft"||e.key==="ArrowUp"){
+    e.preventDefault();
+    navigatePrev();
+  } else if(e.key==="ArrowRight"||e.key==="ArrowDown"){
+    e.preventDefault();
+    navigateNext();
   }
 });
+
+// ── SWIPE TO NAVIGATE (mobile, quick-answer question types only) ──
+// Deliberately scoped to MCQ / Fill / True-False / Match — never enabled for
+// Brief/Reasons/Paragraph/Distinguish, since a stray swipe while scrolling a
+// long written answer (or with the on-screen keyboard up) could accidentally
+// fire "next question" and feel like it ate the student's work. Quick-answer
+// types have nothing to lose from an accidental swipe, so it's safe there.
+const SWIPE_SAFE_QTYPES = new Set(["mcq","fill","truefalse","match"]);
+
+function isSwipeSafeRightNow(){
+  const overlay = document.getElementById("quizOverlay");
+  if(!overlay?.classList.contains("visible")) return false;
+  // Never swipe while any text input/textarea is focused, even on a safe qtype's
+  // page (e.g. the rare case of a select still open) — belt-and-suspenders.
+  const tag = document.activeElement?.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return false;
+
+  const isMock = currentLesson?.id==="__mock__";
+  const qtype = isMock ? mockQuestions[mockQIndex]?.qtype : currentQType;
+  return SWIPE_SAFE_QTYPES.has(qtype);
+}
+
+(function setupSwipeNav(){
+  let touchStartX = null, touchStartY = null, touchStartTime = 0;
+  const quizBody = document.getElementById("quizBody");
+  if(!quizBody) return;
+
+  quizBody.addEventListener("touchstart", function(e){
+    if(!isSwipeSafeRightNow() || e.touches.length!==1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  }, {passive:true});
+
+  quizBody.addEventListener("touchend", function(e){
+    if(touchStartX===null || !isSwipeSafeRightNow()) { touchStartX=null; return; }
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+    touchStartX = null;
+
+    // Require a clearly horizontal, deliberate flick — not a scroll, not a tap,
+    // not a diagonal drag. Mirrors how native swipe-card gestures feel.
+    const MIN_DISTANCE = 60, MAX_VERTICAL = 60, MAX_TIME = 600;
+    if(Math.abs(dx) < MIN_DISTANCE || Math.abs(dy) > MAX_VERTICAL || dt > MAX_TIME) return;
+    if(!isSwipeSafeRightNow()) return; // re-check in case state changed mid-gesture
+
+    if(_navKeyLock) return;
+    _navKeyLock = true;
+    setTimeout(()=>{ _navKeyLock=false; }, 350);
+
+    if(dx < 0) navigateNext();      // swipe left → next
+    else navigatePrev();            // swipe right → previous
+  }, {passive:true});
+})();
 function getMotivation(avg){
   if(avg===100) return { msg:"Perfect score! You're a star! ⭐", tick:"✓✓" };
   if(avg>=90)   return { msg:"Outstanding work! Keep it up!", tick:"✓✓" };
@@ -4421,14 +4487,11 @@ function showReportTab(tab){
   document.getElementById("reportTabTopics").style.display = tab==="topics" ? "block" : "none";
   document.getElementById("reportTabPast").style.display = tab==="past" ? "block" : "none";
   document.getElementById("reportTabMock").style.display = tab==="mockexams" ? "block" : "none";
-  document.getElementById("reportTabScoreboard").style.display = tab==="scoreboard" ? "block" : "none";
   document.getElementById("reportTabBtnTopics").classList.toggle("active", tab==="topics");
   document.getElementById("reportTabBtnPast").classList.toggle("active", tab==="past");
   document.getElementById("reportTabBtnMock").classList.toggle("active", tab==="mockexams");
-  document.getElementById("reportTabBtnScoreboard").classList.toggle("active", tab==="scoreboard");
   if(tab==="past") buildStudentPastSessionsList();
   if(tab==="mockexams") buildStudentMockExamsList();
-  if(tab==="scoreboard") buildStudentScoreboard();
 }
 
 // ── STANDALONE SPELLING GAME PANEL (its own floating icon, separate from Session Report) ──
@@ -4438,6 +4501,15 @@ function openSpellingPanel(){
 }
 function closeSpellingPanel(){
   document.getElementById("spellingPanel").classList.remove("visible");
+}
+
+// ── STANDALONE SCOREBOARD PANEL (its own floating icon, alongside Mock Exam / Spelling) ──
+function openScoreboardPanel(){
+  document.getElementById("scoreboardPanel").classList.add("visible");
+  buildStudentScoreboard();
+}
+function closeScoreboardPanel(){
+  document.getElementById("scoreboardPanel").classList.remove("visible");
 }
 
 // Same logic as the admin's scoreboard, but scoped to the logged-in student
@@ -4556,6 +4628,50 @@ function aggregateScoreboardData(logsSnap, examSnap){
 //
 // The result is a single 0-100 "Growth Score" that a student can't inflate just by
 // repeating questions they already know.
+// ═══════════════════════════════════════════════════════
+//  DAILY GOAL — answer at least one question from each of the 8 question
+//  types, every day. Rewards well-rounded daily practice (a bit of everything)
+//  rather than grinding only the question types that feel easiest.
+// ═══════════════════════════════════════════════════════
+function calcDailyGoal(allScoredEntries){
+  const startOfToday = new Date();
+  startOfToday.setHours(0,0,0,0);
+  const todayMs = startOfToday.getTime();
+
+  const doneToday = new Set();
+  allScoredEntries.forEach(e=>{
+    if(e.ts >= todayMs && e.qtype) doneToday.add(e.qtype);
+  });
+
+  const checklist = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
+  const doneCount = checklist.filter(c=>c.done).length;
+  const completedToday = doneCount >= QTYPES.length;
+
+  // Streak: how many consecutive days (including today, if already complete)
+  // the full 8-type goal was hit. Computed from the same entries, grouped by
+  // calendar day, walking backwards from today.
+  const byDay = {};
+  allScoredEntries.forEach(e=>{
+    const d = new Date(e.ts);
+    d.setHours(0,0,0,0);
+    const key = d.getTime();
+    if(!byDay[key]) byDay[key] = new Set();
+    if(e.qtype) byDay[key].add(e.qtype);
+  });
+  let streak = 0;
+  let cursor = todayMs;
+  // If today isn't complete yet, the streak counts up to yesterday instead —
+  // still gives credit for past consecutive days without requiring today to
+  // already be finished before showing any streak at all.
+  if(!completedToday) cursor -= 86400000;
+  while(byDay[cursor] && byDay[cursor].size >= QTYPES.length){
+    streak++;
+    cursor -= 86400000;
+  }
+
+  return { checklist, doneCount, total: QTYPES.length, completedToday, streak };
+}
+
 function calcGrowthScore(allUnique, allScoredEntries){
   const totalAvailable = countTotalAvailableQuestions();
   const coverage = totalAvailable>0 ? Math.min(100, Math.round((allUnique.size/totalAvailable)*100)) : 0;
@@ -4584,24 +4700,50 @@ function calcGrowthScore(allUnique, allScoredEntries){
     trend = Math.max(0, Math.min(100, Math.round(50 + delta*2.5)));
   }
 
-  const growthScore = Math.round(coverage*0.4 + mastery*0.4 + trend*0.2);
-  return { growthScore, coverage, mastery, trend, totalAvailable };
+  // Small bonus for hitting today's "one of each type" goal, plus a tiny extra
+  // per day of an active streak — capped so it nudges the score rather than
+  // dominating it (coverage/mastery/trend still do the heavy lifting).
+  const dailyGoal = calcDailyGoal(allScoredEntries);
+  const dailyBonus = (dailyGoal.completedToday ? 5 : 0) + Math.min(5, dailyGoal.streak);
+
+  const growthScore = Math.min(100, Math.round(coverage*0.4 + mastery*0.4 + trend*0.2) + dailyBonus);
+  return { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus };
 }
 
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries){
   const sessionCount = Object.keys(bySession).length;
-  const { growthScore, coverage, mastery, trend, totalAvailable } = calcGrowthScore(allUnique, allScoredEntries||[]);
+  const { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus } = calcGrowthScore(allUnique, allScoredEntries||[]);
 
   const growthLabel = growthScore>=80 ? "🌟 Excellent growth!" : growthScore>=60 ? "📈 Good progress!" : growthScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
   const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
   const trendColor = trend>60 ? "#7ee787" : trend<40 ? "#ffa07a" : "#d8d8d8";
+
+  const dailyChecklistHTML = dailyGoal.checklist.map(c=>`
+    <div style="display:flex;align-items:center;gap:6px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${c.done?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:8px;padding:5px 9px">
+      <span style="font-size:13px">${c.done?'✅':c.icon}</span>
+      <span style="font-size:11px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
+    </div>`).join("");
 
   return `
     <div style="text-align:center;margin-bottom:14px">
       <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Score</div>
       <div style="font-size:42px;font-weight:900;margin:4px 0">${growthScore}</div>
       <div style="font-size:13px;font-weight:700">${growthLabel}</div>
+      ${dailyBonus>0 ? `<div style="font-size:11px;color:#7ee787;margin-top:2px">+${dailyBonus} from today's goal &amp; streak</div>` : ""}
     </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700">📅 Today's Goal — one of each type</div>
+        <div style="font-size:12px;font-weight:800">${dailyGoal.doneCount}/${dailyGoal.total}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${dailyGoal.streak>0?'8px':'0'}">
+        ${dailyChecklistHTML}
+      </div>
+      ${dailyGoal.completedToday ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Goal complete for today! +5 bonus</div>` : ""}
+      ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
+    </div>
+
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
         <div style="font-size:17px;font-weight:800">${coverage}%</div>
@@ -4876,6 +5018,7 @@ function checkPasscode(){
     ws.classList.add("fade-out");
     setTimeout(()=>ws.classList.add("gone"), 420);
     if(isAdminUser) showAdminBar();
+    else setTimeout(()=>showWelcomeBackPopup(), 550); // let the welcome screen fade out first
   } else {
     const inp = document.getElementById("passcodeInput");
     const err = document.getElementById("wlError");
@@ -4885,6 +5028,81 @@ function checkPasscode(){
     setTimeout(()=>inp.classList.remove("error"), 400);
     inp.focus();
   }
+}
+
+// Shown once right after the student logs in — a quick, motivating snapshot of
+// their Growth Score and today's goal, so progress is the first thing they see
+// rather than something they have to go dig for.
+async function showWelcomeBackPopup(){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, collection, query, orderBy, getDocs } = window._fb;
+
+  let overlay = document.getElementById("welcomeBackPopup");
+  if(!overlay){
+    overlay = document.createElement("div");
+    overlay.id = "welcomeBackPopup";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px";
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <div style="font-size:32px;margin-bottom:8px">👋</div>
+    <div style="font-size:13px;color:var(--muted)">Loading your progress…</div>
+  </div>`;
+
+  let logsSnap, examSnap;
+  try{
+    logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
+    examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
+  } catch(err){
+    overlay.remove();
+    return;
+  }
+
+  if(logsSnap.empty && examSnap.empty){
+    // First-ever session — a simple welcome instead of stats that don't exist yet.
+    overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+      <div style="font-size:40px;margin-bottom:10px">🚀</div>
+      <div style="font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px">Welcome, ${STUDENT_NAME}!</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px">Let's get started — try one question from each topic type today to hit your first daily goal.</div>
+      <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Let's go! →</button>
+    </div>`;
+    return;
+  }
+
+  const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
+  const { growthScore, dailyGoal } = calcGrowthScore(allUnique, allScoredEntries);
+  const growthLabel = growthScore>=80 ? "🌟 You're doing brilliantly!" : growthScore>=60 ? "📈 Great progress so far!" : growthScore>=40 ? "🌱 You're growing steadily!" : "💪 Let's build some momentum!";
+
+  const checklistHTML = dailyGoal.checklist.map(c=>`
+    <div style="display:flex;align-items:center;gap:5px;background:${c.done?'rgba(76,204,138,.15)':'var(--parchment)'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:7px;padding:4px 8px">
+      <span style="font-size:12px">${c.done?'✅':c.icon}</span>
+      <span style="font-size:10.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
+    </div>`).join("");
+
+  overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <div style="font-size:30px;margin-bottom:4px">👋</div>
+    <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:10px">Welcome back, ${STUDENT_NAME}!</div>
+
+    <div style="background:var(--navy);color:#fff;border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:.5px">Growth Score</div>
+      <div style="font-size:36px;font-weight:900;margin:2px 0">${growthScore}</div>
+      <div style="font-size:12px;font-weight:700">${growthLabel}</div>
+    </div>
+
+    <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy)">📅 Today's Goal</div>
+        <div style="font-size:12px;font-weight:800;color:var(--navy)">${dailyGoal.doneCount}/${dailyGoal.total}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${checklistHTML}</div>
+      ${dailyGoal.completedToday
+        ? `<div style="font-size:12px;color:var(--green);font-weight:700;margin-top:8px">🎉 Already complete for today!</div>`
+        : `<div style="font-size:12px;color:var(--muted);margin-top:8px">Try one question from each remaining type to finish today's goal.</div>`}
+      ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:#b8860b;font-weight:700;margin-top:4px">🔥 ${dailyGoal.streak} day streak</div>` : ""}
+    </div>
+
+    <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;margin-top:16px;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>
+  </div>`;
 }
 
 // Write one log entry to Firestore under the student's phone number,
