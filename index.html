@@ -4672,6 +4672,62 @@ function calcDailyGoal(allScoredEntries){
   return { checklist, doneCount, total: QTYPES.length, completedToday, streak };
 }
 
+// ═══════════════════════════════════════════════════════
+//  SESSION GOALS — encourages showing up twice a day, with the strongest
+//  nudge reserved for studying early (6-7am specifically). Independent of the
+//  8-type daily goal above: this is about WHEN and HOW OFTEN he studies, not
+//  WHAT he studies.
+//
+//  A "session" here just means at least MIN_QUESTIONS_FOR_SESSION questions
+//  answered within that time window — low bar so it's achievable, high enough
+//  that opening and immediately closing the app doesn't count.
+// ═══════════════════════════════════════════════════════
+const MIN_QUESTIONS_FOR_SESSION = 3;
+
+function calcSessionGoals(allScoredEntries){
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0,0,0,0);
+  const todayMs = startOfToday.getTime();
+
+  // Count today's entries into three buckets by hour-of-day.
+  let earlyCount=0, lateCount=0, eveningCount=0;
+  allScoredEntries.forEach(e=>{
+    if(e.ts < todayMs) return;
+    const hour = new Date(e.ts).getHours();
+    if(hour===6) earlyCount++;
+    else if(hour===7) lateCount++;
+    else eveningCount++;
+  });
+
+  const earlyDone   = earlyCount >= MIN_QUESTIONS_FOR_SESSION;   // 6:00-6:59am — the one we most want to encourage
+  const lateDone     = lateCount >= MIN_QUESTIONS_FOR_SESSION;    // 7:00-7:59am — still morning, smaller reward
+  const morningDone  = earlyDone || lateDone;                     // either counts as "studied this morning"
+  const eveningDone  = eveningCount >= MIN_QUESTIONS_FOR_SESSION; // anytime outside the 6-8am window
+  const bothDone     = morningDone && eveningDone;                // showed up twice today
+
+  // Morning streak: consecutive days (including today, if already hit) where
+  // a morning session (6-8am) happened. Tracked separately from the 8-type
+  // streak since this is specifically about the early-rising habit.
+  const byDayMorning = {};
+  allScoredEntries.forEach(e=>{
+    const hour = new Date(e.ts).getHours();
+    if(hour!==6 && hour!==7) return;
+    const d = new Date(e.ts); d.setHours(0,0,0,0);
+    const key = d.getTime();
+    byDayMorning[key] = (byDayMorning[key]||0) + 1;
+  });
+  let morningStreak = 0;
+  let cursor = todayMs;
+  if(!morningDone) cursor -= 86400000;
+  while(byDayMorning[cursor] && byDayMorning[cursor] >= MIN_QUESTIONS_FOR_SESSION){
+    morningStreak++;
+    cursor -= 86400000;
+  }
+
+  return { earlyDone, lateDone, morningDone, eveningDone, bothDone, morningStreak, earlyCount, lateCount, eveningCount };
+}
+
 function calcGrowthScore(allUnique, allScoredEntries){
   const totalAvailable = countTotalAvailableQuestions();
   const coverage = totalAvailable>0 ? Math.min(100, Math.round((allUnique.size/totalAvailable)*100)) : 0;
@@ -4706,13 +4762,26 @@ function calcGrowthScore(allUnique, allScoredEntries){
   const dailyGoal = calcDailyGoal(allScoredEntries);
   const dailyBonus = (dailyGoal.completedToday ? 5 : 0) + Math.min(5, dailyGoal.streak);
 
-  const growthScore = Math.min(100, Math.round(coverage*0.4 + mastery*0.4 + trend*0.2) + dailyBonus);
-  return { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus };
+  // Session bonus: rewards showing up to study, with the strongest nudge for
+  // the 6-7am slot specifically (the early-rising habit this is meant to build).
+  // 7-8am still counts as morning but earns less. Hitting both a morning AND
+  // an evening session in the same day earns a small "showed up twice" extra.
+  // Capped the same way as the daily bonus — a nudge, not a dominant factor.
+  const sessionGoals = calcSessionGoals(allScoredEntries);
+  let sessionBonus = 0;
+  if(sessionGoals.earlyDone) sessionBonus += 15;
+  else if(sessionGoals.lateDone) sessionBonus += 8;
+  if(sessionGoals.eveningDone) sessionBonus += 5;
+  if(sessionGoals.bothDone) sessionBonus += 5;
+  sessionBonus += Math.min(10, sessionGoals.morningStreak); // morning streak, capped separately from the 8-type streak
+
+  const growthScore = Math.min(100, Math.round(coverage*0.4 + mastery*0.4 + trend*0.2) + dailyBonus + sessionBonus);
+  return { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus, sessionGoals, sessionBonus };
 }
 
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries){
   const sessionCount = Object.keys(bySession).length;
-  const { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus } = calcGrowthScore(allUnique, allScoredEntries||[]);
+  const { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus, sessionGoals, sessionBonus } = calcGrowthScore(allUnique, allScoredEntries||[]);
 
   const growthLabel = growthScore>=80 ? "🌟 Excellent growth!" : growthScore>=60 ? "📈 Good progress!" : growthScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
   const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
@@ -4724,12 +4793,34 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       <span style="font-size:11px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
     </div>`).join("");
 
+  const totalBonus = dailyBonus + sessionBonus;
+
   return `
     <div style="text-align:center;margin-bottom:14px">
       <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Score</div>
       <div style="font-size:42px;font-weight:900;margin:4px 0">${growthScore}</div>
       <div style="font-size:13px;font-weight:700">${growthLabel}</div>
-      ${dailyBonus>0 ? `<div style="font-size:11px;color:#7ee787;margin-top:2px">+${dailyBonus} from today's goal &amp; streak</div>` : ""}
+      ${totalBonus>0 ? `<div style="font-size:11px;color:#7ee787;margin-top:2px">+${totalBonus} from goals &amp; streaks</div>` : ""}
+    </div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700">⏰ Study Sessions Today</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
+        <div style="flex:1;background:${sessionGoals.morningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.morningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:8px;text-align:center">
+          <div style="font-size:18px">${sessionGoals.earlyDone?'🌅':sessionGoals.lateDone?'🌤️':'🌙'}</div>
+          <div style="font-size:11px;font-weight:700;margin-top:2px">${sessionGoals.morningDone?'Morning ✓':'Morning'}</div>
+          <div style="font-size:9px;opacity:.7">${sessionGoals.earlyDone?'6-7am · best!':sessionGoals.lateDone?'7-8am':'6-8am goal'}</div>
+        </div>
+        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:8px;text-align:center">
+          <div style="font-size:18px">🌙</div>
+          <div style="font-size:11px;font-weight:700;margin-top:2px">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
+          <div style="font-size:9px;opacity:.7">anytime else</div>
+        </div>
+      </div>
+      ${sessionGoals.bothDone ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Studied twice today! +5 bonus</div>` : ""}
+      ${sessionGoals.morningStreak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>
 
     <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
@@ -5070,8 +5161,19 @@ async function showWelcomeBackPopup(){
   }
 
   const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  const { growthScore, dailyGoal } = calcGrowthScore(allUnique, allScoredEntries);
+  const { growthScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries);
   const growthLabel = growthScore>=80 ? "🌟 You're doing brilliantly!" : growthScore>=60 ? "📈 Great progress so far!" : growthScore>=40 ? "🌱 You're growing steadily!" : "💪 Let's build some momentum!";
+
+  // Logging in during the 6-8am window with no morning session yet is the
+  // single best moment to encourage the early-rising habit — call it out
+  // specifically rather than burying it in the regular checklist.
+  const currentHour = new Date().getHours();
+  const inMorningWindow = currentHour===6 || currentHour===7;
+  const morningNudgeHTML = (inMorningWindow && !sessionGoals.morningDone) ? `
+    <div style="background:rgba(232,184,75,.15);border:1.5px solid var(--gold,#e8b84b);border-radius:12px;padding:10px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#8a6500">${currentHour===6 ? "🌅 You're up early — nice!" : "🌤️ Still counts as morning!"}</div>
+      <div style="font-size:11.5px;color:#8a6500;margin-top:2px">Answer ${MIN_QUESTIONS_FOR_SESSION} questions in the next ${60-new Date().getMinutes()} min to lock in ${currentHour===6?"the big morning bonus":"your morning session"}.</div>
+    </div>` : "";
 
   const checklistHTML = dailyGoal.checklist.map(c=>`
     <div style="display:flex;align-items:center;gap:5px;background:${c.done?'rgba(76,204,138,.15)':'var(--parchment)'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:7px;padding:4px 8px">
@@ -5088,6 +5190,8 @@ async function showWelcomeBackPopup(){
       <div style="font-size:36px;font-weight:900;margin:2px 0">${growthScore}</div>
       <div style="font-size:12px;font-weight:700">${growthLabel}</div>
     </div>
+
+    ${morningNudgeHTML}
 
     <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
