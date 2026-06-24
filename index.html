@@ -245,17 +245,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 /* ── WELCOME / PASSCODE SCREEN ── */
 .welcome-screen{
   position:fixed;inset:0;z-index:2000;
-  background:var(--navy);
+  background:linear-gradient(160deg, #16213a 0%, #1a2744 45%, #233458 100%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px 24px;text-align:center;
   transition:opacity .4s ease;
+  overflow:hidden;
 }
 .welcome-screen.fade-out{opacity:0;pointer-events:none}
 .welcome-screen.gone{display:none}
-.wl-icon{font-size:56px;margin-bottom:16px;animation:bob 2.4s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.wl-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:.3px;margin-bottom:4px}
-.wl-sub{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:14px;line-height:1.5}
+.wl-bg-decor{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.wl-float{position:absolute;font-size:22px;opacity:.16;animation:wlFloat 9s ease-in-out infinite}
+@keyframes wlFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-22px) rotate(8deg)}}
+.wl-icon{font-size:58px;margin-bottom:14px;animation:bob 2.4s ease-in-out infinite;position:relative;z-index:1}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-8px) rotate(-3deg)}}
+.wl-title{font-size:28px;font-weight:900;color:#fff;letter-spacing:.3px;margin-bottom:4px;position:relative;z-index:1;background:linear-gradient(90deg,#fff,#ffe9bb);-webkit-background-clip:text;background-clip:text}
+.wl-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px;line-height:1.5;position:relative;z-index:1}
+.wl-motivate{font-size:12.5px;color:var(--gold);font-weight:700;margin-bottom:16px;position:relative;z-index:1;min-height:18px}
 .wl-verse{
   margin-top:16px;
   padding-top:14px;
@@ -287,8 +292,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   text-transform:uppercase;
   opacity:.8;
 }
-.wl-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-  border-radius:18px;padding:28px 24px;width:100%;max-width:360px}
+.wl-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;padding:28px 24px;width:100%;max-width:360px;position:relative;z-index:1;
+  box-shadow:0 20px 60px rgba(0,0,0,.35), 0 0 0 1px rgba(232,184,75,.06)}
 .wl-card-title{font-size:13px;font-weight:700;text-transform:uppercase;
   letter-spacing:1px;color:rgba(255,255,255,.45);margin-bottom:16px}
 .wl-input-wrap{position:relative;margin-bottom:12px}
@@ -310,12 +316,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .wl-toggle:hover{color:rgba(255,255,255,.8)}
 .wl-error{font-size:12px;color:var(--red);min-height:18px;margin-bottom:10px;font-weight:600}
 .wl-btn{
-  width:100%;padding:14px;background:var(--gold);color:var(--navy);
+  width:100%;padding:14px;background:linear-gradient(135deg,#f0c768,var(--gold));color:var(--navy);
   font-size:15px;font-weight:800;border:none;border-radius:12px;
   cursor:pointer;font-family:inherit;letter-spacing:.4px;
-  transition:opacity .2s,transform .1s;
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 6px 20px rgba(232,184,75,.25);
 }
-.wl-btn:hover{opacity:.9}
+.wl-btn:hover{opacity:.95;transform:translateY(-1px);box-shadow:0 8px 24px rgba(232,184,75,.35)}
 .wl-btn:active{transform:scale(.98)}
 .wl-footer{font-size:11px;color:rgba(255,255,255,.25);margin-top:28px}
 
@@ -600,9 +607,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 <!-- ══ WELCOME / PASSCODE SCREEN ══ -->
 <div class="welcome-screen" id="welcomeScreen">
+  <div class="wl-bg-decor" id="wlBgDecor"></div>
   <div class="wl-icon">📚</div>
   <div class="wl-title">Study Buddy</div>
   <div class="wl-sub">Class 9 · Science &amp; Social Science<br>Your personal exam prep companion</div>
+  <div class="wl-motivate" id="wlMotivate"></div>
   <div class="wl-card">
     <div class="wl-card-title">🔒 Enter Passcode</div>
     <div class="wl-input-wrap">
@@ -1757,6 +1766,35 @@ function init(){
   const v=verses[Math.floor(Date.now()/86400000)%verses.length];
   const el=document.getElementById("wlVerse");
   if(el) el.innerHTML=`<span class="wl-verse-text">${v.text}</span><span class="wl-verse-ref">${v.ref}</span>`;
+
+  // A short, warm line that rotates daily — small touch to make the login
+  // screen feel encouraging rather than purely a security gate.
+  const motivateLines = [
+    "🌟 Every question you try makes you a little stronger.",
+    "📈 Small steps today, big results in the exam.",
+    "🔥 Show up today — your streak is counting on you!",
+    "🏆 Yesterday you grew. Today, grow a little more.",
+    "💡 Curiosity is the best exam strategy.",
+    "🚀 Ready to add another question to your streak?",
+  ];
+  const ml = motivateLines[Math.floor(Date.now()/86400000)%motivateLines.length];
+  const mlEl = document.getElementById("wlMotivate");
+  if(mlEl) mlEl.textContent = ml;
+
+  // A handful of softly floating decorative emojis behind the login card —
+  // purely visual, no interaction, just makes the screen feel less static.
+  const decor = document.getElementById("wlBgDecor");
+  if(decor){
+    const icons = ["📖","✏️","🏆","🔤","🎯","📐","🧪","🌟"];
+    const positions = [
+      {top:"8%",left:"10%"}, {top:"15%",left:"82%"}, {top:"72%",left:"6%"},
+      {top:"78%",left:"88%"}, {top:"40%",left:"4%"}, {top:"50%",left:"92%"},
+      {top:"88%",left:"45%"}, {top:"6%",left:"48%"},
+    ];
+    decor.innerHTML = positions.map((pos,i)=>
+      `<span class="wl-float" style="top:${pos.top};left:${pos.left};animation-delay:${i*0.7}s">${icons[i%icons.length]}</span>`
+    ).join("");
+  }
 
   renderSidebar();
   renderSubjectTabs();
@@ -5041,12 +5079,6 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
   const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
   const trendColor = trend>60 ? "#7ee787" : trend<40 ? "#ffa07a" : "#d8d8d8";
 
-  const dailyChecklistHTML = dailyGoal.checklist.map(c=>`
-    <div style="display:flex;align-items:center;gap:6px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${c.done?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:8px;padding:5px 9px">
-      <span style="font-size:13px">${c.done?'✅':c.icon}</span>
-      <span style="font-size:11px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
-    </div>`).join("");
-
   // Renders a compact version of the same 8-type checklist, used for the
   // Morning and Evening trackers — smaller chips since they sit side by side.
   function miniChecklistHTML(list){
@@ -5092,18 +5124,6 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       ${sessionGoals.morningStreak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>
 
-    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700">📅 Today's Goal — one of each type</div>
-        <div style="font-size:12px;font-weight:800">${dailyGoal.doneCount}/${dailyGoal.total}</div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${dailyGoal.streak>0?'8px':'0'}">
-        ${dailyChecklistHTML}
-      </div>
-      ${dailyGoal.completedToday ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Goal complete for today! +5 bonus</div>` : ""}
-      ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
-    </div>
-
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -5122,6 +5142,8 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.eveningChecklist.checklist)}</div>
       </div>
     </div>
+    ${dailyGoal.completedToday ? `<div style="text-align:center;font-size:12px;color:#7ee787;font-weight:700;margin-bottom:10px">🎉 Full daily goal complete — both sessions covered all 8 types! +5 bonus</div>` : ""}
+    ${dailyGoal.streak>0 ? `<div style="text-align:center;font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-bottom:14px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
 
     <details style="margin-bottom:4px">
       <summary style="cursor:pointer;font-size:12px;font-weight:700;opacity:.85;padding:6px 2px;list-style:none">📊 More stats (coverage, mastery, trend, totals) ▾</summary>
@@ -5494,12 +5516,6 @@ async function showWelcomeBackPopup(){
       ${sessionGoals.morningStreak>0 ? `<div style="font-size:11.5px;color:#b8860b;font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>`;
 
-  const checklistHTML = dailyGoal.checklist.map(c=>`
-    <div style="display:flex;align-items:center;gap:5px;background:${c.done?'rgba(76,204,138,.15)':'var(--parchment)'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:7px;padding:4px 8px">
-      <span style="font-size:12px">${c.done?'✅':c.icon}</span>
-      <span style="font-size:10.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
-    </div>`).join("");
-
   // Compact Morning/Evening versions of the same checklist, for the popup.
   function popupMiniChecklist(list){
     return list.map(c=>`
@@ -5538,24 +5554,16 @@ async function showWelcomeBackPopup(){
     ${morningNudgeHTML}
     ${sessionGoalsHTML}
 
-    <div style="display:flex;gap:8px;margin-bottom:12px">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
       ${morningTypesHTML}
       ${eveningTypesHTML}
     </div>
+    ${dailyGoal.completedToday
+      ? `<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:16px">🎉 Both sessions covered all 8 types — goal complete!</div>`
+      : `<div style="font-size:11.5px;color:var(--muted);margin-bottom:16px">Cover the remaining types in a morning or evening session to finish today's goal.</div>`}
+    ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:#b8860b;font-weight:700;margin-bottom:16px">🔥 ${dailyGoal.streak} day streak</div>` : ""}
 
-    <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;color:var(--navy)">📅 Today's Goal</div>
-        <div style="font-size:12px;font-weight:800;color:var(--navy)">${dailyGoal.doneCount}/${dailyGoal.total}</div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">${checklistHTML}</div>
-      ${dailyGoal.completedToday
-        ? `<div style="font-size:12px;color:var(--green);font-weight:700;margin-top:8px">🎉 Already complete for today!</div>`
-        : `<div style="font-size:12px;color:var(--muted);margin-top:8px">Try one question from each remaining type to finish today's goal.</div>`}
-      ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:#b8860b;font-weight:700;margin-top:4px">🔥 ${dailyGoal.streak} day streak</div>` : ""}
-    </div>
-
-    <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;margin-top:16px;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>
+    <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;margin-top:0;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>
   </div>`;
 }
 
