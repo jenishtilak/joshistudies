@@ -2691,13 +2691,14 @@ function checkCurrentPart(){
   const {pct} = scoreAnswer(userText, s.parts[i]);
   s.scores[i] = pct;
   const fb = document.getElementById("partFeedback");
-  if(fb){
-    const cls = pct>=80?"perfect":pct>=50?"good":"poor";
-    fb.innerHTML = `<div class="score-stamp" style="margin-top:8px">
-      <div class="score-circle ${cls}" style="width:46px;height:46px;font-size:14px">${pct}%</div>
+  const feedbackHTML = `<div class="score-stamp" style="margin-top:8px">
+      <div class="score-circle ${pct>=80?"perfect":pct>=50?"good":"poor"}" style="width:46px;height:46px;font-size:14px">${pct}%</div>
       <div><div class="score-label" style="font-size:13px">${pct>=80?"Great — this part is solid":pct>=50?"Good, room to add a bit more":"Worth revising this part"}</div></div>
     </div>`;
-  }
+  if(fb) fb.innerHTML = feedbackHTML;
+  // Let the admin see this part's result the moment it's checked, same as
+  // every other "submit" moment elsewhere in the app.
+  fbLiveState({ currentAnswer: userText, answered:true, isCorrect: pct>=80, lastScore: pct, feedbackHTML, typing:false });
 }
 
 function renderPartsStep(){
@@ -2713,6 +2714,24 @@ function renderPartsStep(){
       <div><div class="score-label" style="font-size:13px">${existingScore>=80?"Great — this part is solid":existingScore>=50?"Good, room to add a bit more":"Worth revising this part"}</div></div>
     </div>`;
 
+  // Tell the admin mirror what the student is doing — previously missing
+  // entirely for "Write it in parts" mode, so the admin saw nothing at all
+  // while the student worked through a long answer piece by piece.
+  fbLiveState({
+    mode: "study",
+    lessonId: currentLesson?.id||"",
+    lessonTitle: currentLesson?.title||"",
+    qtype: currentQType,
+    qIndex: currentQIndex,
+    questionText: `${s.originalQuestion}  (Writing in parts — part ${i+1} of ${total})`,
+    correctAnswer: s.parts[i] || "",
+    currentAnswer: s.written[i] || "",
+    answered: existingScore!==null,
+    isCorrect: existingScore!==null ? existingScore>=80 : false,
+    lastScore: existingScore,
+    peeksUsedThisQuestion: hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0
+  });
+
   body.innerHTML = `
     <div class="question-card">
       <div class="q-label">Writing in Parts — Part ${i+1} of ${total}</div>
@@ -2725,7 +2744,7 @@ function renderPartsStep(){
       <div class="peek-text">${(s.parts[i]||"").replace(/</g,"&lt;")}</div>
     </div>
     <div class="answer-area" id="answerArea">
-      <textarea class="answer-textarea" id="partInput" placeholder="Write this part of your answer…" style="min-height:120px" oninput="document.getElementById('partFeedback').innerHTML=''">${s.written[i]||""}</textarea>
+      <textarea class="answer-textarea" id="partInput" placeholder="Write this part of your answer…" style="min-height:120px" oninput="document.getElementById('partFeedback').innerHTML=''; reportPartLiveState(this.value)">${s.written[i]||""}</textarea>
       <div id="partFeedback">${existingFeedback}</div>
       <div class="answer-actions" style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-check" onclick="checkCurrentPart()" style="flex:1">Check this part</button>
@@ -2741,6 +2760,11 @@ function renderPartsStep(){
     <button onclick="exitPartsMode()" style="margin-top:14px;width:100%;background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer">Go back to writing it all at once</button>
   `;
   document.getElementById("partInput")?.focus();
+}
+
+// Reports live typing for the current part to the admin's mirror view.
+function reportPartLiveState(value){
+  fbLiveState({ currentAnswer: value, typing:true });
 }
 
 // Peek toggle for "Write it in parts" mode — same lock-until-closed behaviour
@@ -4594,14 +4618,28 @@ function aggregateScoreboardData(logsSnap, examSnap){
   const allUnique = new Set();
   let grandAttempts = 0, grandTimeMs = 0;
 
+  // Resolves a Firestore timestamp field to a real millisecond number, or null
+  // if it genuinely isn't available yet. Never falls back to "now" — doing so
+  // previously caused entries with an unresolved/missing timestamp to silently
+  // look like they happened today, every single time the page reloaded, which
+  // is exactly what made the daily goal appear permanently "complete" and never
+  // reset at midnight.
+  function resolveTs(e){
+    if(e.ts?.toDate) return e.ts.toDate().getTime();
+    if(typeof e.ts === "number") return e.ts; // already a millisecond number
+    return null;
+  }
+
   logsSnap.forEach(d=>{
     const e = d.data();
     const sid = e.sessionId || "unknown";
     if(!bySession[sid]) bySession[sid] = { entries:[], mockEntries:[], firstTs:null, lastTs:null };
     bySession[sid].entries.push(e);
-    const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : Date.now();
-    if(!bySession[sid].firstTs || tsMs < bySession[sid].firstTs) bySession[sid].firstTs = tsMs;
-    if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
+    const tsMs = resolveTs(e);
+    if(tsMs!==null){
+      if(!bySession[sid].firstTs || tsMs < bySession[sid].firstTs) bySession[sid].firstTs = tsMs;
+      if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
+    }
 
     allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
     grandAttempts++;
@@ -4617,9 +4655,11 @@ function aggregateScoreboardData(logsSnap, examSnap){
     const sid = e.sessionId || "unknown";
     if(!bySession[sid]) bySession[sid] = { entries:[], mockEntries:[], firstTs:null, lastTs:null };
     bySession[sid].mockEntries.push(e);
-    const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : Date.now();
-    if(!bySession[sid].firstTs || tsMs < bySession[sid].firstTs) bySession[sid].firstTs = tsMs;
-    if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
+    const tsMs = resolveTs(e);
+    if(tsMs!==null){
+      if(!bySession[sid].firstTs || tsMs < bySession[sid].firstTs) bySession[sid].firstTs = tsMs;
+      if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
+    }
 
     const uniqueKey = `mock|${e.lessonId}|${e.qtype}|${e.mockIdx}`;
     mockUnique.add(uniqueKey);
@@ -4637,18 +4677,22 @@ function aggregateScoreboardData(logsSnap, examSnap){
 
   // Flat list of every scored entry (study + mock combined) — used by the Growth Score
   // calculation for mastery-weighting and the improvement trend, independent of how
-  // sessions/mock exams happen to be grouped.
+  // sessions/mock exams happen to be grouped. Entries with no resolvable timestamp
+  // are skipped entirely here, rather than guessed, since the daily goal and session
+  // goals both depend on knowing exactly which calendar day each entry belongs to.
   const allScoredEntries = [];
   logsSnap.forEach(d=>{
     const e = d.data();
-    if(typeof e.pct === "number"){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: e.ts?.toDate ? e.ts.toDate().getTime() : Date.now() });
+    const tsMs = resolveTs(e);
+    if(typeof e.pct === "number" && tsMs!==null){
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs });
     }
   });
   examSnap.forEach(d=>{
     const e = d.data();
-    if(typeof e.pct === "number"){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: e.ts?.toDate ? e.ts.toDate().getTime() : Date.now() });
+    const tsMs = resolveTs(e);
+    if(typeof e.pct === "number" && tsMs!==null){
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs });
     }
   });
   allScoredEntries.sort((a,b)=>a.ts-b.ts);
@@ -4682,6 +4726,23 @@ function calcDailyGoal(allScoredEntries){
   startOfToday.setHours(0,0,0,0);
   const todayMs = startOfToday.getTime();
 
+  // Builds an 8-type checklist scoped to entries from today that also fall
+  // within a given hour range (inclusive start, exclusive end). Used to show
+  // separate Morning / Evening checklists, not just the overall daily one.
+  function buildChecklistForWindow(startHour, endHour){
+    const doneInWindow = new Set();
+    allScoredEntries.forEach(e=>{
+      if(e.ts < todayMs || !e.qtype) return;
+      const hour = new Date(e.ts).getHours();
+      const inWindow = startHour===null
+        ? !(hour>=6 && hour<8)   // "evening" = anything outside the 6-8am window
+        : (hour>=startHour && hour<endHour);
+      if(inWindow) doneInWindow.add(e.qtype);
+    });
+    const list = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneInWindow.has(qt.id) }));
+    return { checklist:list, doneCount:list.filter(c=>c.done).length, total:QTYPES.length };
+  }
+
   const doneToday = new Set();
   allScoredEntries.forEach(e=>{
     if(e.ts >= todayMs && e.qtype) doneToday.add(e.qtype);
@@ -4690,6 +4751,12 @@ function calcDailyGoal(allScoredEntries){
   const checklist = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
   const doneCount = checklist.filter(c=>c.done).length;
   const completedToday = doneCount >= QTYPES.length;
+
+  // Morning (6-8am) and Evening (everything else) versions of the same 8-type
+  // checklist — lets him see which types he's covered in each session, not
+  // just overall for the day.
+  const morningChecklist = buildChecklistForWindow(6, 8);
+  const eveningChecklist = buildChecklistForWindow(null, null);
 
   // Streak: how many consecutive days (including today, if already complete)
   // the full 8-type goal was hit. Computed from the same entries, grouped by
@@ -4713,7 +4780,7 @@ function calcDailyGoal(allScoredEntries){
     cursor -= 86400000;
   }
 
-  return { checklist, doneCount, total: QTYPES.length, completedToday, streak };
+  return { checklist, doneCount, total: QTYPES.length, completedToday, streak, morningChecklist, eveningChecklist };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -4837,6 +4904,16 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       <span style="font-size:11px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
     </div>`).join("");
 
+  // Renders a compact version of the same 8-type checklist, used for the
+  // Morning and Evening trackers — smaller chips since they sit side by side.
+  function miniChecklistHTML(list){
+    return list.map(c=>`
+      <div style="display:flex;align-items:center;gap:4px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${c.done?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:7px;padding:3px 6px">
+        <span style="font-size:11px">${c.done?'✅':c.icon}</span>
+        <span style="font-size:9.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
+      </div>`).join("");
+  }
+
   const totalBonus = dailyBonus + sessionBonus;
 
   return `
@@ -4882,6 +4959,23 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       </div>
       ${dailyGoal.completedToday ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Goal complete for today! +5 bonus</div>` : ""}
       ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700">🌅 Morning Types</div>
+          <div style="font-size:11px;font-weight:800">${dailyGoal.morningChecklist.doneCount}/${dailyGoal.morningChecklist.total}</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.morningChecklist.checklist)}</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700">🌙 Evening Types</div>
+          <div style="font-size:11px;font-weight:800">${dailyGoal.eveningChecklist.doneCount}/${dailyGoal.eveningChecklist.total}</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.eveningChecklist.checklist)}</div>
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -5257,6 +5351,31 @@ async function showWelcomeBackPopup(){
       <span style="font-size:10.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
     </div>`).join("");
 
+  // Compact Morning/Evening versions of the same checklist, for the popup.
+  function popupMiniChecklist(list){
+    return list.map(c=>`
+      <div style="display:flex;align-items:center;gap:3px;background:${c.done?'rgba(76,204,138,.15)':'#fff'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:6px;padding:3px 5px">
+        <span style="font-size:10px">${c.done?'✅':c.icon}</span>
+        <span style="font-size:8.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
+      </div>`).join("");
+  }
+  const morningTypesHTML = `
+    <div style="flex:1;background:#fff;border-radius:10px;padding:8px;text-align:left">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <div style="font-size:10px;font-weight:700;color:var(--navy)">🌅 Morning</div>
+        <div style="font-size:10px;font-weight:800;color:var(--navy)">${dailyGoal.morningChecklist.doneCount}/${dailyGoal.morningChecklist.total}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">${popupMiniChecklist(dailyGoal.morningChecklist.checklist)}</div>
+    </div>`;
+  const eveningTypesHTML = `
+    <div style="flex:1;background:#fff;border-radius:10px;padding:8px;text-align:left">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <div style="font-size:10px;font-weight:700;color:var(--navy)">🌙 Evening</div>
+        <div style="font-size:10px;font-weight:800;color:var(--navy)">${dailyGoal.eveningChecklist.doneCount}/${dailyGoal.eveningChecklist.total}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">${popupMiniChecklist(dailyGoal.eveningChecklist.checklist)}</div>
+    </div>`;
+
   overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
     <div style="font-size:30px;margin-bottom:4px">👋</div>
     <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:10px">Welcome back, ${STUDENT_NAME}!</div>
@@ -5269,6 +5388,11 @@ async function showWelcomeBackPopup(){
 
     ${morningNudgeHTML}
     ${sessionGoalsHTML}
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      ${morningTypesHTML}
+      ${eveningTypesHTML}
+    </div>
 
     <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -5364,9 +5488,9 @@ function openAdminMirror(){
       <div id="adminLiveNow" style="background:var(--parchment,#faf6ee);border:1.5px solid var(--border,#e8e0d0);border-radius:14px;padding:16px;margin-bottom:20px">
         <div id="adminLiveNowBody"><p style="opacity:.7;margin:0">Waiting for activity…</p></div>
       </div>
-      <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity</h3>
+      <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity (Today)</h3>
       <div id="adminLogList" style="font-size:13px"></div>
-      <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers</h3>
+      <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers (Today)</h3>
       <div id="adminExamList" style="font-size:13px"></div>
       <button onclick="downloadAdminMirror()" style="margin-top:20px;padding:10px 20px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download Full Report</button>
     </div>
@@ -5445,13 +5569,20 @@ function openAdminMirror(){
     `;
   });
 
-  // Live listener — logs
+  // Live listener — logs (today only — this is "recent activity," not full history;
+  // use Past Sessions or Mock Exams tabs for anything older).
   const logsQ = query(collection(db, "sessions", currentUserPhone, "logs"), orderBy("ts", "desc"));
   onSnapshot(logsQ, snap => {
     const list = document.getElementById("adminLogList");
     if(!list) return;
-    if(snap.empty){ list.innerHTML = "<p style='color:#999'>No session activity yet.</p>"; return; }
-    list.innerHTML = snap.docs.map(d=>{
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const todayDocs = snap.docs.filter(d=>{
+      const e = d.data();
+      const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : null;
+      return tsMs!==null && tsMs >= startOfToday.getTime();
+    });
+    if(!todayDocs.length){ list.innerHTML = "<p style='color:#999'>No activity today yet.</p>"; return; }
+    list.innerHTML = todayDocs.map(d=>{
       const e = d.data();
       return `<div style="padding:8px 10px;border-bottom:1px solid #eee">
         <b>${e.lessonTitle||"—"}</b> · ${e.qtype||""} · ${e.pct!==undefined?e.pct+"%":""}
@@ -5465,8 +5596,14 @@ function openAdminMirror(){
   onSnapshot(examQ, snap => {
     const list = document.getElementById("adminExamList");
     if(!list) return;
-    if(snap.empty){ list.innerHTML = "<p style='color:#999'>No mock exam activity yet.</p>"; return; }
-    list.innerHTML = snap.docs.map(d=>{
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const todayDocs = snap.docs.filter(d=>{
+      const e = d.data();
+      const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : null;
+      return tsMs!==null && tsMs >= startOfToday.getTime();
+    });
+    if(!todayDocs.length){ list.innerHTML = "<p style='color:#999'>No mock exam activity today. See the Mock Exams tab for past attempts.</p>"; return; }
+    list.innerHTML = todayDocs.map(d=>{
       const e = d.data();
       const isOk = (e.pct||0) >= 80;
       return `<div style="padding:8px 10px;border-bottom:1px solid #eee">
