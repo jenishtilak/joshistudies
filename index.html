@@ -4902,6 +4902,11 @@ function aggregateScoreboardData(logsSnap, examSnap){
 //  types, every day. Rewards well-rounded daily practice (a bit of everything)
 //  rather than grinding only the question types that feel easiest.
 // ═══════════════════════════════════════════════════════
+// Minimum score for an answer to count toward the daily goal / streaks. A
+// guess that happens to touch every question type shouldn't satisfy the goal —
+// it should reflect genuine attempts, not just clicking through.
+const MIN_SCORE_FOR_GOAL_CREDIT = 50;
+
 function calcDailyGoal(allScoredEntries){
   const startOfToday = new Date();
   startOfToday.setHours(0,0,0,0);
@@ -4914,6 +4919,7 @@ function calcDailyGoal(allScoredEntries){
     const doneInWindow = new Set();
     allScoredEntries.forEach(e=>{
       if(e.ts < todayMs || !e.qtype) return;
+      if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return; // low-scoring attempts don't count
       const hour = new Date(e.ts).getHours();
       const inWindow = startHour===null
         ? !(hour>=6 && hour<8)   // "evening" = anything outside the 6-8am window
@@ -4926,7 +4932,7 @@ function calcDailyGoal(allScoredEntries){
 
   const doneToday = new Set();
   allScoredEntries.forEach(e=>{
-    if(e.ts >= todayMs && e.qtype) doneToday.add(e.qtype);
+    if(e.ts >= todayMs && e.qtype && (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) doneToday.add(e.qtype);
   });
 
   const checklist = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
@@ -4941,9 +4947,11 @@ function calcDailyGoal(allScoredEntries){
 
   // Streak: how many consecutive days (including today, if already complete)
   // the full 8-type goal was hit. Computed from the same entries, grouped by
-  // calendar day, walking backwards from today.
+  // calendar day, walking backwards from today. Same score threshold applies —
+  // a streak should reflect days of genuine effort, not just activity.
   const byDay = {};
   allScoredEntries.forEach(e=>{
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const d = new Date(e.ts);
     d.setHours(0,0,0,0);
     const key = d.getTime();
@@ -4986,6 +4994,7 @@ function calcSessionGoals(allScoredEntries){
   let earlyCount=0, lateCount=0, eveningCount=0;
   allScoredEntries.forEach(e=>{
     if(e.ts < todayMs) return;
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return; // low-scoring attempts don't count toward "studied"
     const hour = new Date(e.ts).getHours();
     if(hour===6) earlyCount++;
     else if(hour===7) lateCount++;
@@ -5003,6 +5012,7 @@ function calcSessionGoals(allScoredEntries){
   // streak since this is specifically about the early-rising habit.
   const byDayMorning = {};
   allScoredEntries.forEach(e=>{
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const hour = new Date(e.ts).getHours();
     if(hour!==6 && hour!==7) return;
     const d = new Date(e.ts); d.setHours(0,0,0,0);
