@@ -4820,47 +4820,46 @@ function renderHowToEarnPoints(targetId){
       <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);padding:10px 12px;background:var(--parchment);border-radius:10px;list-style:none">💡 How do I earn points? ▾</summary>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
 
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📚 Try new questions (Coverage)</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">The more different questions you try across the whole syllabus — not just repeating ones you already know — the higher this goes. Worth 40% of your score.</div>
+        <div style="font-size:11px;color:var(--muted);padding:0 2px">There are two different numbers — here's what each one means:</div>
+
+        <div style="background:#fff;border:1.5px solid var(--gold,#e8b84b);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🏆 Growth Points — never goes down</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Every question you answer well adds points permanently. It only ever climbs — this is the number that shows you're building something over time.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🎯 Answer well (Mastery)</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Scoring well counts — and harder question types (Paragraph, Distinguish) count for more than easy ones (MCQ, Fill). Worth 40% of your score.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📊 Mastery Score (0-100)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">A snapshot of how well you're doing right now — based on how much of the syllabus you've tried (Coverage), how well you score on it (Mastery), and whether you're improving (Trend).</div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--navy);padding:6px 2px 0">How Growth Points add up — every answer 50%+ counts:</div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">✏️ Each question you answer well</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">+1 point for MCQ/Fill/True-False, +2 for Brief/Reasons, +3 for Distinguish, +5 for Match/Paragraph. Harder questions are worth more.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📊 Keep improving (Trend)</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">If your recent scores are better than your earlier ones, you get a boost here. Worth 20% of your score.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📅 Daily Goal — +10 per day</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Score 50%+ on at least one question of every type (all 8) in the same day. Every day you do this adds another +10, forever.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📅 Daily Goal — +5 bonus</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Score 50% or higher on at least one question of every type (Choose Correct, Fill, Match, Brief, True/False, Reasons, Distinguish, Paragraph) in the same day.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +8 or +5 per day</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions (50%+ score) between 6:00-6:59am for +8, or 7:00-7:59am for +5. Counts every day you do it — it adds up over the school year.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — up to +15</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least 3 questions (50%+ score) between 6:00-6:59am for the biggest bonus, or 7:00-7:59am for a smaller one.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3, plus +5 for both</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions any other time of day for +3. Doing a morning AND evening session the same day adds an extra +5 on top.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +5, plus +5 for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least 3 questions any other time of day. Doing BOTH a morning and evening session the same day earns an extra +5.</div>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🔥 Streaks — up to +10 each</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Hit the Daily Goal on consecutive days for a streak bonus (up to +5), and hit a Morning Session on consecutive days for a separate streak bonus (up to +10).</div>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Lesson Test — 30 to 100 bonus points</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Lesson Test — 30 to 100 points</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 30 points, 80%+ for 40, 90%+ for 50, and a perfect 100% earns a full 100 points.</div>
         </div>
 
-        <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-top:2px">⚠️ Answers below 50% don't count toward goals or streaks — quality matters, not just clicking through.</div>
+        <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-top:2px">⚠️ Answers below 50% don't count toward any of this — quality matters, not just clicking through.</div>
       </div>
     </details>`;
 }
