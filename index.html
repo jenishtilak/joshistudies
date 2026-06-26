@@ -521,6 +521,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 #studentScoreboardTotal summary{color:#fff}
 #scoreboardTotal summary::-webkit-details-marker{display:none}
 #scoreboardTotal summary{color:#fff}
+#scoreboardHowToEarn summary::-webkit-details-marker{display:none}
+#adminHowToEarn summary::-webkit-details-marker{display:none}
 .report-panel.visible{display:flex}
 .report-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px 20px 40px}
 .report-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
@@ -680,11 +682,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 <!-- SCOREBOARD PANEL (standalone floating) -->
 <div class="report-panel" id="scoreboardPanel" onclick="if(event.target===this)closeScoreboardPanel()">
-  <div class="report-sheet">
+  <div class="report-sheet" style="position:relative">
+    <button onclick="closeScoreboardPanel()" style="position:sticky;top:0;float:right;margin-top:-4px;background:#e05c5c;color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:15px;font-weight:700;cursor:pointer;z-index:10">✕</button>
     <div class="report-handle"></div>
     <div class="report-title">🏆 Scoreboard</div>
     <div id="studentScoreboardTotal" style="background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;margin:10px 0;font-size:13px"></div>
-    <button class="report-close" style="width:100%;margin-top:10px" onclick="closeScoreboardPanel()">Done</button>
+    <div id="scoreboardHowToEarn" style="margin-top:14px"></div>
+    <button class="report-close" style="width:100%;margin-top:14px" onclick="closeScoreboardPanel()">Done</button>
   </div>
 </div>
 
@@ -2081,6 +2085,33 @@ function stampQuestion(){
   _questionStart=Date.now();
   return elapsed;
 }
+// Quick, unobtrusive "+N points" toast — fires every time Growth Points goes
+// up. Stacks if several fire in quick succession (e.g. answering MCQs fast)
+// instead of overlapping, and each one clears itself automatically. Never
+// blocks input, never requires dismissing, just a small confirming nudge.
+function showPointsToast(amount, label){
+  let stack = document.getElementById("pointsToastStack");
+  if(!stack){
+    stack = document.createElement("div");
+    stack.id = "pointsToastStack";
+    stack.style.cssText = "position:fixed;top:14px;right:14px;z-index:99997;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none";
+    document.body.appendChild(stack);
+  }
+  const toast = document.createElement("div");
+  toast.style.cssText = "background:var(--navy);color:var(--gold,#e8b84b);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(-8px) scale(.9);transition:opacity .25s,transform .25s;white-space:nowrap";
+  toast.textContent = `+${amount} ${label || "Growth Points"} 🏆`;
+  stack.appendChild(toast);
+  requestAnimationFrame(()=>{
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0) scale(1)";
+  });
+  setTimeout(()=>{
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-8px) scale(.9)";
+    setTimeout(()=>toast.remove(), 250);
+  }, 1800);
+}
+
 function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   const entry = {
     subject: currentSubject||'',
@@ -2098,6 +2129,12 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   fbLiveState({ answered:true, lastScore: pct, isCorrect: !!isCorrect, feedbackHTML: feedbackHTML||"" });
   const btn=document.getElementById('reportBtn');
   if(btn) btn.classList.add('visible');
+  // Growth Points go up by +1 for every well-answered question (50%+) — show
+  // a quick, unobtrusive toast right away so he sees the number move every
+  // single time, without waiting for the Scoreboard to reload. Kept small and
+  // auto-dismissing on purpose: this happens often, so it should never feel
+  // like an interruption, just a quiet "yes, that counted."
+  if(pct >= MIN_SCORE_FOR_GOAL_CREDIT) showPointsToast(getMarks(currentQType));
 }
 function timeChip(ms){
   const s=Math.round(ms/1000);
@@ -4145,25 +4182,52 @@ function showMockResults(){
   ov.scrollTo(0,0);
   setTimeout(()=>ov.scrollTo(0,0),50);
 
-  // Lesson Test specific: award and announce bonus points based on the score tier.
-  if(isLessonTest){
-    const points = calcTestPoints(avg);
-    if(points>0){
-      fbLogEntry("testPoints", {
-        lessonId: lessonTestLesson?.id||"",
-        lessonTitle: lessonTestLesson?.title||"",
-        pct: avg,
-        points
-      });
-    }
-    setTimeout(()=>showTestPointsPopup(avg, points), 400);
+  // Award and announce bonus points based on the score tier — for BOTH a
+  // single-lesson Test and a full multi-lesson Mock Exam. Mock Exam earns
+  // slightly more per tier since it covers more ground in one sitting.
+  //
+  // The tier bonus is then scaled by how genuinely difficult the chosen mix
+  // of question types is — picking only MCQ/Fill/True-False (all 1-mark)
+  // should not earn the same completion bonus as a mix that includes Brief,
+  // Distinguish, or Paragraph. Without this, a student could deselect every
+  // hard question type in the Mock Exam picker, answer only easy ones, and
+  // still collect the full tiered bonus for comparatively little effort.
+  const avgMarksWeight = mockResults.length
+    ? mockResults.reduce((sum,r)=>sum+getMarks(r.qtype),0) / mockResults.length
+    : 1;
+  // 1.0 (all 1-mark types) -> 50% of the tier bonus. 5.0 (all 5-mark types) -> 100%.
+  const difficultyMultiplier = Math.max(0.5, Math.min(1, 0.5 + (avgMarksWeight-1)/8));
+
+  const rawPoints = isLessonTest ? calcTestPoints(avg) : calcMockExamPoints(avg);
+  const points = Math.round(rawPoints * difficultyMultiplier);
+  if(points>0){
+    fbLogEntry("testPoints", {
+      lessonId: isLessonTest ? (lessonTestLesson?.id||"") : "",
+      lessonTitle: isLessonTest ? (lessonTestLesson?.title||"") : `Mock Exam (${mockSelected.size} lesson${mockSelected.size!==1?"s":""})`,
+      pct: avg,
+      points,
+      rawPoints,
+      difficultyMultiplier,
+      isMockExam: !isLessonTest
+    });
   }
+  setTimeout(()=>showTestPointsPopup(avg, points, isLessonTest, difficultyMultiplier), 400);
+}
+
+// Point tiers for a full multi-lesson Mock Exam — same shape as Lesson Test
+// but a bit richer per tier, since a mock exam spans more material at once.
+function calcMockExamPoints(pct){
+  if(pct>=100) return 120;
+  if(pct>=90)  return 65;
+  if(pct>=80)  return 50;
+  if(pct>=60)  return 35;
+  return 0;
 }
 
 // Announces the test score and any bonus points earned, right after the
 // answer sheet appears — the whole point of telling him is to make it land
 // as a clear, immediate result, not something buried in the scoreboard later.
-function showTestPointsPopup(pct, points){
+function showTestPointsPopup(pct, points, isLessonTestRun, difficultyMultiplier){
   let overlay = document.getElementById("testPointsPopup");
   if(!overlay){
     overlay = document.createElement("div");
@@ -4173,19 +4237,22 @@ function showTestPointsPopup(pct, points){
   }
   const tier = pct>=100?"🏆 Perfect Score!":pct>=90?"🌟 Outstanding!":pct>=80?"🎉 Great Job!":pct>=60?"👍 Good Work!":"💪 Keep Practising!";
   const tierColor = pct>=90?"var(--gold,#e8b84b)":pct>=60?"var(--green,#4ccc8a)":"var(--muted,#888)";
+  const runLabel = isLessonTestRun ? "lesson test" : "mock exam";
+  const showDifficultyNote = !isLessonTestRun && difficultyMultiplier!==undefined && difficultyMultiplier < 0.95;
   overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)">
     <div style="font-size:40px;margin-bottom:8px">${pct>=80?"🎊":pct>=60?"✨":"📘"}</div>
     <div style="font-size:18px;font-weight:800;color:${tierColor};margin-bottom:4px">${tier}</div>
-    <div style="font-size:14px;color:var(--muted);margin-bottom:16px">You scored <b style="color:var(--navy)">${pct}%</b> on this lesson test</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:16px">You scored <b style="color:var(--navy)">${pct}%</b> on this ${runLabel}</div>
     ${points>0 ? `
       <div style="background:var(--parchment);border-radius:12px;padding:14px;margin-bottom:16px">
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Bonus Points Earned</div>
         <div style="font-size:32px;font-weight:900;color:var(--navy)">+${points}</div>
+        ${showDifficultyNote ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Include harder question types like Brief, Distinguish or Paragraph next time for a bigger bonus!</div>` : ""}
       </div>` : `
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Score 60% or higher to earn bonus points. Try again!</div>`}
     <button onclick="document.getElementById('testPointsPopup').remove()" style="width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Continue →</button>
   </div>`;
-  if(pct>=80) launchFireworks();
+  if(points>0) launchFireworks();
 }
 
 function buildMockAnswerSheet(avg, totalMs){
@@ -4735,9 +4802,67 @@ function closeSpellingPanel(){
 function openScoreboardPanel(){
   document.getElementById("scoreboardPanel").classList.add("visible");
   buildStudentScoreboard();
+  renderHowToEarnPoints();
 }
 function closeScoreboardPanel(){
   document.getElementById("scoreboardPanel").classList.remove("visible");
+}
+
+// Plain-language explanation of every way the Growth Score actually moves —
+// shown collapsed by default so it doesn't compete with the live numbers,
+// but always one tap away. The goal is that he understands the LEVERS, not
+// just the result.
+function renderHowToEarnPoints(targetId){
+  const box = document.getElementById(targetId||"scoreboardHowToEarn");
+  if(!box) return;
+  box.innerHTML = `
+    <details>
+      <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);padding:10px 12px;background:var(--parchment);border-radius:10px;list-style:none">💡 How do I earn points? ▾</summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📚 Try new questions (Coverage)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">The more different questions you try across the whole syllabus — not just repeating ones you already know — the higher this goes. Worth 40% of your score.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🎯 Answer well (Mastery)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Scoring well counts — and harder question types (Paragraph, Distinguish) count for more than easy ones (MCQ, Fill). Worth 40% of your score.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📊 Keep improving (Trend)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">If your recent scores are better than your earlier ones, you get a boost here. Worth 20% of your score.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📅 Daily Goal — +5 bonus</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Score 50% or higher on at least one question of every type (Choose Correct, Fill, Match, Brief, True/False, Reasons, Distinguish, Paragraph) in the same day.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — up to +15</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least 3 questions (50%+ score) between 6:00-6:59am for the biggest bonus, or 7:00-7:59am for a smaller one.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +5, plus +5 for both</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least 3 questions any other time of day. Doing BOTH a morning and evening session the same day earns an extra +5.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🔥 Streaks — up to +10 each</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Hit the Daily Goal on consecutive days for a streak bonus (up to +5), and hit a Morning Session on consecutive days for a separate streak bonus (up to +10).</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Lesson Test — 30 to 100 bonus points</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 30 points, 80%+ for 40, 90%+ for 50, and a perfect 100% earns a full 100 points.</div>
+        </div>
+
+        <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-top:2px">⚠️ Answers below 50% don't count toward goals or streaks — quality matters, not just clicking through.</div>
+      </div>
+    </details>`;
 }
 
 // Same logic as the admin's scoreboard, but scoped to the logged-in student
@@ -4769,8 +4894,9 @@ async function buildStudentScoreboard(){
   }
 
   const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries);
-  celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries);
+  const totalTestPoints = await fetchTotalTestPoints();
+  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
+  celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
 }
 
 // Fires a fireworks burst the first time the daily goal is seen as complete
@@ -4778,15 +4904,35 @@ async function buildStudentScoreboard(){
 // is reopened many times after it's already done. Uses localStorage purely
 // as a "have I already celebrated today" flag, scoped by date so it resets
 // naturally every day.
-function celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries){
+// Checks for newly-completed milestones (daily goal, morning/evening sessions)
+// and celebrates each one exactly once per day — fireworks plus a clear
+// "+N points" announcement, separate from the small per-question toast.
+// Each milestone gets its own dated flag so completing several in one day
+// (e.g. daily goal AND both sessions) celebrates all of them, just once each.
+function celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints){
   try{
-    const { dailyGoal } = calcGrowthScore(allUnique, allScoredEntries);
-    if(!dailyGoal.completedToday) return;
+    const { dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints||0);
     const todayKey = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    const storageKey = "studybuddy_celebrated_" + todayKey;
-    if(localStorage.getItem(storageKey)) return; // already celebrated today
-    localStorage.setItem(storageKey, "1");
-    launchFireworks();
+
+    const milestones = [
+      { done: dailyGoal.completedToday, flag:"goal", points:10, label:"Daily Goal complete!" },
+      { done: sessionGoals.earlyDone,   flag:"early", points:8,  label:"Early Morning Session!" },
+      { done: sessionGoals.lateDone && !sessionGoals.earlyDone, flag:"late", points:5, label:"Morning Session!" },
+      { done: sessionGoals.eveningDone, flag:"evening", points:3, label:"Evening Session complete!" },
+      { done: sessionGoals.bothDone,    flag:"both", points:5,  label:"Studied twice today!" },
+    ];
+
+    let anyNewMilestone = false;
+    milestones.forEach(ms=>{
+      if(!ms.done) return;
+      const storageKey = `studybuddy_celebrated_${ms.flag}_${todayKey}`;
+      if(localStorage.getItem(storageKey)) return; // already celebrated this one today
+      localStorage.setItem(storageKey, "1");
+      showPointsToast(ms.points, ms.label);
+      anyNewMilestone = true;
+    });
+
+    if(anyNewMilestone) launchFireworks();
   } catch(err){
     // localStorage can throw in some restricted contexts — celebration is a
     // nice-to-have, never worth breaking the scoreboard over.
@@ -5030,7 +5176,65 @@ function calcSessionGoals(allScoredEntries){
   return { earlyDone, lateDone, morningDone, eveningDone, bothDone, morningStreak, earlyCount, lateCount, eveningCount };
 }
 
-function calcGrowthScore(allUnique, allScoredEntries){
+// ═══════════════════════════════════════════════════════
+//  CUMULATIVE TOTALS — unlike "today's" goal status above, these never reset.
+//  Every day the daily goal or a session was completed adds permanently to the
+//  Growth Score, the same way Coverage/Mastery do. This is what makes the score
+//  genuinely cumulative: progress earned yesterday stays earned forever, it
+//  doesn't evaporate at midnight just because "today" started fresh.
+// ═══════════════════════════════════════════════════════
+function calcCumulativeTotals(allScoredEntries){
+  // Group every scored, goal-eligible entry by calendar day, with both its
+  // qtype set (for the 8-type goal) and which hour-bucket it falls in (for
+  // morning/evening session detection).
+  const byDay = {}; // dayKey -> { qtypes:Set, early:count, late:count, evening:count }
+  allScoredEntries.forEach(e=>{
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT || !e.qtype) return;
+    const d = new Date(e.ts); d.setHours(0,0,0,0);
+    const key = d.getTime();
+    if(!byDay[key]) byDay[key] = { qtypes:new Set(), early:0, late:0, evening:0 };
+    byDay[key].qtypes.add(e.qtype);
+    const hour = new Date(e.ts).getHours();
+    if(hour===6) byDay[key].early++;
+    else if(hour===7) byDay[key].late++;
+    else byDay[key].evening++;
+  });
+
+  let daysGoalCompleted = 0;
+  let daysEarlyMorning = 0, daysLateMorning = 0, daysEvening = 0, daysBoth = 0;
+
+  Object.values(byDay).forEach(day=>{
+    if(day.qtypes.size >= QTYPES.length) daysGoalCompleted++;
+    const early = day.early >= MIN_QUESTIONS_FOR_SESSION;
+    const late = day.late >= MIN_QUESTIONS_FOR_SESSION;
+    const evening = day.evening >= MIN_QUESTIONS_FOR_SESSION;
+    if(early) daysEarlyMorning++;
+    else if(late) daysLateMorning++; // only count the better tier once per day
+    if(evening) daysEvening++;
+    if((early||late) && evening) daysBoth++;
+  });
+
+  return { daysGoalCompleted, daysEarlyMorning, daysLateMorning, daysEvening, daysBoth };
+}
+
+// Fetches every Lesson Test attempt ever logged and sums the points earned —
+// used to fold Test points into the main Growth Points total, since they're
+// stored in their own collection (tagged per-lesson) rather than alongside
+// regular question logs.
+async function fetchTotalTestPoints(){
+  if(!window._fb || !currentUserPhone) return 0;
+  const { db, collection, query, orderBy, getDocs } = window._fb;
+  try{
+    const snap = await getDocs(query(collection(db,"sessions",currentUserPhone,"testPoints"), orderBy("ts","asc")));
+    let total = 0;
+    snap.forEach(d=>{ total += d.data().points || 0; });
+    return total;
+  } catch(err){
+    return 0; // never let a missing/failed fetch break the rest of the scoreboard
+  }
+}
+
+function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const totalAvailable = countTotalAvailableQuestions();
   const coverage = totalAvailable>0 ? Math.min(100, Math.round((allUnique.size/totalAvailable)*100)) : 0;
 
@@ -5058,34 +5262,48 @@ function calcGrowthScore(allUnique, allScoredEntries){
     trend = Math.max(0, Math.min(100, Math.round(50 + delta*2.5)));
   }
 
-  // Small bonus for hitting today's "one of each type" goal, plus a tiny extra
-  // per day of an active streak — capped so it nudges the score rather than
-  // dominating it (coverage/mastery/trend still do the heavy lifting).
-  const dailyGoal = calcDailyGoal(allScoredEntries);
-  const dailyBonus = (dailyGoal.completedToday ? 5 : 0) + Math.min(5, dailyGoal.streak);
+  // Mastery Score: a capped 0-100 quality measure — "how good is he right now."
+  // A cap makes sense here since it's a percentage-style measure, the same way
+  // a test score caps at 100%.
+  const masteryScore = Math.round(coverage*0.4 + mastery*0.4 + trend*0.2);
 
-  // Session bonus: rewards showing up to study, with the strongest nudge for
-  // the 6-7am slot specifically (the early-rising habit this is meant to build).
-  // 7-8am still counts as morning but earns less. Hitting both a morning AND
-  // an evening session in the same day earns a small "showed up twice" extra.
-  // Capped the same way as the daily bonus — a nudge, not a dominant factor.
-  const sessionGoals = calcSessionGoals(allScoredEntries);
-  let sessionBonus = 0;
-  if(sessionGoals.earlyDone) sessionBonus += 15;
-  else if(sessionGoals.lateDone) sessionBonus += 8;
-  if(sessionGoals.eveningDone) sessionBonus += 5;
-  if(sessionGoals.bothDone) sessionBonus += 5;
-  sessionBonus += Math.min(10, sessionGoals.morningStreak); // morning streak, capped separately from the 8-type streak
+  // Growth Points: a completely different kind of number — it never caps and
+  // never goes down. Every genuine answer, every completed daily goal, every
+  // session, every lesson test adds points permanently. This is the number
+  // that should always visibly be climbing, the one that actually motivates
+  // showing up again tomorrow — unlike a 0-100 score that has nowhere left to
+  // go once it's near the ceiling, which is exactly what made finishing the
+  // evening goal feel like it "did nothing" once the old score was near 100.
+  const cumulative = calcCumulativeTotals(allScoredEntries);
+  const dailyGoal = calcDailyGoal(allScoredEntries);       // still used for "today's" checklist display
+  const sessionGoals = calcSessionGoals(allScoredEntries); // still used for "today's" session card display
 
-  const growthScore = Math.min(100, Math.round(coverage*0.4 + mastery*0.4 + trend*0.2) + dailyBonus + sessionBonus);
-  return { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus, sessionGoals, sessionBonus };
+  let growthPoints = 0;
+  allScoredEntries.forEach(e=>{
+    // Points per question scale with how much that question type is actually
+    // worth — the same marks weighting already used for scoring (MCQ/Fill/
+    // TrueFalse=1, Brief/Reasons=2, Distinguish=3, Match/Paragraph=5). A
+    // one-word MCQ guess and a full Paragraph answer shouldn't earn the same
+    // points; this also closes off picking only easy question types as a way
+    // to rack up points faster than genuinely harder work would.
+    if((e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) growthPoints += getMarks(e.qtype);
+  });
+  growthPoints += cumulative.daysGoalCompleted * 10;   // full 8-type goal, any day — big, permanent
+  growthPoints += cumulative.daysEarlyMorning  * 8;    // 6-7am session, any day
+  growthPoints += cumulative.daysLateMorning   * 5;    // 7-8am session, any day
+  growthPoints += cumulative.daysEvening       * 3;    // evening session, any day
+  growthPoints += cumulative.daysBoth          * 5;    // showed up twice in one day, extra
+  growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
+  growthPoints = Math.round(growthPoints);
+
+  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints };
 }
 
-function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries){
+function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
   const sessionCount = Object.keys(bySession).length;
-  const { growthScore, coverage, mastery, trend, totalAvailable, dailyGoal, dailyBonus, sessionGoals, sessionBonus } = calcGrowthScore(allUnique, allScoredEntries||[]);
+  const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
 
-  const growthLabel = growthScore>=80 ? "🌟 Excellent growth!" : growthScore>=60 ? "📈 Good progress!" : growthScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
+  const masteryLabel = masteryScore>=80 ? "🌟 Excellent mastery!" : masteryScore>=60 ? "📈 Good progress!" : masteryScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
   const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
   const trendColor = trend>60 ? "#7ee787" : trend<40 ? "#ffa07a" : "#d8d8d8";
 
@@ -5099,14 +5317,15 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       </div>`).join("");
   }
 
-  const totalBonus = dailyBonus + sessionBonus;
-
   return `
     <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Score</div>
-      <div style="font-size:42px;font-weight:900;margin:4px 0">${growthScore}</div>
-      <div style="font-size:13px;font-weight:700">${growthLabel}</div>
-      ${totalBonus>0 ? `<div style="font-size:11px;color:#7ee787;margin-top:2px">+${totalBonus} from goals &amp; streaks</div>` : ""}
+      <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Points</div>
+      <div style="font-size:48px;font-weight:900;margin:4px 0;color:var(--gold,#e8b84b)">${growthPoints}</div>
+      <div style="font-size:11px;opacity:.75">Keeps climbing — never resets, never goes down</div>
+      <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)">
+        <div><div style="font-size:20px;font-weight:800">${masteryScore}</div><div style="font-size:9px;opacity:.7">Mastery Score /100</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;margin-top:4px">${masteryLabel}</div>
     </div>
 
     <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
@@ -5117,20 +5336,20 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.earlyDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
           <div style="font-size:16px">🌅</div>
           <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
-          <div style="font-size:8px;opacity:.7">+15 best!</div>
+          <div style="font-size:8px;opacity:.7">best time!</div>
         </div>
         <div style="flex:1;background:${sessionGoals.lateDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.lateDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
           <div style="font-size:16px">🌤️</div>
           <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
-          <div style="font-size:8px;opacity:.7">+8</div>
+          <div style="font-size:8px;opacity:.7">still morning</div>
         </div>
         <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
           <div style="font-size:16px">🌙</div>
           <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:8px;opacity:.7">+5</div>
+          <div style="font-size:8px;opacity:.7">anytime else</div>
         </div>
       </div>
-      ${sessionGoals.bothDone ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Studied twice today! +5 bonus</div>` : ""}
+      ${sessionGoals.bothDone ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Studied twice today!</div>` : ""}
       ${sessionGoals.morningStreak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>
 
@@ -5152,7 +5371,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.eveningChecklist.checklist)}</div>
       </div>
     </div>
-    ${dailyGoal.completedToday ? `<div style="text-align:center;font-size:12px;color:#7ee787;font-weight:700;margin-bottom:10px">🎉 Full daily goal complete — both sessions covered all 8 types! +5 bonus</div>` : ""}
+    ${dailyGoal.completedToday ? `<div style="text-align:center;font-size:12px;color:#7ee787;font-weight:700;margin-bottom:10px">🎉 Full daily goal complete — both sessions covered all 8 types!</div>` : ""}
     ${dailyGoal.streak>0 ? `<div style="text-align:center;font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-bottom:14px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
 
     <details style="margin-bottom:4px">
@@ -5484,9 +5703,10 @@ async function showWelcomeBackPopup(){
   }
 
   const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  const { growthScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries);
-  const growthLabel = growthScore>=80 ? "🌟 You're doing brilliantly!" : growthScore>=60 ? "📈 Great progress so far!" : growthScore>=40 ? "🌱 You're growing steadily!" : "💪 Let's build some momentum!";
-  celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries);
+  const totalTestPoints = await fetchTotalTestPoints();
+  const { growthPoints, masteryScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
+  const masteryLabel = masteryScore>=80 ? "🌟 Excellent mastery!" : masteryScore>=60 ? "📈 Great progress so far!" : masteryScore>=40 ? "🌱 You're growing steadily!" : "💪 Let's build some momentum!";
+  celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
 
   // Logging in during the 6-8am window with no morning session yet is the
   // single best moment to encourage the early-rising habit — call it out
@@ -5509,17 +5729,17 @@ async function showWelcomeBackPopup(){
         <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.earlyDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
           <div style="font-size:15px">🌅</div>
           <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
-          <div style="font-size:8px;color:var(--muted)">+15</div>
+          <div style="font-size:8px;color:var(--muted)">best time!</div>
         </div>
         <div style="flex:1;background:${sessionGoals.lateDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.lateDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
           <div style="font-size:15px">🌤️</div>
           <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
-          <div style="font-size:8px;color:var(--muted)">+8</div>
+          <div style="font-size:8px;color:var(--muted)">still morning</div>
         </div>
         <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.eveningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
           <div style="font-size:15px">🌙</div>
           <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:8px;color:var(--muted)">+5</div>
+          <div style="font-size:8px;color:var(--muted)">anytime else</div>
         </div>
       </div>
       ${sessionGoals.bothDone ? `<div style="font-size:11.5px;color:var(--green);font-weight:700">🎉 Studied twice today!</div>` : ""}
@@ -5556,9 +5776,10 @@ async function showWelcomeBackPopup(){
     <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:10px">Welcome back, ${STUDENT_NAME}!</div>
 
     <div style="background:var(--navy);color:#fff;border-radius:14px;padding:14px;margin-bottom:14px">
-      <div style="font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:.5px">Growth Score</div>
-      <div style="font-size:36px;font-weight:900;margin:2px 0">${growthScore}</div>
-      <div style="font-size:12px;font-weight:700">${growthLabel}</div>
+      <div style="font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:.5px">Growth Points</div>
+      <div style="font-size:40px;font-weight:900;margin:2px 0;color:var(--gold,#e8b84b)">${growthPoints}</div>
+      <div style="font-size:10px;opacity:.7">Keeps climbing — never resets</div>
+      <div style="font-size:12px;font-weight:700;margin-top:6px">${masteryLabel}</div>
     </div>
 
     ${morningNudgeHTML}
@@ -5664,6 +5885,7 @@ function openAdminMirror(){
 
     <div id="adminTabScoreboard" style="display:none">
       <div id="scoreboardTotal" style="background:#1a2744;color:#fff;border-radius:12px;padding:16px;margin-bottom:20px"></div>
+      <div id="adminHowToEarn" style="margin-bottom:20px"></div>
       <div id="scoreboardSessions"></div>
     </div>
 
@@ -5792,7 +6014,7 @@ function showAdminTab(tab){
   document.getElementById("tabBtnScoreboard").classList.toggle("active", tab==="scoreboard");
   document.getElementById("tabBtnPast").classList.toggle("active", tab==="past");
   document.getElementById("tabBtnMockExams").classList.toggle("active", tab==="mockexams");
-  if(tab==="scoreboard") buildScoreboard();
+  if(tab==="scoreboard"){ buildScoreboard(); renderHowToEarnPoints("adminHowToEarn"); }
   if(tab==="past") buildPastSessionsList();
   if(tab==="mockexams") buildMockExamsList();
 }
@@ -5814,7 +6036,8 @@ async function buildScoreboard(){
   }
 
   const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries);
+  const totalTestPoints = await fetchTotalTestPoints();
+  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
   sessBox.innerHTML = renderScoreboardSessionsHTML(bySession);
 }
 
