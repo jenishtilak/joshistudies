@@ -1616,6 +1616,49 @@ const DATA = {
         ]
       }
     }
+  },
+  "English": {
+    icon: "📘",
+    parts: {
+      "Prose": {
+        icon: "📖",
+        lessons: [
+          {
+            id:"ep1", unit:"Unit 1", title:"Learning the Game", month:"June",
+            questions:{
+              mcq:[], fill:[], match:[],
+              brief:[
+                { q:"What was coach Achrekar's first impression on Sachin?", answer:"Coach Achrekar's first impression on Sachin was that he was too young to play and suggested to bring him back when he was a little older." },
+                { q:"Why did Sachin feel that the schedule of the camp was 'rigorous'?", answer:"Sachin felt it rigorous because his cricket practice was between 7:30 a.m and 10:30 a.m in the morning and again in the afternoon which continued till evening." },
+                { q:"What did serve as a very personal coaching manual to Sachin?", answer:"Ajit, the brother of Sachin, gave a note to him containing some thoughts about batting; it served as a very personal coaching manual." },
+                { q:"Why was Sachin asked to change the school?", answer:"The new English school in Bandra did not have cricket facilities. So he was asked to change the school." },
+                { q:"What was the condition laid down by Sachin's father for changing the school?", answer:"The condition laid down by Sachin's father for changing the school was that Sachin should assure that he was really serious about playing cricket." },
+                { q:"How did the act with the one rupee coin help Sachin become a good cricketer?", answer:"Winning the one rupee coin used to give him a lot of satisfaction and taught him how to concentrate even when physically drained. This type of training motivated him to become a better cricketer." },
+                { q:"What did help Sachin build his physical and mental stamina?", answer:"The training that Sachin underwent during the summer leave of 60 days helped him build up his physical and mental stamina." },
+                { q:"Which incident triggered the coach to be angry on Sachin?", answer:"One day Sachin bunked his daily evening practice and went to watch an inter-school cricket match. This made the coach angry with Sachin." },
+                { q:"Why do you think Achrekar punished Sachin?", answer:"Achrekar punished Sachin to make him the best cricketer in the world." },
+                { q:"'I owe myself to him' - What does Sachin mean by this?", answer:"Sachin became the world's best cricketer because of the training given by his coach Achrekar; without him he would not have become the cricketer he is now. So Sachin dedicates himself to his coach." },
+              ],
+              truefalse:[], reasons:[], distinguish:[], paragraph:[]
+            }
+          },
+        ]
+      },
+      "Poem": {
+        icon: "📜",
+        lessons: [
+          {
+            id:"epo1", unit:"Unit 1", title:"Stopping by Woods on a Snowy Evening", month:"June",
+            questions:{
+              mcq:[], fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[],
+              paragraph:[
+                { q:"It is said, \"The choices made by one, shapes one's destiny\". Ponder on the thought and write a paragraph.", answer:"Making a choice is a turning point in everyone's life. Our choices build our future. To make good choices, we should think about the future and ask for advice from wise people we trust. We cannot control everything in life, but we can choose how we act every day. Small choices, like working hard and listening to others, shape our path. While luck can help us start, our own choices decide who we become. In the end, we make our own life and we shape our own destiny." },
+              ]
+            }
+          },
+        ]
+      }
+    }
   }
 };
 
@@ -3698,6 +3741,17 @@ function findLessonById(id){
   return null;
 }
 
+// Looks up which top-level subject (Science / Social Science / English) a
+// given lesson id belongs to — needed because mock exam log entries only
+// store the lessonId, not the subject name directly.
+function findSubjectForLesson(lessonId){
+  for(const [subjName, subj] of Object.entries(DATA))
+    for(const part of Object.values(subj.parts))
+      for(const lesson of part.lessons)
+        if(lesson.id===lessonId) return subjName;
+  return "";
+}
+
 // Counts every individual question across the entire syllabus, regardless of subject/unit.
 // Used as the denominator for the "coverage" component of the Growth Score — this is what
 // actually rewards trying new material over re-doing the same few easy questions.
@@ -3709,6 +3763,48 @@ function countTotalAvailableQuestions(){
         for(const qtype of Object.keys(lesson.questions||{}))
           total += (lesson.questions[qtype]||[]).length;
   return total;
+}
+
+// Same as above but scoped to one subject — used to compute Coverage % per
+// subject for the scoreboard's per-subject breakdown.
+function countAvailableQuestionsForSubject(subjectName){
+  const subj = DATA[subjectName];
+  if(!subj) return 0;
+  let total = 0;
+  for(const part of Object.values(subj.parts))
+    for(const lesson of part.lessons)
+      for(const qtype of Object.keys(lesson.questions||{}))
+        total += (lesson.questions[qtype]||[]).length;
+  return total;
+}
+
+// Builds a Coverage/Mastery/Attempts breakdown per subject, from the same
+// flat allScoredEntries list already used for the main Growth Score — splits
+// by the `subject` field every log entry already carries. Goals (Daily Goal,
+// Morning/Evening, Growth Points) stay unified across subjects by design;
+// this is purely a "where is he strong/weak" view, not a separate goal system.
+function calcSubjectBreakdown(allScoredEntries){
+  const subjectNames = Object.keys(DATA);
+  return subjectNames.map(name=>{
+    const entries = allScoredEntries.filter(e=>e.subject===name);
+    const uniqueKeys = new Set(entries.map(e=>`${e.lessonId}|${e.qtype}|${e.qIndex}`));
+    const totalAvailable = countAvailableQuestionsForSubject(name);
+    const coverage = totalAvailable>0 ? Math.min(100, Math.round((uniqueKeys.size/totalAvailable)*100)) : 0;
+
+    let mastery = 0;
+    if(entries.length){
+      let earned=0, possible=0;
+      entries.forEach(e=>{
+        const m = getMarks(e.qtype||"mcq");
+        possible += m;
+        earned += m*(e.pct/100);
+      });
+      mastery = possible>0 ? Math.round((earned/possible)*100) : 0;
+    }
+
+    const icon = DATA[name]?.icon || "📘";
+    return { name, icon, coverage, mastery, attempts: entries.length, uniqueCount: uniqueKeys.size, totalAvailable };
+  }).filter(s=>s.attempts>0 || s.totalAvailable>0); // skip subjects with literally nothing in them
 }
 
 // Tests the ENTIRE lesson in one go — every question, every type — as a single
@@ -5011,14 +5107,18 @@ function aggregateScoreboardData(logsSnap, examSnap){
     const e = d.data();
     const tsMs = resolveTs(e);
     if(typeof e.pct === "number" && tsMs!==null){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs });
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject:e.subject||"", lessonId:e.lessonId||"", qIndex:e.qIndex });
     }
   });
   examSnap.forEach(d=>{
     const e = d.data();
     const tsMs = resolveTs(e);
     if(typeof e.pct === "number" && tsMs!==null){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs });
+      // Mock exam answers don't carry a `subject` field directly — fall back
+      // to looking up the lesson, since mock exams can span multiple lessons
+      // that may belong to different subjects.
+      const lesson = findLessonById(e.lessonId);
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx });
     }
   });
   allScoredEntries.sort((a,b)=>a.ts-b.ts);
@@ -5301,6 +5401,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
   const sessionCount = Object.keys(bySession).length;
   const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
+  const subjectBreakdown = calcSubjectBreakdown(allScoredEntries||[]);
 
   const masteryLabel = masteryScore>=80 ? "🌟 Excellent mastery!" : masteryScore>=60 ? "📈 Good progress!" : masteryScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
   const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
@@ -5404,6 +5505,23 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         <div><div style="font-size:18px;font-weight:800">${mockStats.avgScore!==null?mockStats.avgScore+'%':'—'}</div><div style="font-size:11px;opacity:.8">Mock Exam Avg Score</div></div>
       </div>` : ""}
       <div style="font-size:11px;opacity:.65;margin-top:10px;text-align:center">${sessionCount} session${sessionCount!==1?"s":""} so far</div>
+    </details>
+
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-size:12px;font-weight:700;opacity:.85;padding:6px 2px;list-style:none">📘 By Subject ▾</summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        ${subjectBreakdown.map(s=>`
+          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12.5px;font-weight:700">${s.icon} ${s.name}</div>
+              <div style="font-size:10px;opacity:.7">${s.attempts} attempt${s.attempts!==1?"s":""}</div>
+            </div>
+            <div style="display:flex;gap:14px">
+              <div><div style="font-size:15px;font-weight:800">${s.coverage}%</div><div style="font-size:9px;opacity:.7">Covered (${s.uniqueCount}/${s.totalAvailable})</div></div>
+              <div><div style="font-size:15px;font-weight:800">${s.mastery}%</div><div style="font-size:9px;opacity:.7">Mastery</div></div>
+            </div>
+          </div>`).join("") || `<div style="font-size:11.5px;opacity:.7;text-align:center">No activity yet — try a question in any subject!</div>`}
+      </div>
     </details>`;
 }
 
