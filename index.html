@@ -3221,8 +3221,6 @@ function togglePartPeek(){
     const hadWrittenSomething = !!(ta && ta.value && ta.value.trim());
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
-    // Start the speed countdown the moment the student closes the peek and begins writing
-    if(!hadWrittenSomething) startSpeedTimer(currentQType);
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
@@ -3446,6 +3444,8 @@ function togglePeek(){
     const hadWrittenSomething = !!(ta && ta.value && ta.value.trim());
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
+    // Start the speed timer the first time the student closes the peek to begin writing
+    if(!hadWrittenSomething) startSpeedTimer(currentQType);
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
