@@ -127,7 +127,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .qtype-tab.active .qt-count{background:var(--navy);color:#fff}
 
 /* ── SPEED TIMER ── */
-#speedTimerWrap{margin:0 0 10px;animation:fadeIn .3s}
+#speedTimerWrap{margin:0 0 10px}
 #speedTimerBar{height:5px;border-radius:3px;transition:width .5s linear,background .5s;background:var(--green)}
 #speedTimerLabel{font-size:11px;font-weight:700;margin-top:4px;display:flex;justify-content:space-between;align-items:center}
 #speedTimerLabel .timer-pts{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;background:var(--green);color:#fff;transition:background .5s}
@@ -2392,7 +2392,7 @@ function startSpeedTimer(qtype){
   }
 
   tick();
-  _speedTimerInterval = setInterval(tick, 500);
+  _speedTimerInterval = setInterval(tick, 250);
 }
 
 function stopSpeedTimer(){
@@ -2631,7 +2631,7 @@ ${q.lines.replace(/</g,"&lt;")}
     ${peekBtn}
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
-        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
@@ -2651,6 +2651,7 @@ ${q.lines.replace(/</g,"&lt;")}
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`:""}`;
+  setTimeout(()=>startSpeedTimer("memorise"), 50);
 }
 
 function togglePeekMem(){
@@ -2661,7 +2662,6 @@ function togglePeekMem(){
   const showing = panel.classList.toggle("open");
   btn.textContent = showing ? "📕 Hide poem — now type from memory!" : "📖 Show poem again";
   if(ta) ta.disabled = showing; // lock textarea while poem is visible
-  if(!showing) startSpeedTimer("memorise"); // timer starts when poem is hidden
 }
 
 // ── SHUFFLE helper ──
@@ -3057,7 +3057,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   const speedTimerHTML = SPEED_BONUS[currentQType] ? `
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
-        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
@@ -3086,9 +3086,12 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   // Writing starts locked — the student must open and close the peek at least
   // once (an explicit "I'm ready to write" action) before the textarea unlocks.
   // Mock exam skips this since there's no peek option there at all.
+  // Start speed timer immediately when question appears — time is running from the moment
+  // the student sees the question, whether they peek or not.
+  setTimeout(()=>startSpeedTimer(currentQType), 50);
   if(currentMode==="exam"){
     const ta=document.getElementById("answerInput");
-    if(ta){ ta.disabled=false; startSpeedTimer(currentQType); }
+    if(ta) ta.disabled=false;
   }
 }
 
@@ -3444,8 +3447,6 @@ function togglePeek(){
     const hadWrittenSomething = !!(ta && ta.value && ta.value.trim());
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
-    // Start the speed timer the first time the student closes the peek to begin writing
-    if(!hadWrittenSomething) startSpeedTimer(currentQType);
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
@@ -3595,8 +3596,6 @@ function renderDistinguish(q, qnum, isLast){
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
 
   const distPlaceholder = currentMode==="exam" ? null : "Tap 👁 above, then close it to start writing…";
-  if(currentMode==="exam") setTimeout(()=>startSpeedTimer("distinguish"), 50);
-
   fbLiveState({
     mode: currentLesson?.id==="__mock__" ? "mock" : "study",
     lessonId: currentLesson?.id||"",
@@ -3620,7 +3619,7 @@ function renderDistinguish(q, qnum, isLast){
     ${peekBtn}
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
-        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
@@ -3645,6 +3644,7 @@ function renderDistinguish(q, qnum, isLast){
       <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`:""}`;
+  setTimeout(()=>startSpeedTimer("distinguish"), 50);
 }
 
 // Toggle peek for distinguish — disables BOTH textareas. Free to view before
@@ -3666,7 +3666,6 @@ function togglePeekDist(){
     if(hadWrittenSomething) recordPeekUsed();
     if(taA){ taA.disabled=false; taA.focus(); }
     if(taB) taB.disabled=false;
-    if(!hadWrittenSomething) startSpeedTimer("distinguish");
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
