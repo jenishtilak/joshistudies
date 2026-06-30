@@ -1701,14 +1701,14 @@ const DATA = {
                 { q:"What does 'promises to keep' symbolise?", options:["A marriage promise","Worldly duties and commitments","A promise to return to the woods","A promise made to the horse"], correct:1 },
               ],
               fill:[
-                { sentence:"After a long travel the poet entered a ___.", answers:["forest / wood"] },
+                { sentence:"After a long travel the poet entered a ___.", answers:["forest"] },
                 { sentence:"He realized that the owner of the wood lived in a ___.", answers:["village"] },
-                { sentence:"The horse would think it very ___ to stop near the woods.", answers:["queer / strange"] },
+                { sentence:"The horse would think it very ___ to stop near the woods.", answers:["queer"] },
                 { sentence:"The poet was actually standing between the woods and ___.", answers:["a frozen lake"] },
-                { sentence:"The time was ___.", answers:["evening / the darkest evening of the year"] },
+                { sentence:"The time was ___.", answers:["the darkest evening of the year"] },
                 { sentence:"The horse indicated that the poet has made a ___ by shaking its head.", answers:["mistake"] },
                 { sentence:"The poet felt that the woods are lovely, ___ and ___.", answers:["dark","deep"] },
-                { sentence:"He suddenly realized that he had worldly ___ which would not allow him to ___ in the woods for a long time.", answers:["promises / duties","stay / stop"] },
+                { sentence:"He suddenly realized that he had worldly ___ which would not allow him to ___ in the woods for a long time.", answers:["promises","stay"] },
               ],
               match:[], 
               brief:[
@@ -2126,7 +2126,9 @@ function renderRevise(lesson){
         let idx=0;
         const filled = q.sentence.replace(/___/g,()=>{
           const ans = q.answers[idx++]||"";
-          return `<span class="revise-blank">${ans}</span>`;
+          // Show slash-alternatives as "word or word" for clarity
+          const display = ans.split("/").map(s=>s.trim()).join(" or ");
+          return `<span class="revise-blank">${display}</span>`;
         });
         html += `<div class="revise-fill-sentence">${filled}</div>`;
 
@@ -2659,7 +2661,7 @@ function renderFill(q, qnum, isLast){
   const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" onclick="toggleFillPeek()">👁 View Answer before filling</button>
        <div class="peek-panel" id="peekPanel">
          <div class="peek-label">Answer</div>
-         <div class="peek-text">${q.answers.join(" / ")}</div>
+         <div class="peek-text">${q.answers.map(a=>a.split("/").map(s=>s.trim()).join(" or ")).join("  |  ")}</div>
        </div>` : "";
 
   const actionBar = currentMode==="exam"
@@ -2721,8 +2723,10 @@ function checkFill(answers){
   answers.forEach((ans,i)=>{
     const inp=document.getElementById("blank"+i);
     if(!inp) return;
-    const userVal=inp.value.trim();
-    const ok=userVal.toLowerCase()===ans.toLowerCase() || levenshtein(userVal.toLowerCase(),ans.toLowerCase())<=1;
+    const userVal=inp.value.trim().toLowerCase();
+    // Accept any slash-separated alternative (e.g. "forest / wood" means forest OR wood)
+    const alternatives = ans.split("/").map(a=>a.trim().toLowerCase()).filter(Boolean);
+    const ok = alternatives.some(alt => userVal===alt || levenshtein(userVal,alt)<=1);
     inp.disabled=true;
     if(ok){
       inp.style.borderColor="var(--green)";
@@ -2733,10 +2737,10 @@ function checkFill(answers){
       inp.style.borderColor="var(--red)";
       inp.style.color="var(--red)";
       inp.style.background="var(--red-light)";
-      // Show correct answer inline after the input
+      // Show accepted answers cleanly — "forest or wood" instead of "forest / wood"
       const span=document.createElement("span");
       span.className="word-correction";
-      span.textContent="→ "+ans;
+      span.textContent="→ "+alternatives.join(" or ");
       inp.insertAdjacentElement("afterend",span);
     }
   });
@@ -2757,7 +2761,10 @@ function examNextFill(answers, isLast){
   const q=qs[currentQIndex];
   const userVals=answers.map((_,i)=>{ const el=document.getElementById("blank"+i); return el?el.value.trim():""; });
   let correct=0;
-  answers.forEach((ans,i)=>{ if(levenshtein(userVals[i].toLowerCase(),ans.toLowerCase())<=1) correct++; });
+  answers.forEach((ans,i)=>{
+    const alts = ans.split("/").map(a=>a.trim().toLowerCase()).filter(Boolean);
+    if(alts.some(alt=>levenshtein(userVals[i].toLowerCase(),alt)<=1)) correct++;
+  });
   const pct=Math.round(100*correct/answers.length);
   sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
@@ -5124,7 +5131,7 @@ function renderHowToEarnPoints(targetId){
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3 per subject, +5 bonus for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has between 5:00pm–10:00pm for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has anytime after 8:00am for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -5443,7 +5450,7 @@ function calcSessionGoals(allScoredEntries){
     // Morning: 6-7am (early) or 7-8am (late)
     // Evening: 5pm-10pm (17-21)
     // Anything else (8am-5pm, after 10pm) does NOT count toward session bonuses
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : hour>=8 ? 'evening' : null;
     if(!bucket) return;
     globalQtypes[bucket].add(e.qtype);
     const subj = e.subject || '';
@@ -5539,7 +5546,7 @@ function calcCumulativeTotals(allScoredEntries){
     const d = new Date(e.ts); d.setHours(0,0,0,0);
     const dayKey = d.getTime();
     const hour = new Date(e.ts).getHours();
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : hour>=8 ? 'evening' : null;
     if(!bucket) {
       // Still counts for the global daily goal (answered anytime counts for goal)
       if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set() };
@@ -5724,23 +5731,23 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         const eStarted = !sg.eveningDone && sg.progEvening > 0;
         const mProg = sg.morningDone ? '' : (mStarted ? ` ${sg.progMorning}/${req}` : '');
         const eProg = sg.eveningDone ? '' : (eStarted ? ` ${sg.progEvening}/${req}` : '');
-        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':mStarted?'rgba(232,184,75,.18)':'rgba(255,255,255,.06)';
-        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':mStarted?'rgba(232,184,75,.5)':'rgba(255,255,255,.12)';
-        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':eStarted?'rgba(232,184,75,.18)':'rgba(255,255,255,.06)';
-        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':eStarted?'rgba(232,184,75,.5)':'rgba(255,255,255,.12)';
+        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':mStarted?'rgba(255,140,0,.18)':'rgba(255,255,255,.06)';
+        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':mStarted?'rgba(255,140,0,.6)':'rgba(255,255,255,.12)';
+        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':eStarted?'rgba(255,140,0,.18)':'rgba(255,255,255,.06)';
+        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':eStarted?'rgba(255,140,0,.6)':'rgba(255,255,255,.12)';
         const timeLabel = sg.earlyDone?'6-7am':sg.lateDone?'7-8am':'6-8am';
         return `<div style="margin-bottom:8px">
           <div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:4px">${icon} ${subj}</div>
           <div style="display:flex;gap:6px">
             <div style="flex:1;background:${morningColor};border:1px solid ${morningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌅</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.morningDone?'inherit':mStarted?'#8a5c00':'inherit'}">${sg.morningDone?timeLabel+' ✓':mStarted?'In progress'+mProg:'Morning'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.morningDone?'inherit':mStarted?'#c45000':'inherit'}">${sg.morningDone?timeLabel+' ✓':mStarted?'In progress'+mProg:'Morning'}</div>
               <div style="font-size:8px;opacity:.6">${sg.morningDone?'✅ +70 pts':mStarted?'🟠 +10 for trying':'6-8am · all '+req+' types'}</div>
             </div>
             <div style="flex:1;background:${eveningColor};border:1px solid ${eveningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌙</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.eveningDone?'inherit':eStarted?'#8a5c00':'inherit'}">${sg.eveningDone?'Evening ✓':eStarted?'In progress'+eProg:'Evening'}</div>
-              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'✅ +50 pts':eStarted?'🟠 +10 for trying':'5pm–10pm · all '+req+' types'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.eveningDone?'inherit':eStarted?'#c45000':'inherit'}">${sg.eveningDone?'Evening ✓':eStarted?'In progress'+eProg:'Evening'}</div>
+              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'✅ +50 pts':eStarted?'🟠 +10 for trying':'after 8am · all '+req+' types'}</div>
             </div>
             ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +50</div>':''}
           </div>
@@ -6138,12 +6145,12 @@ async function showWelcomeBackPopup(){
       const icon = DATA[subj]?.icon||'📚';
       const mDone = sg.morningDone, eDone = sg.eveningDone;
       const mStart = sg.mornStarted, eStart = sg.eveStarted;
-      const mBg = mDone?'rgba(76,204,138,.18)':mStart?'rgba(232,184,75,.18)':'#fff';
-      const mBorder = mDone?'var(--green)':mStart?'#e8a020':'var(--border)';
-      const eBg = eDone?'rgba(76,204,138,.18)':eStart?'rgba(232,184,75,.18)':'#fff';
-      const eBorder = eDone?'var(--green)':eStart?'#e8a020':'var(--border)';
+      const mBg = mDone?'rgba(76,204,138,.18)':mStart?'rgba(255,140,0,.18)':'#fff';
+      const mBorder = mDone?'var(--green)':mStart?'#ff8c00':'var(--border)';
+      const eBg = eDone?'rgba(76,204,138,.18)':eStart?'rgba(255,140,0,.18)':'#fff';
+      const eBorder = eDone?'var(--green)':eStart?'#ff8c00':'var(--border)';
       const mLabel = mDone?'✓ Done':mStart?'Started…':'6–8am';
-      const eLabel = eDone?'✓ Done':eStart?'Started…':'5–10pm';
+      const eLabel = eDone?'✓ Done':eStart?'Started…':'After 8am';
       return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
         <div style="font-size:11px;font-weight:700;color:var(--navy);width:90px;text-align:left">${icon} ${subj.split(' ')[0]}</div>
         <div style="flex:1;background:${mBg};border:1px solid ${mBorder};border-radius:7px;padding:4px;text-align:center">
@@ -6152,7 +6159,7 @@ async function showWelcomeBackPopup(){
         </div>
         <div style="flex:1;background:${eBg};border:1px solid ${eBorder};border-radius:7px;padding:4px;text-align:center">
           <div style="font-size:10px;font-weight:700;color:var(--navy)">🌙 ${eLabel}</div>
-          <div style="font-size:8px;color:var(--muted)">${eDone?'+50 pts':eStart?'+10 so far':'all types'}</div>
+          <div style="font-size:8px;color:var(--muted)">${eDone?'+50 pts':eStart?'+10 so far':'anytime after 8am'}</div>
         </div>
       </div>`;
     }).join('');
