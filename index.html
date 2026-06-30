@@ -966,6 +966,7 @@ const DATA = {
               ],
               match:[
                 {
+                  q:"Match the terms with their descriptions",
                   left:["Element","Compound","Colloid","Suspension","Mixture"],
                   right:["Settles down on standing","Impure substance","Made up of molecules","Pure substance","Made up of atoms"],
                   correct:[4,2,1,0,3]
@@ -1044,6 +1045,7 @@ const DATA = {
               ],
               match:[
                 {
+                  q:"Match the terms with their meanings",
                   left:["Palaeo anthropology","Hand axe tools","Images on stone and bone","Red sand dunes","Stone artefacts of small size"],
                   right:["Teris","Venus","Acheulian","Microliths","The study of the human ancestors"],
                   correct:[4,2,1,0,3]
@@ -1467,6 +1469,7 @@ const DATA = {
               ],
               match:[
                 {
+                  q:"Match the terms with their definitions",
                   left:["Autocracy","Right to vote","Chanakya","Theocracy"],
                   right:["18","Arthashastra","Vatican","North Korea"],
                   correct:[3,0,1,2]
@@ -1563,6 +1566,7 @@ const DATA = {
               ],
               match:[
                 {
+                  q:"Match the terms with their descriptions",
                   left:["Development","Human resource","Solar energy","1972"],
                   right:["Wild life Protection Act","Renewable resources","Part of daily life","Education"],
                   correct:[2,3,1,0]
@@ -1649,20 +1653,14 @@ const DATA = {
               ],
               fill:[],
               match:[
-                { heading:"Match the words with their Synonyms (Column A → Column B)", pairs:[
-                  { left:"ease", right:"effortless" },
-                  { left:"evolve", right:"progress" },
-                  { left:"excess", right:"surplus" },
-                  { left:"survive", right:"endure" },
-                  { left:"immense", right:"great" },
-                ]},
-                { heading:"Match the words with their Antonyms (Column A → Column B)", pairs:[
-                  { left:"concentrate", right:"distract" },
-                  { left:"inevitable", right:"preventable" },
-                  { left:"occasional", right:"continual" },
-                  { left:"complete", right:"incomplete" },
-                  { left:"insane", right:"wise" },
-                ]},
+                { q:"Match the words with their Synonyms",
+                  left:["ease","evolve","excess","survive","immense"],
+                  right:["effortless","progress","surplus","endure","great"],
+                  correct:[0,1,2,3,4] },
+                { q:"Match the words with their Antonyms",
+                  left:["concentrate","inevitable","occasional","complete","insane"],
+                  right:["distract","preventable","continual","incomplete","wise"],
+                  correct:[0,1,2,3,4] },
               ],
               brief:[
                 { q:"What was coach Achrekar's first impression on Sachin?", answer:"Coach Achrekar's first impression on Sachin was that he was too young to play and suggested to bring him back when he was a little older." },
@@ -1703,14 +1701,14 @@ const DATA = {
                 { q:"What does 'promises to keep' symbolise?", options:["A marriage promise","Worldly duties and commitments","A promise to return to the woods","A promise made to the horse"], correct:1 },
               ],
               fill:[
-                { q:"After a long travel the poet entered a ________.", answer:"forest / wood" },
-                { q:"He realized that the owner of the wood lived in a ________.", answer:"village" },
-                { q:"The horse would think it very ________ to stop near the woods.", answer:"queer / strange" },
-                { q:"The poet was actually standing between the woods and ________.", answer:"a frozen lake" },
-                { q:"The time was ________.", answer:"evening / the darkest evening of the year" },
-                { q:"The horse indicated that the poet has made a ________ by shaking its head.", answer:"mistake" },
-                { q:"The poet felt that the woods are lovely, ________ and ________.", answer:"dark and deep" },
-                { q:"He suddenly realized that he had worldly ________ which would not allow him to ________ in the woods for a long time.", answer:"promises / duties; stay / stop" },
+                { sentence:"After a long travel the poet entered a ___.", answers:["forest / wood"] },
+                { sentence:"He realized that the owner of the wood lived in a ___.", answers:["village"] },
+                { sentence:"The horse would think it very ___ to stop near the woods.", answers:["queer / strange"] },
+                { sentence:"The poet was actually standing between the woods and ___.", answers:["a frozen lake"] },
+                { sentence:"The time was ___.", answers:["evening / the darkest evening of the year"] },
+                { sentence:"The horse indicated that the poet has made a ___ by shaking its head.", answers:["mistake"] },
+                { sentence:"The poet felt that the woods are lovely, ___ and ___.", answers:["dark","deep"] },
+                { sentence:"He suddenly realized that he had worldly ___ which would not allow him to ___ in the woods for a long time.", answers:["promises / duties","stay / stop"] },
               ],
               match:[], 
               brief:[
@@ -2133,7 +2131,7 @@ function renderRevise(lesson){
         html += `<div class="revise-fill-sentence">${filled}</div>`;
 
       } else if(qt.id==="match"){
-        html += `<div class="revise-q">Match the following</div>
+        html += `<div class="revise-q">${q.q||"Match the following"}</div>
           <table class="revise-match-table">
             <thead><tr><th>Column A</th><th>Column B</th></tr></thead>
             <tbody>${q.left.map((l,li)=>`<tr><td>${l}</td><td>${q.right[q.correct[li]]}</td></tr>`).join("")}</tbody>
@@ -2149,6 +2147,9 @@ function renderRevise(lesson){
           <div class="revise-mcq-opt correct">Answer: ${q.answer==="true"?"True ✓":"False ✗"}</div>
           ${q.reason?`<div class="revise-answer" style="margin-top:8px">${q.reason}</div>`:""}`;
 
+      } else if(qt.id==="memorise"){
+        html += `<div class="revise-q">${q.q}</div>
+          <div class="revise-answer" style="font-family:Georgia,serif;font-size:14px;line-height:1.9;white-space:pre-line">${(q.lines||"").replace(/</g,"&lt;")}</div>`;
       } else {
         // brief, reasons, paragraph
         html += `<div class="revise-q">${q.q}</div>
@@ -5123,7 +5124,7 @@ function renderHowToEarnPoints(targetId){
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3 per subject, +5 bonus for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has, any other time of day, for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has between 5:00pm–10:00pm for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -5188,13 +5189,15 @@ function celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTes
     const milestones = [
       { done: dailyGoal.completedToday, flag:"goal", points:10, label:"Daily Goal complete!" },
     ];
-    // Per-subject session milestones
+    // Per-subject session milestones — full completion and partial "started"
     Object.entries(sessionGoals.bySubject||{}).forEach(([subj,sg])=>{
       const abbr = subj.split(" ")[0]; // e.g. "Social" from "Social Science"
-      if(sg.earlyDone)  milestones.push({ done:true, flag:"early_"+subj,   points:70, label:`Early Morning — ${abbr}! 🌅` });
-      else if(sg.lateDone) milestones.push({ done:true, flag:"late_"+subj, points:50, label:`Morning Session — ${abbr}! 🌅` });
-      if(sg.eveningDone) milestones.push({ done:true, flag:"evening_"+subj, points:50, label:`Evening Session — ${abbr}! 🌙` });
-      if(sg.bothDone)    milestones.push({ done:true, flag:"both_"+subj,    points:50, label:`Both sessions — ${abbr}! 🎉` });
+      if(sg.earlyDone)       milestones.push({ done:true, flag:"early_"+subj,      points:70, label:`Early Morning — ${abbr}! 🌅` });
+      else if(sg.lateDone)   milestones.push({ done:true, flag:"late_"+subj,       points:50, label:`Morning Session — ${abbr}! 🌅` });
+      else if(sg.mornStarted)milestones.push({ done:true, flag:"mornstart_"+subj,  points:10, label:`${abbr} Morning started! 🟠 Keep going!` });
+      if(sg.eveningDone)     milestones.push({ done:true, flag:"evening_"+subj,    points:50, label:`Evening Session — ${abbr}! 🌙` });
+      else if(sg.eveStarted) milestones.push({ done:true, flag:"evestart_"+subj,   points:10, label:`${abbr} Evening started! 🟠 Keep going!` });
+      if(sg.bothDone)        milestones.push({ done:true, flag:"both_"+subj,       points:50, label:`Both sessions — ${abbr}! 🎉` });
     });
 
     let anyNewMilestone = false;
@@ -5437,7 +5440,11 @@ function calcSessionGoals(allScoredEntries){
     if(e.ts < todayMs || !e.qtype) return;
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const hour = new Date(e.ts).getHours();
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : 'evening';
+    // Morning: 6-7am (early) or 7-8am (late)
+    // Evening: 5pm-10pm (17-21)
+    // Anything else (8am-5pm, after 10pm) does NOT count toward session bonuses
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
+    if(!bucket) return;
     globalQtypes[bucket].add(e.qtype);
     const subj = e.subject || '';
     if(subjQtypes[subj]) subjQtypes[subj][bucket].add(e.qtype);
@@ -5471,8 +5478,11 @@ function calcSessionGoals(allScoredEntries){
     const progLate    = required.filter(qt=>subjQtypes[s].late.has(qt.id)).length;
     const progEvening = required.filter(qt=>subjQtypes[s].evening.has(qt.id)).length;
     const progMorning = Math.max(progEarly, progLate);
+    const mornStarted = !sMorning && progMorning > 0;
+    const eveStarted  = !sEvening && progEvening > 0;
     bySubject[s] = {
       earlyDone:sEarly, lateDone:sLate, morningDone:sMorning, eveningDone:sEvening, bothDone:sMorning&&sEvening,
+      mornStarted, eveStarted,
       required: required.length,
       progMorning, progEvening,
     };
@@ -5529,7 +5539,13 @@ function calcCumulativeTotals(allScoredEntries){
     const d = new Date(e.ts); d.setHours(0,0,0,0);
     const dayKey = d.getTime();
     const hour = new Date(e.ts).getHours();
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : 'evening';
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
+    if(!bucket) {
+      // Still counts for the global daily goal (answered anytime counts for goal)
+      if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set() };
+      byDay[dayKey].qtypes.add(e.qtype);
+      return;
+    }
 
     // Global daily goal tracking
     if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set() };
@@ -5546,7 +5562,7 @@ function calcCumulativeTotals(allScoredEntries){
 
   let daysGoalCompleted = 0;
   const subjectSessions = {};
-  subjectNames.forEach(s=>{ subjectSessions[s] = { earlyMorning:0, lateMorning:0, evening:0, both:0 }; });
+  subjectNames.forEach(s=>{ subjectSessions[s] = { earlyMorning:0, lateMorning:0, evening:0, both:0, mornStarted:0, eveStarted:0 }; });
 
   // Global daily goal
   Object.values(byDay).forEach(day=>{
@@ -5556,6 +5572,7 @@ function calcCumulativeTotals(allScoredEntries){
 
   // Per-subject session days: a session counts only when all of that
   // subject's active types were covered in that bucket on that day.
+  // "started" = at least 1 type covered but not all.
   Object.entries(byDaySubjBucket).forEach(([dayKey, subjMap])=>{
     subjectNames.forEach(subj=>{
       const buckets = subjMap[subj];
@@ -5565,9 +5582,14 @@ function calcCumulativeTotals(allScoredEntries){
       const early = required.every(qt=>buckets.early.has(qt.id));
       const late  = required.every(qt=>buckets.late.has(qt.id));
       const eve   = required.every(qt=>buckets.evening.has(qt.id));
+      const earlyStarted   = !early  && buckets.early.size   > 0;
+      const lateStarted    = !late   && buckets.late.size    > 0;
+      const eveStarted     = !eve    && buckets.evening.size > 0;
       if(early) subjectSessions[subj].earlyMorning++;
       else if(late) subjectSessions[subj].lateMorning++;
+      else if(earlyStarted || lateStarted) subjectSessions[subj].mornStarted++;
       if(eve) subjectSessions[subj].evening++;
+      else if(eveStarted) subjectSessions[subj].eveStarted++;
       if((early||late) && eve) subjectSessions[subj].both++;
     });
   });
@@ -5649,10 +5671,12 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   growthPoints += cumulative.daysGoalCompleted * 10;   // full 8-type goal, any day — big, permanent
   // Per-subject morning/evening sessions — each subject earns its own bonus
   Object.values(cumulative.subjectSessions||{}).forEach(ss=>{
-    growthPoints += ss.earlyMorning * 70;  // 6-7am for this subject
-    growthPoints += ss.lateMorning  * 50;  // 7-8am for this subject
-    growthPoints += ss.evening      * 50;  // evening session for this subject
-    growthPoints += ss.both         * 50;  // both morning+evening for this subject
+    growthPoints += ss.earlyMorning * 70;  // 6-7am complete for this subject
+    growthPoints += ss.lateMorning  * 50;  // 7-8am complete for this subject
+    growthPoints += ss.evening      * 50;  // evening complete for this subject
+    growthPoints += ss.both         * 50;  // both sessions complete for this subject
+    growthPoints += ss.mornStarted  * 10;  // started morning but didn't finish all types
+    growthPoints += ss.eveStarted   * 10;  // started evening but didn't finish all types
   });
   growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
   growthPoints = Math.round(growthPoints);
@@ -5696,25 +5720,27 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
         const icon = DATA[subj]?.icon||'📚';
         const req = sg.required || 0;
         // Progress labels show X/N types done when incomplete
-        const mProg = sg.morningDone ? '' : (sg.progMorning>0 ? ` ${sg.progMorning}/${req}` : '');
-        const eProg = sg.eveningDone ? '' : (sg.progEvening>0 ? ` ${sg.progEvening}/${req}` : '');
-        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':sg.progMorning>0?'rgba(232,184,75,.15)':'rgba(255,255,255,.06)';
-        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':sg.progMorning>0?'rgba(232,184,75,.4)':'rgba(255,255,255,.12)';
-        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':sg.progEvening>0?'rgba(232,184,75,.15)':'rgba(255,255,255,.06)';
-        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':sg.progEvening>0?'rgba(232,184,75,.4)':'rgba(255,255,255,.12)';
+        const mStarted = !sg.morningDone && sg.progMorning > 0;
+        const eStarted = !sg.eveningDone && sg.progEvening > 0;
+        const mProg = sg.morningDone ? '' : (mStarted ? ` ${sg.progMorning}/${req}` : '');
+        const eProg = sg.eveningDone ? '' : (eStarted ? ` ${sg.progEvening}/${req}` : '');
+        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':mStarted?'rgba(232,184,75,.18)':'rgba(255,255,255,.06)';
+        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':mStarted?'rgba(232,184,75,.5)':'rgba(255,255,255,.12)';
+        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':eStarted?'rgba(232,184,75,.18)':'rgba(255,255,255,.06)';
+        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':eStarted?'rgba(232,184,75,.5)':'rgba(255,255,255,.12)';
         const timeLabel = sg.earlyDone?'6-7am':sg.lateDone?'7-8am':'6-8am';
         return `<div style="margin-bottom:8px">
           <div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:4px">${icon} ${subj}</div>
           <div style="display:flex;gap:6px">
             <div style="flex:1;background:${morningColor};border:1px solid ${morningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌅</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.morningDone?timeLabel+' ✓':'Morning'+mProg}</div>
-              <div style="font-size:8px;opacity:.6">${sg.morningDone?'+70 pts':req?'all '+req+' types':'6-8am'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.morningDone?'inherit':mStarted?'#8a5c00':'inherit'}">${sg.morningDone?timeLabel+' ✓':mStarted?'In progress'+mProg:'Morning'}</div>
+              <div style="font-size:8px;opacity:.6">${sg.morningDone?'✅ +70 pts':mStarted?'🟠 +10 for trying':'6-8am · all '+req+' types'}</div>
             </div>
             <div style="flex:1;background:${eveningColor};border:1px solid ${eveningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌙</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.eveningDone?'Evening ✓':'Evening'+eProg}</div>
-              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'+50 pts':req?'all '+req+' types':'anytime'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.eveningDone?'inherit':eStarted?'#8a5c00':'inherit'}">${sg.eveningDone?'Evening ✓':eStarted?'In progress'+eProg:'Evening'}</div>
+              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'✅ +50 pts':eStarted?'🟠 +10 for trying':'5pm–10pm · all '+req+' types'}</div>
             </div>
             ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +50</div>':''}
           </div>
@@ -6126,7 +6152,7 @@ async function showWelcomeBackPopup(){
         <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.eveningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
           <div style="font-size:15px">🌙</div>
           <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:8px;color:var(--muted)">anytime else</div>
+          <div style="font-size:8px;color:var(--muted)">5pm–10pm</div>
         </div>
       </div>
       ${sessionGoals.bothDone ? `<div style="font-size:11.5px;color:var(--green);font-weight:700">🎉 Studied twice today!</div>` : ""}
