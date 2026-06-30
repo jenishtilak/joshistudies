@@ -5118,12 +5118,12 @@ function renderHowToEarnPoints(targetId){
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +8 or +5 per subject per day</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions (50%+ score) per subject between 6:00-6:59am for +70, or 7:00-7:59am for +50. Each subject earns its own bonus — study Social Science and English in the morning for double points!</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject between 6:00-6:59am for +70, or 7:00-7:59am for +50. Each subject earns its own bonus — cover Social Science AND English in the morning for double points!</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3 per subject, +5 bonus for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions per subject any other time of day for +50 each. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has, any other time of day, for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -5391,6 +5391,20 @@ function calcDailyGoal(allScoredEntries){
   return { checklist, doneCount, total:activeCount, completedToday, streak, morningChecklist, eveningChecklist };
 }
 
+
+// Returns the question types that actually have questions within one specific subject.
+// Used so per-subject session bonuses only require types that subject has content for.
+function getActiveQTypesForSubject(subjectName){
+  const subj = DATA[subjectName];
+  if(!subj) return [];
+  const present = new Set();
+  for(const part of Object.values(subj.parts))
+    for(const lesson of part.lessons)
+      for(const qt of QTYPES)
+        if((lesson.questions[qt.id]||[]).length > 0) present.add(qt.id);
+  return QTYPES.filter(qt => present.has(qt.id));
+}
+
 // ═══════════════════════════════════════════════════════
 //  SESSION GOALS — encourages showing up twice a day, with the strongest
 //  nudge reserved for studying early (6-7am specifically). Independent of the
@@ -5401,72 +5415,98 @@ function calcDailyGoal(allScoredEntries){
 //  answered within that time window — low bar so it's achievable, high enough
 //  that opening and immediately closing the app doesn't count.
 // ═══════════════════════════════════════════════════════
-const MIN_QUESTIONS_FOR_SESSION = 3;
-
 function calcSessionGoals(allScoredEntries){
   const now = new Date();
   const startOfToday = new Date(now);
   startOfToday.setHours(0,0,0,0);
   const todayMs = startOfToday.getTime();
 
-  // Count today's entries into buckets by hour-of-day (global + per-subject).
-  let earlyCount=0, lateCount=0, eveningCount=0;
   const subjectNames = Object.keys(DATA);
-  const subjectCounts = {};
-  subjectNames.forEach(s=>{ subjectCounts[s]={early:0,late:0,evening:0}; });
+
+  // Track which qtypes were answered per subject per time-bucket today.
+  // A subject session is complete only when ALL active qtypes for that subject
+  // are covered in that bucket — not just a count of questions.
+  // subjQtypes[subj][bucket] = Set of qtype ids answered
+  const subjQtypes = {};
+  subjectNames.forEach(s=>{ subjQtypes[s] = { early:new Set(), late:new Set(), evening:new Set() }; });
+
+  // Also track global early/late/evening any-subject coverage for the morning streak
+  const globalQtypes = { early:new Set(), late:new Set(), evening:new Set() };
 
   allScoredEntries.forEach(e=>{
-    if(e.ts < todayMs) return;
+    if(e.ts < todayMs || !e.qtype) return;
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const hour = new Date(e.ts).getHours();
-    if(hour===6){ earlyCount++; }
-    else if(hour===7){ lateCount++; }
-    else{ eveningCount++; }
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : 'evening';
+    globalQtypes[bucket].add(e.qtype);
     const subj = e.subject || '';
-    if(subjectCounts[subj]){
-      if(hour===6) subjectCounts[subj].early++;
-      else if(hour===7) subjectCounts[subj].late++;
-      else subjectCounts[subj].evening++;
-    }
+    if(subjQtypes[subj]) subjQtypes[subj][bucket].add(e.qtype);
   });
 
-  const earlyDone   = earlyCount >= MIN_QUESTIONS_FOR_SESSION;
-  const lateDone    = lateCount  >= MIN_QUESTIONS_FOR_SESSION;
-  const morningDone = earlyDone || lateDone;
-  const eveningDone = eveningCount >= MIN_QUESTIONS_FOR_SESSION;
-  const bothDone    = morningDone && eveningDone;
+  // A subject session is done when all of that subject's active types are covered
+  function subjSessionDone(subj, bucket){
+    const required = getActiveQTypesForSubject(subj);
+    if(!required.length) return false;
+    return required.every(qt => subjQtypes[subj][bucket].has(qt.id));
+  }
 
-  // Per-subject session status for today
+  // Global morning done = any subject covered all its types in 6-8am
+  // (used only for morning streak — per-subject has its own earlyDone/lateDone)
+  const anyEarlyDone = subjectNames.some(s => subjSessionDone(s, 'early'));
+  const anyLateDone  = subjectNames.some(s => subjSessionDone(s, 'late'));
+  const morningDone  = anyEarlyDone || anyLateDone;
+  const eveningDone  = subjectNames.some(s => subjSessionDone(s, 'evening'));
+  const bothDone     = morningDone && eveningDone;
+
+  // Per-subject status
   const bySubject = {};
   subjectNames.forEach(s=>{
-    const sc = subjectCounts[s];
-    const sEarly   = sc.early   >= MIN_QUESTIONS_FOR_SESSION;
-    const sLate    = sc.late    >= MIN_QUESTIONS_FOR_SESSION;
+    const sEarly   = subjSessionDone(s, 'early');
+    const sLate    = subjSessionDone(s, 'late');
     const sMorning = sEarly || sLate;
-    const sEvening = sc.evening >= MIN_QUESTIONS_FOR_SESSION;
-    bySubject[s] = { earlyDone:sEarly, lateDone:sLate, morningDone:sMorning, eveningDone:sEvening, bothDone:sMorning&&sEvening };
+    const sEvening = subjSessionDone(s, 'evening');
+    // Progress: how many types done vs required, per bucket
+    const required = getActiveQTypesForSubject(s);
+    const progEarly   = required.filter(qt=>subjQtypes[s].early.has(qt.id)).length;
+    const progLate    = required.filter(qt=>subjQtypes[s].late.has(qt.id)).length;
+    const progEvening = required.filter(qt=>subjQtypes[s].evening.has(qt.id)).length;
+    const progMorning = Math.max(progEarly, progLate);
+    bySubject[s] = {
+      earlyDone:sEarly, lateDone:sLate, morningDone:sMorning, eveningDone:sEvening, bothDone:sMorning&&sEvening,
+      required: required.length,
+      progMorning, progEvening,
+    };
   });
 
-  // Morning streak (global — any subject counts)
+  // Morning streak: consecutive days where any subject had a complete morning session
   const byDayMorning = {};
   allScoredEntries.forEach(e=>{
-    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT || !e.qtype) return;
     const hour = new Date(e.ts).getHours();
     if(hour!==6 && hour!==7) return;
     const d = new Date(e.ts); d.setHours(0,0,0,0);
     const key = d.getTime();
-    byDayMorning[key] = (byDayMorning[key]||0) + 1;
+    if(!byDayMorning[key]) byDayMorning[key] = {};
+    const subj = e.subject||'';
+    if(!byDayMorning[key][subj]) byDayMorning[key][subj] = new Set();
+    byDayMorning[key][subj].add(e.qtype);
   });
   let morningStreak = 0;
   let cursor = todayMs;
   if(!morningDone) cursor -= 86400000;
-  while(byDayMorning[cursor] && byDayMorning[cursor] >= MIN_QUESTIONS_FOR_SESSION){
+  function dayHadMorningSession(dayData){
+    if(!dayData) return false;
+    return subjectNames.some(s=>{
+      const required = getActiveQTypesForSubject(s);
+      return required.length && required.every(qt=>(dayData[s]||new Set()).has(qt.id));
+    });
+  }
+  while(dayHadMorningSession(byDayMorning[cursor])){
     morningStreak++;
     cursor -= 86400000;
   }
 
-  return { earlyDone, lateDone, morningDone, eveningDone, bothDone, morningStreak,
-           earlyCount, lateCount, eveningCount, bySubject };
+  return { morningDone, eveningDone, bothDone, morningStreak, bySubject };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5477,68 +5517,62 @@ function calcSessionGoals(allScoredEntries){
 //  doesn't evaporate at midnight just because "today" started fresh.
 // ═══════════════════════════════════════════════════════
 function calcCumulativeTotals(allScoredEntries){
-  // Group every scored, goal-eligible entry by calendar day + subject,
-  // for both the 8-type daily goal and per-subject morning/evening sessions.
   const subjectNames = Object.keys(DATA);
-  // byDay: dayKey -> { qtypes:Set, early:count, late:count, evening:count }
+
+  // byDay[dayKey] = { qtypes:Set }  — for the global daily goal
+  // byDaySubjBucket[dayKey][subj][bucket] = Set of qtype ids
   const byDay = {};
-  // byDaySubj: "dayKey:subject" -> { early:count, late:count, evening:count }
-  const byDaySubj = {};
+  const byDaySubjBucket = {};
 
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT || !e.qtype) return;
     const d = new Date(e.ts); d.setHours(0,0,0,0);
     const dayKey = d.getTime();
     const hour = new Date(e.ts).getHours();
-    // Global day bucket
-    if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set(), early:0, late:0, evening:0 };
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : 'evening';
+
+    // Global daily goal tracking
+    if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set() };
     byDay[dayKey].qtypes.add(e.qtype);
-    if(hour===6) byDay[dayKey].early++;
-    else if(hour===7) byDay[dayKey].late++;
-    else byDay[dayKey].evening++;
-    // Per-subject day bucket
+
+    // Per-subject per-bucket qtype tracking
     const subj = e.subject || '';
     if(subj){
-      const subjKey = dayKey + ':' + subj;
-      if(!byDaySubj[subjKey]) byDaySubj[subjKey] = { early:0, late:0, evening:0 };
-      if(hour===6) byDaySubj[subjKey].early++;
-      else if(hour===7) byDaySubj[subjKey].late++;
-      else byDaySubj[subjKey].evening++;
+      if(!byDaySubjBucket[dayKey]) byDaySubjBucket[dayKey] = {};
+      if(!byDaySubjBucket[dayKey][subj]) byDaySubjBucket[dayKey][subj] = { early:new Set(), late:new Set(), evening:new Set() };
+      byDaySubjBucket[dayKey][subj][bucket].add(e.qtype);
     }
   });
 
   let daysGoalCompleted = 0;
-  // Global (legacy, kept for non-subject-aware points)
-  let daysEarlyMorning = 0, daysLateMorning = 0, daysEvening = 0, daysBoth = 0;
-  // Per-subject cumulative session counts (subject -> counts)
   const subjectSessions = {};
   subjectNames.forEach(s=>{ subjectSessions[s] = { earlyMorning:0, lateMorning:0, evening:0, both:0 }; });
 
+  // Global daily goal
   Object.values(byDay).forEach(day=>{
-    const activeTypes = getActiveQTypes(); if(activeTypes.every(qt=>day.qtypes.has(qt.id))) daysGoalCompleted++;
-    const early = day.early >= MIN_QUESTIONS_FOR_SESSION;
-    const late  = day.late  >= MIN_QUESTIONS_FOR_SESSION;
-    const eve   = day.evening >= MIN_QUESTIONS_FOR_SESSION;
-    if(early) daysEarlyMorning++;
-    else if(late) daysLateMorning++;
-    if(eve) daysEvening++;
-    if((early||late) && eve) daysBoth++;
+    const activeTypes = getActiveQTypes();
+    if(activeTypes.every(qt=>day.qtypes.has(qt.id))) daysGoalCompleted++;
   });
 
-  // Tally per-subject session days from byDaySubj
-  Object.entries(byDaySubj).forEach(([key, sc])=>{
-    const subj = key.split(':').slice(1).join(':');
-    if(!subjectSessions[subj]) return;
-    const early = sc.early   >= MIN_QUESTIONS_FOR_SESSION;
-    const late  = sc.late    >= MIN_QUESTIONS_FOR_SESSION;
-    const eve   = sc.evening >= MIN_QUESTIONS_FOR_SESSION;
-    if(early) subjectSessions[subj].earlyMorning++;
-    else if(late) subjectSessions[subj].lateMorning++;
-    if(eve) subjectSessions[subj].evening++;
-    if((early||late) && eve) subjectSessions[subj].both++;
+  // Per-subject session days: a session counts only when all of that
+  // subject's active types were covered in that bucket on that day.
+  Object.entries(byDaySubjBucket).forEach(([dayKey, subjMap])=>{
+    subjectNames.forEach(subj=>{
+      const buckets = subjMap[subj];
+      if(!buckets) return;
+      const required = getActiveQTypesForSubject(subj);
+      if(!required.length) return;
+      const early = required.every(qt=>buckets.early.has(qt.id));
+      const late  = required.every(qt=>buckets.late.has(qt.id));
+      const eve   = required.every(qt=>buckets.evening.has(qt.id));
+      if(early) subjectSessions[subj].earlyMorning++;
+      else if(late) subjectSessions[subj].lateMorning++;
+      if(eve) subjectSessions[subj].evening++;
+      if((early||late) && eve) subjectSessions[subj].both++;
+    });
   });
 
-  return { daysGoalCompleted, daysEarlyMorning, daysLateMorning, daysEvening, daysBoth, subjectSessions };
+  return { daysGoalCompleted, subjectSessions };
 }
 
 // Fetches every Lesson Test attempt ever logged and sums the points earned —
@@ -5660,25 +5694,29 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       <div style="font-size:12px;font-weight:700;margin-bottom:10px">⏰ Study Sessions Today</div>
       ${Object.entries(sessionGoals.bySubject||{}).map(([subj,sg])=>{
         const icon = DATA[subj]?.icon||'📚';
-        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)';
-        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.12)';
-        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)';
-        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.12)';
-        const timeLabel = sg.earlyDone?'6-7am ✓':sg.lateDone?'7-8am ✓':'Morning';
+        const req = sg.required || 0;
+        // Progress labels show X/N types done when incomplete
+        const mProg = sg.morningDone ? '' : (sg.progMorning>0 ? ` ${sg.progMorning}/${req}` : '');
+        const eProg = sg.eveningDone ? '' : (sg.progEvening>0 ? ` ${sg.progEvening}/${req}` : '');
+        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':sg.progMorning>0?'rgba(232,184,75,.15)':'rgba(255,255,255,.06)';
+        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':sg.progMorning>0?'rgba(232,184,75,.4)':'rgba(255,255,255,.12)';
+        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':sg.progEvening>0?'rgba(232,184,75,.15)':'rgba(255,255,255,.06)';
+        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':sg.progEvening>0?'rgba(232,184,75,.4)':'rgba(255,255,255,.12)';
+        const timeLabel = sg.earlyDone?'6-7am':sg.lateDone?'7-8am':'6-8am';
         return `<div style="margin-bottom:8px">
           <div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:4px">${icon} ${subj}</div>
           <div style="display:flex;gap:6px">
             <div style="flex:1;background:${morningColor};border:1px solid ${morningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌅</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.morningDone?timeLabel:'Morning'}${sg.morningDone?' ✓':''}</div>
-              <div style="font-size:8px;opacity:.6">${sg.morningDone?'+70 pts':'6-8am'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.morningDone?timeLabel+' ✓':'Morning'+mProg}</div>
+              <div style="font-size:8px;opacity:.6">${sg.morningDone?'+70 pts':req?'all '+req+' types':'6-8am'}</div>
             </div>
             <div style="flex:1;background:${eveningColor};border:1px solid ${eveningBorder};border-radius:8px;padding:6px 4px;text-align:center">
               <div style="font-size:14px">🌙</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.eveningDone?'Evening ✓':'Evening'}</div>
-              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'+50 pts':'any time'}</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.eveningDone?'Evening ✓':'Evening'+eProg}</div>
+              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'+50 pts':req?'all '+req+' types':'anytime'}</div>
             </div>
-            ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +5</div>':''}
+            ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +50</div>':''}
           </div>
         </div>`;
       }).join('')}
@@ -5691,7 +5729,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
           <div style="font-size:11px;font-weight:700">🌅 Morning</div>
           <div style="font-size:11px;font-weight:800">${dailyGoal.morningChecklist.doneCount}/${dailyGoal.morningChecklist.total}</div>
         </div>
-        <div style="font-size:9px;opacity:.65;margin-bottom:6px">${sessionGoals.earlyDone?'✓ 6-7am done':sessionGoals.lateDone?'✓ 7-8am done':'6-8am · not yet'}${sessionGoals.morningStreak>0?` · 🔥${sessionGoals.morningStreak}d`:''}</div>
+        <div style="font-size:9px;opacity:.65;margin-bottom:6px">${sessionGoals.morningDone?'✓ Morning done':'6-8am · not yet'}${sessionGoals.morningStreak>0?` · 🔥${sessionGoals.morningStreak}d`:''}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.morningChecklist.checklist)}</div>
       </div>
       <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
@@ -6075,14 +6113,14 @@ async function showWelcomeBackPopup(){
     <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">⏰ Study Sessions Today</div>
       <div style="display:flex;gap:5px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
-        <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.earlyDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
+        <div style="flex:1;background:${sessionGoals.morningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.morningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
           <div style="font-size:15px">🌅</div>
-          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
+          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.morningDone?'Morning ✓':'Morning'}</div>
           <div style="font-size:8px;color:var(--muted)">best time!</div>
         </div>
-        <div style="flex:1;background:${sessionGoals.lateDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.lateDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
+        <div style="flex:1;
           <div style="font-size:15px">🌤️</div>
-          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
+          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)"></div>
           <div style="font-size:8px;color:var(--muted)">still morning</div>
         </div>
         <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.eveningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
