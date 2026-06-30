@@ -865,7 +865,21 @@ const QTYPES = [
   { id:"reasons",     label:"Give Reasons",                icon:"💡",  marks:2 },
   { id:"distinguish", label:"Distinguish Between",         icon:"⚖️",  marks:3 },
   { id:"paragraph",   label:"Answer in Paragraph/Detail",  icon:"📄",  marks:5 },
+  { id:"memorise",    label:"Quote from Memory",           icon:"🎤",  marks:3 },
 ];
+
+// Returns only question types that actually have questions somewhere in the data.
+// Used by the daily goal so students aren't penalised for a missing type (e.g. no
+// True/False in English Grammar). Recomputed each call since data could expand.
+function getActiveQTypes(){
+  const present = new Set();
+  for(const subj of Object.values(DATA))
+    for(const part of Object.values(subj.parts))
+      for(const lesson of part.lessons)
+        for(const qt of QTYPES)
+          if((lesson.questions[qt.id]||[]).length > 0) present.add(qt.id);
+  return QTYPES.filter(qt => present.has(qt.id));
+}
 
 // Get marks for a question type
 function getMarks(qtypeId){ return QTYPES.find(q=>q.id===qtypeId)?.marks||1; }
@@ -1626,7 +1640,30 @@ const DATA = {
           {
             id:"ep1", unit:"Unit 1", title:"Learning the Game", month:"June",
             questions:{
-              mcq:[], fill:[], match:[],
+              mcq:[
+                { q:"The Paralympic games are for _________.", options:["children","disabled people","women","senior citizens"], correct:1 },
+                { q:"The Paralympic games usually happen _________.", options:["in Greece","every four years","after the Olympic Games","every two years"], correct:1 },
+                { q:"The first true Paralympic Games happened in Rome in _________.", options:["1960","1952","1848","1972"], correct:0 },
+                { q:"In 394 BCE, the _________ stopped the Greek Olympic Games, because they didn't like them.", options:["Romans","Greeks","British","French"], correct:0 },
+                { q:"_________ was a doctor at the Stoke Mandeville hospital in England.", options:["Pierre de Coubertin","Sir Ludwig Guttmann","Natalie du Toit","Sachin Tendulkar"], correct:1 },
+              ],
+              fill:[],
+              match:[
+                { heading:"Match the words with their Synonyms (Column A → Column B)", pairs:[
+                  { left:"ease", right:"effortless" },
+                  { left:"evolve", right:"progress" },
+                  { left:"excess", right:"surplus" },
+                  { left:"survive", right:"endure" },
+                  { left:"immense", right:"great" },
+                ]},
+                { heading:"Match the words with their Antonyms (Column A → Column B)", pairs:[
+                  { left:"concentrate", right:"distract" },
+                  { left:"inevitable", right:"preventable" },
+                  { left:"occasional", right:"continual" },
+                  { left:"complete", right:"incomplete" },
+                  { left:"insane", right:"wise" },
+                ]},
+              ],
               brief:[
                 { q:"What was coach Achrekar's first impression on Sachin?", answer:"Coach Achrekar's first impression on Sachin was that he was too young to play and suggested to bring him back when he was a little older." },
                 { q:"Why did Sachin feel that the schedule of the camp was 'rigorous'?", answer:"Sachin felt it rigorous because his cricket practice was between 7:30 a.m and 10:30 a.m in the morning and again in the afternoon which continued till evening." },
@@ -1639,7 +1676,12 @@ const DATA = {
                 { q:"Why do you think Achrekar punished Sachin?", answer:"Achrekar punished Sachin to make him the best cricketer in the world." },
                 { q:"'I owe myself to him' - What does Sachin mean by this?", answer:"Sachin became the world's best cricketer because of the training given by his coach Achrekar; without him he would not have become the cricketer he is now. So Sachin dedicates himself to his coach." },
               ],
-              truefalse:[], reasons:[], distinguish:[], paragraph:[]
+              truefalse:[], reasons:[], distinguish:[],
+              paragraph:[
+                { q:"'Achrekar was a sincere coach.' Substantiate. (120–150 words)", answer:"Achrekar was the best cricket coach of his time. He started coaching Sachin on seeing his batting. He challenged Tendulkar by placing a one rupee coin over the stumps — Sachin earned it if he remained unbowled. When Sachin did anything wrong, Achrekar punished him to refine him further. He found out the hidden talent of Sachin and moulded him carefully. He cared for him deeply. It was his far-sightedness which assured that one day Sachin would become a world famous cricketer. He was a strict disciplinarian too. When Sachin missed practice to watch a cricket match, Achrekar scolded him and told him that one day people from across the world would come to watch him play. It was the sincerity and dedication of Ramakant Achrekar that gifted a 'Kohinoor' called Sachin Tendulkar to the world of cricket." },
+                { q:"Narrate in your own words the hardships undergone by Sachin to become a great cricketer. (120–150 words)", answer:"Sachin went through a tough time to reach his position of fame and name. Though the schedule was rigorous, he never gave up. He managed with a single set of cricket clothes. He had changed schools on his coach's suggestion. His day began at 7:30 a.m. and ended late in the evening. He would be completely exhausted by the end of the day, yet he built his physical and mental stamina through this rigorous training. He had to travel forty minutes by bus carrying a heavy kit bag, and bus conductors would embarrass him by asking him to buy two tickets. Whenever Sachin made any mistake, he was punished. But he took it positively, which helped him refine himself. All these hardships kept him simple and humble even after reaching the pinnacle of glory." },
+                { q:"Quote the sentences you find most inspiring from 'Learning the Game'. How do they inspire you? Explain. (120–150 words)", answer:"I am most inspired by two sentences from the lesson. First, 'Don't waste your time playing insane games with these kids. Cricket is waiting for you at the nets.' This shows how Achrekar kept Sachin focused on his goal. It teaches us that we must not be distracted by unimportant activities when we have a bigger purpose to fulfil. Second, 'I owe myself to him.' This sentence shows Sachin's deep gratitude towards his coach. Even after becoming the greatest cricketer in the world, Sachin remained humble and gave full credit to his teacher. This inspires me to be grateful to those who guide and support us. These two sentences remind me that focus, hard work, and gratitude are the key qualities needed to become truly great in any field." },
+              ]
             }
           },
         ]
@@ -1650,10 +1692,94 @@ const DATA = {
           {
             id:"epo1", unit:"Unit 1", title:"Stopping by Woods on a Snowy Evening", month:"June",
             questions:{
-              mcq:[], fill:[], match:[], brief:[], truefalse:[], reasons:[], distinguish:[],
+              mcq:[
+                { q:"To whom do the woods belong?", options:["The poet","A farmer near the lake","A person whose house is in the village","The horse's owner"], correct:2 },
+                { q:"Why does the horse shake his harness bells?", options:["He is happy","He wants to rest","He thinks the poet has made a mistake","He sees a farmhouse"], correct:2 },
+                { q:"What sounds does the poet hear in the woods?", options:["Birds singing and water flowing","Wind and downy snowflakes","The horse neighing loudly","Bells and drums"], correct:1 },
+                { q:"Why does the poet say 'And miles to go before I sleep' twice?", options:["He forgot he already said it","To show he is tired","To stress that he has many duties left to fulfil","To describe the distance to the village"], correct:2 },
+                { q:"Where was the poet standing?", options:["Near a farmhouse","Between the woods and a frozen lake","At the village gate","On top of a hill"], correct:1 },
+                { q:"What is the rhyme scheme of the first stanza?", options:["abab","aabb","aaba","abba"], correct:2 },
+                { q:"'My little horse must think it queer' — what figure of speech is used here?", options:["Simile","Metaphor","Personification","Alliteration"], correct:2 },
+                { q:"What does 'promises to keep' symbolise?", options:["A marriage promise","Worldly duties and commitments","A promise to return to the woods","A promise made to the horse"], correct:1 },
+              ],
+              fill:[
+                { q:"After a long travel the poet entered a ________.", answer:"forest / wood" },
+                { q:"He realized that the owner of the wood lived in a ________.", answer:"village" },
+                { q:"The horse would think it very ________ to stop near the woods.", answer:"queer / strange" },
+                { q:"The poet was actually standing between the woods and ________.", answer:"a frozen lake" },
+                { q:"The time was ________.", answer:"evening / the darkest evening of the year" },
+                { q:"The horse indicated that the poet has made a ________ by shaking its head.", answer:"mistake" },
+                { q:"The poet felt that the woods are lovely, ________ and ________.", answer:"dark and deep" },
+                { q:"He suddenly realized that he had worldly ________ which would not allow him to ________ in the woods for a long time.", answer:"promises / duties; stay / stop" },
+              ],
+              match:[], 
+              brief:[
+                { q:"What information does the poet highlight about the season and the time of the day in the poem?", answer:"The poem is set in winter. The woods are filled with snow and the lakes are frozen. The poet sees the darkest evening of that particular year, which tells us it is night time in winter." },
+                { q:"In which way is the reaction of the speaker different from that of the horse? What does it convey?", answer:"The poet stops by the woods and wants to admire the beauty of the snow-filled woods. But his little horse thinks it strange to stop at an unknown place with no farmhouse nearby. It conveys that the horse is practical while the poet is sensitive to nature's beauty." },
+                { q:"What are the sounds heard by the poet?", answer:"Apart from the sound of the horse's harness bells, the poet can hear the gentle sweep of the wind and the soft sound of downy snowflakes falling." },
+                { q:"The poet is aware of two choices. What are they? What choice does he make ultimately?", answer:"The two choices before the poet are to stay in the woods and admire its beauty, or to continue his journey and fulfil his duties. The poet ultimately chooses to leave the woods and go back to his responsibilities." },
+                { q:"Pick out words from the poem that bring to mind peace and quiet.", answer:"'Easy wind', 'downy flake', 'darkest evening', 'lovely', 'dark and deep' — all these words bring to mind peace and quiet." },
+                { q:"Whom does 'he' refer to in 'He will not see me stopping here'?", answer:"'He' refers to the owner of the woods, whose house is in the village." },
+                { q:"Why should the horse think it queer to stop?", answer:"It is strange for the horse because they have stopped at a place where there is no farmhouse nearby, and the horse is not used to his master stopping in such an unusual spot." },
+                { q:"Why does the horse give his harness bells a shake?", answer:"The horse shakes his harness bells to check whether anything has gone wrong with the poet and to ask if there is some mistake in stopping at such an unusual place." },
+                { q:"How are the woods described in the poem?", answer:"The woods are described as lovely, dark and deep." },
+                { q:"Explain: 'miles to go before I sleep'.", answer:"This line means the poet has many worldly commitments and duties to fulfil before he can rest. 'Sleep' symbolises the end of his journey and responsibilities, while 'miles to go' represents all the work he still has ahead of him." },
+              ],
+              truefalse:[], reasons:[], distinguish:[],
+              memorise:[
+                { q:"Quote from memory: The first stanza of 'Stopping by Woods on a Snowy Evening'",
+                  lines:"Whose woods these are I think I know.\nHis house is in the village though;\nHe will not see me stopping here\nTo watch his woods fill up with snow.",
+                  answer:"Whose woods these are I think I know His house is in the village though He will not see me stopping here To watch his woods fill up with snow" },
+                { q:"Quote from memory: The second stanza of 'Stopping by Woods on a Snowy Evening'",
+                  lines:"My little horse must think it queer\nTo stop without a farmhouse near\nBetween the woods and frozen lake\nThe darkest evening of the year.",
+                  answer:"My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year" },
+                { q:"Quote from memory: The third stanza of 'Stopping by Woods on a Snowy Evening'",
+                  lines:"He gives his harness bells a shake\nTo ask if there is some mistake.\nThe only other sound's the sweep\nOf easy wind and downy flake.",
+                  answer:"He gives his harness bells a shake To ask if there is some mistake The only other sound's the sweep Of easy wind and downy flake" },
+                { q:"Quote from memory: The fourth (final) stanza of 'Stopping by Woods on a Snowy Evening'",
+                  lines:"The woods are lovely, dark and deep.\nBut I have promises to keep,\nAnd miles to go before I sleep,\nAnd miles to go before I sleep.",
+                  answer:"The woods are lovely dark and deep But I have promises to keep And miles to go before I sleep And miles to go before I sleep" },
+                { q:"Quote from memory: The complete poem 'Stopping by Woods on a Snowy Evening' by Robert Frost",
+                  lines:"Whose woods these are I think I know.\nHis house is in the village though;\nHe will not see me stopping here\nTo watch his woods fill up with snow.\n\nMy little horse must think it queer\nTo stop without a farmhouse near\nBetween the woods and frozen lake\nThe darkest evening of the year.\n\nHe gives his harness bells a shake\nTo ask if there is some mistake.\nThe only other sound's the sweep\nOf easy wind and downy flake.\n\nThe woods are lovely, dark and deep.\nBut I have promises to keep,\nAnd miles to go before I sleep,\nAnd miles to go before I sleep.",
+                  answer:"Whose woods these are I think I know His house is in the village though He will not see me stopping here To watch his woods fill up with snow My little horse must think it queer To stop without a farmhouse near Between the woods and frozen lake The darkest evening of the year He gives his harness bells a shake To ask if there is some mistake The only other sound's the sweep Of easy wind and downy flake The woods are lovely dark and deep But I have promises to keep And miles to go before I sleep And miles to go before I sleep" },
+              ],
               paragraph:[
-                { q:"It is said, \"The choices made by one, shapes one's destiny\". Ponder on the thought and write a paragraph.", answer:"Making a choice is a turning point in everyone's life. Our choices build our future. To make good choices, we should think about the future and ask for advice from wise people we trust. We cannot control everything in life, but we can choose how we act every day. Small choices, like working hard and listening to others, shape our path. While luck can help us start, our own choices decide who we become. In the end, we make our own life and we shape our own destiny." },
+                { q:"It is said, \"The choices made by one, shapes one's destiny\". Ponder on the thought and write a paragraph. (80–100 words)", answer:"Making a choice is a turning point in everyone's life. Our choices build our future. To make good choices, we should think about the future and ask for advice from wise people we trust. We cannot control everything in life, but we can choose how we act every day. Small choices, like working hard and listening to others, shape our path. While luck can help us start, our own choices decide who we become. In the end, we make our own life and we shape our own destiny." },
+                { q:"Write an appreciation of the poem 'Stopping by Woods on a Snowy Evening'. (80–100 words)", answer:"In this poem 'Stopping by Woods on a Snowy Evening', Robert Frost stands in front of a dark wood and wants to enjoy the snowy evening. Though he wants to stay back in the woods, he cannot do so as he has worldly commitments to fulfil. The poem uses beautiful imagery such as 'easy wind and downy flake' and 'lovely, dark and deep' to describe the peaceful woods. The figure of speech of personification is used when the horse is shown thinking. The last two lines, repeated for emphasis, remind us that duty must come before personal desire. It is a poem about the conflict between beauty and responsibility." },
               ]
+            }
+          },
+        ]
+      },
+      "Grammar": {
+        icon: "✏️",
+        lessons: [
+          {
+            id:"eg1", unit:"Unit 1", title:"Prepositions", month:"June",
+            questions:{
+              mcq:[
+                { q:"We have been living in Chennai _________ eight years.", options:["for","since","during","from"], correct:0 },
+                { q:"Abdul has taken _________ his father.", options:["at","after","from","to"], correct:1 },
+                { q:"Vimal generally goes to his workplace _________ bus.", options:["on","by","in","with"], correct:1 },
+                { q:"The cricket ball was hidden _________ the leaves.", options:["between","among","under","behind"], correct:1 },
+                { q:"Mani divided his toys _________ his brothers and sisters.", options:["between","among","with","to"], correct:1 },
+                { q:"'Since' refers to _________ .", options:["a duration of time","a particular point of time","a movement","a place"], correct:1 },
+                { q:"'For' refers to _________ .", options:["a particular point of time","a place","the duration of time","a movement"], correct:2 },
+                { q:"Which preposition is used when items are part of a group and not specifically named?", options:["Between","Among","During","Since"], correct:1 },
+                { q:"Which type of preposition is 'towards'?", options:["Preposition of Time","Preposition of Place","Preposition of Movement","None of these"], correct:2 },
+                { q:"Both 'during' and 'in' are used to describe actions that happen in a _________ .", options:["particular place","particular person","particular period of time","particular movement"], correct:2 },
+              ],
+              fill:[], match:[],
+              brief:[
+                { q:"What is a preposition? Give an example.", answer:"A preposition is a word that is placed before a noun or a pronoun to show its relationship to other words in a sentence. Example: The cat is on the wall." },
+                { q:"What are prepositions of time? Give examples.", answer:"Prepositions of time are used to indicate when a particular event happened. These include: in, on, at, since, for, during etc. Example: I was studying in the morning. She was born on the 5th of July." },
+                { q:"What are prepositions of place? Give examples.", answer:"Prepositions of place are used to indicate the location and come before a noun or pronoun. These include: in, on, between, behind, under, over, near etc. Example: The cat is on the wall. Raj is in his room." },
+                { q:"What are prepositions of movement? Give examples.", answer:"Prepositions of movement are used to describe movement. These include: to, into, towards, through etc. Example: I went to the book store. The swimmer jumped into the pool." },
+                { q:"What is the difference between 'since' and 'for'?", answer:"'Since' refers to a particular point of time. Example: I have been studying since 5 a.m. 'For' refers to the duration of time. Example: Maya has worked in this institution for 23 years." },
+                { q:"What is the difference between 'between' and 'among'?", answer:"'Between' is used when naming definite, individual items. Example: The final match will be held between India and Australia. 'Among' is used when the items are part of a group and are not specifically named. Example: The sailors divided the money among themselves." },
+                { q:"What are prepositional verbs? Give examples.", answer:"Prepositional verbs are verbs that are usually followed by prepositions before the object of the verb. Examples: The kids laughed at the hilarious antics of the clown. I believe in the healing power of a mother's touch." },
+              ],
+              truefalse:[], reasons:[], distinguish:[], paragraph:[]
             }
           },
         ]
@@ -2369,7 +2495,56 @@ function renderCurrentQuestion(){
     case "reasons":    renderTextAnswer(q, qnum, isLast, false); break;
     case "distinguish":renderDistinguish(q, qnum, isLast); break;
     case "paragraph":  renderTextAnswer(q, qnum, isLast, true); break;
+    case "memorise":   renderMemorise(q, qnum, isLast); break;
   }
+}
+
+
+// ── MEMORISE (Quote from Memory) ──
+// Shows the full poem/passage first. Student reads it, hides it,
+// then types it from memory. Score is based on word-level accuracy.
+function renderMemorise(q, qnum, isLast){
+  const peekBtn = currentMode!=="exam" ? `
+    <button class="btn-peek" id="mainPeekBtn" onclick="togglePeekMem()" style="margin-bottom:10px">
+      📖 Show / Hide the poem to study
+    </button>
+    <div class="peek-panel" id="peekPanel" style="font-family:Georgia,serif;white-space:pre-wrap;font-size:14px;line-height:1.8;color:var(--text)">
+${q.lines.replace(/</g,"&lt;")}
+    </div>` : "";
+  const actionBtns = currentMode==="exam"
+    ? `<button class="btn-check" id="checkBtn" onclick="examNextText(${isLast})">${isLast?"Finish ✓":"Next →"}</button>`
+    : `<button class="btn-check" id="checkBtn" onclick="checkTextAnswer()">Check Recitation</button>
+       <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
+  document.getElementById("quizBody").innerHTML=`
+    <div class="question-card">
+      <div class="q-label">🎤 Quote from Memory</div>
+      <div class="q-num">${qnum}</div>
+      <div class="q-text">${q.q}</div>
+    </div>
+    ${peekBtn}
+    <div class="answer-area" id="answerArea" style="margin-top:10px">
+      <textarea class="answer-textarea" id="answerInput"
+        placeholder="Study the poem above, then hide it and type it from memory here…"
+        style="min-height:180px;font-family:Georgia,serif;line-height:1.8"
+        oninput="fbLiveState({currentAnswer:this.value, typing:true})"
+        onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false"></textarea>
+      <div class="answer-actions">${actionBtns}</div>
+    </div>
+    <div class="result-panel" id="resultPanel"></div>
+    ${currentMode!=="exam"?`<div class="btn-row" id="btnRow" style="display:none">
+      <button class="btn-try-again" onclick="tryAgainQuestion()">🔁 Try Again</button>
+      <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
+    </div>`:""}`;
+}
+
+function togglePeekMem(){
+  const panel = document.getElementById("peekPanel");
+  const btn = document.getElementById("mainPeekBtn");
+  const ta = document.getElementById("answerInput");
+  if(!panel) return;
+  const showing = panel.classList.toggle("open");
+  btn.textContent = showing ? "📕 Hide poem — now type from memory!" : "📖 Show poem again";
+  if(ta) ta.disabled = showing; // lock textarea while poem is visible
 }
 
 // ── SHUFFLE helper ──
@@ -3958,6 +4133,7 @@ function renderMockQuestion(){
     case "reasons":    renderTextAnswer(item.q, qnum, renderIsLast, false); break;
     case "distinguish":renderDistinguish(item.q, qnum, renderIsLast); break;
     case "paragraph":  renderTextAnswer(item.q, qnum, renderIsLast, true); break;
+    case "memorise":   renderMemorise(item.q, qnum, renderIsLast); break;
   }
 }
 
@@ -4941,13 +5117,13 @@ function renderHowToEarnPoints(targetId){
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +8 or +5 per day</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions (50%+ score) between 6:00-6:59am for +8, or 7:00-7:59am for +5. Counts every day you do it — it adds up over the school year.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +8 or +5 per subject per day</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions (50%+ score) per subject between 6:00-6:59am for +70, or 7:00-7:59am for +50. Each subject earns its own bonus — study Social Science and English in the morning for double points!</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3, plus +5 for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions any other time of day for +3. Doing a morning AND evening session the same day adds an extra +5 on top.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3 per subject, +5 bonus for both</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer 3+ questions per subject any other time of day for +50 each. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -5011,11 +5187,15 @@ function celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTes
 
     const milestones = [
       { done: dailyGoal.completedToday, flag:"goal", points:10, label:"Daily Goal complete!" },
-      { done: sessionGoals.earlyDone,   flag:"early", points:8,  label:"Early Morning Session!" },
-      { done: sessionGoals.lateDone && !sessionGoals.earlyDone, flag:"late", points:5, label:"Morning Session!" },
-      { done: sessionGoals.eveningDone, flag:"evening", points:3, label:"Evening Session complete!" },
-      { done: sessionGoals.bothDone,    flag:"both", points:5,  label:"Studied twice today!" },
     ];
+    // Per-subject session milestones
+    Object.entries(sessionGoals.bySubject||{}).forEach(([subj,sg])=>{
+      const abbr = subj.split(" ")[0]; // e.g. "Social" from "Social Science"
+      if(sg.earlyDone)  milestones.push({ done:true, flag:"early_"+subj,   points:70, label:`Early Morning — ${abbr}! 🌅` });
+      else if(sg.lateDone) milestones.push({ done:true, flag:"late_"+subj, points:50, label:`Morning Session — ${abbr}! 🌅` });
+      if(sg.eveningDone) milestones.push({ done:true, flag:"evening_"+subj, points:50, label:`Evening Session — ${abbr}! 🌙` });
+      if(sg.bothDone)    milestones.push({ done:true, flag:"both_"+subj,    points:50, label:`Both sessions — ${abbr}! 🎉` });
+    });
 
     let anyNewMilestone = false;
     milestones.forEach(ms=>{
@@ -5157,22 +5337,25 @@ function calcDailyGoal(allScoredEntries){
   startOfToday.setHours(0,0,0,0);
   const todayMs = startOfToday.getTime();
 
-  // Builds an 8-type checklist scoped to entries from today that also fall
-  // within a given hour range (inclusive start, exclusive end). Used to show
-  // separate Morning / Evening checklists, not just the overall daily one.
+  // Only require types that actually have questions in the syllabus.
+  // This means students aren't blocked from completing the daily goal just
+  // because e.g. English Grammar has no True/False questions.
+  const activeTypes = getActiveQTypes();
+  const activeCount = activeTypes.length;
+
   function buildChecklistForWindow(startHour, endHour){
     const doneInWindow = new Set();
     allScoredEntries.forEach(e=>{
       if(e.ts < todayMs || !e.qtype) return;
-      if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return; // low-scoring attempts don't count
+      if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
       const hour = new Date(e.ts).getHours();
       const inWindow = startHour===null
-        ? !(hour>=6 && hour<8)   // "evening" = anything outside the 6-8am window
+        ? !(hour>=6 && hour<8)
         : (hour>=startHour && hour<endHour);
       if(inWindow) doneInWindow.add(e.qtype);
     });
-    const list = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneInWindow.has(qt.id) }));
-    return { checklist:list, doneCount:list.filter(c=>c.done).length, total:QTYPES.length };
+    const list = activeTypes.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneInWindow.has(qt.id) }));
+    return { checklist:list, doneCount:list.filter(c=>c.done).length, total:activeCount };
   }
 
   const doneToday = new Set();
@@ -5180,20 +5363,13 @@ function calcDailyGoal(allScoredEntries){
     if(e.ts >= todayMs && e.qtype && (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) doneToday.add(e.qtype);
   });
 
-  const checklist = QTYPES.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
+  const checklist = activeTypes.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
   const doneCount = checklist.filter(c=>c.done).length;
-  const completedToday = doneCount >= QTYPES.length;
+  const completedToday = doneCount >= activeCount;
 
-  // Morning (6-8am) and Evening (everything else) versions of the same 8-type
-  // checklist — lets him see which types he's covered in each session, not
-  // just overall for the day.
   const morningChecklist = buildChecklistForWindow(6, 8);
   const eveningChecklist = buildChecklistForWindow(null, null);
 
-  // Streak: how many consecutive days (including today, if already complete)
-  // the full 8-type goal was hit. Computed from the same entries, grouped by
-  // calendar day, walking backwards from today. Same score threshold applies —
-  // a streak should reflect days of genuine effort, not just activity.
   const byDay = {};
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
@@ -5205,16 +5381,14 @@ function calcDailyGoal(allScoredEntries){
   });
   let streak = 0;
   let cursor = todayMs;
-  // If today isn't complete yet, the streak counts up to yesterday instead —
-  // still gives credit for past consecutive days without requiring today to
-  // already be finished before showing any streak at all.
   if(!completedToday) cursor -= 86400000;
-  while(byDay[cursor] && byDay[cursor].size >= QTYPES.length){
+  // Streak: each past day must have covered all active types
+  while(byDay[cursor] && activeTypes.every(qt=>byDay[cursor].has(qt.id))){
     streak++;
     cursor -= 86400000;
   }
 
-  return { checklist, doneCount, total: QTYPES.length, completedToday, streak, morningChecklist, eveningChecklist };
+  return { checklist, doneCount, total:activeCount, completedToday, streak, morningChecklist, eveningChecklist };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5235,26 +5409,45 @@ function calcSessionGoals(allScoredEntries){
   startOfToday.setHours(0,0,0,0);
   const todayMs = startOfToday.getTime();
 
-  // Count today's entries into three buckets by hour-of-day.
+  // Count today's entries into buckets by hour-of-day (global + per-subject).
   let earlyCount=0, lateCount=0, eveningCount=0;
+  const subjectNames = Object.keys(DATA);
+  const subjectCounts = {};
+  subjectNames.forEach(s=>{ subjectCounts[s]={early:0,late:0,evening:0}; });
+
   allScoredEntries.forEach(e=>{
     if(e.ts < todayMs) return;
-    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return; // low-scoring attempts don't count toward "studied"
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const hour = new Date(e.ts).getHours();
-    if(hour===6) earlyCount++;
-    else if(hour===7) lateCount++;
-    else eveningCount++;
+    if(hour===6){ earlyCount++; }
+    else if(hour===7){ lateCount++; }
+    else{ eveningCount++; }
+    const subj = e.subject || '';
+    if(subjectCounts[subj]){
+      if(hour===6) subjectCounts[subj].early++;
+      else if(hour===7) subjectCounts[subj].late++;
+      else subjectCounts[subj].evening++;
+    }
   });
 
-  const earlyDone   = earlyCount >= MIN_QUESTIONS_FOR_SESSION;   // 6:00-6:59am — the one we most want to encourage
-  const lateDone     = lateCount >= MIN_QUESTIONS_FOR_SESSION;    // 7:00-7:59am — still morning, smaller reward
-  const morningDone  = earlyDone || lateDone;                     // either counts as "studied this morning"
-  const eveningDone  = eveningCount >= MIN_QUESTIONS_FOR_SESSION; // anytime outside the 6-8am window
-  const bothDone     = morningDone && eveningDone;                // showed up twice today
+  const earlyDone   = earlyCount >= MIN_QUESTIONS_FOR_SESSION;
+  const lateDone    = lateCount  >= MIN_QUESTIONS_FOR_SESSION;
+  const morningDone = earlyDone || lateDone;
+  const eveningDone = eveningCount >= MIN_QUESTIONS_FOR_SESSION;
+  const bothDone    = morningDone && eveningDone;
 
-  // Morning streak: consecutive days (including today, if already hit) where
-  // a morning session (6-8am) happened. Tracked separately from the 8-type
-  // streak since this is specifically about the early-rising habit.
+  // Per-subject session status for today
+  const bySubject = {};
+  subjectNames.forEach(s=>{
+    const sc = subjectCounts[s];
+    const sEarly   = sc.early   >= MIN_QUESTIONS_FOR_SESSION;
+    const sLate    = sc.late    >= MIN_QUESTIONS_FOR_SESSION;
+    const sMorning = sEarly || sLate;
+    const sEvening = sc.evening >= MIN_QUESTIONS_FOR_SESSION;
+    bySubject[s] = { earlyDone:sEarly, lateDone:sLate, morningDone:sMorning, eveningDone:sEvening, bothDone:sMorning&&sEvening };
+  });
+
+  // Morning streak (global — any subject counts)
   const byDayMorning = {};
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
@@ -5272,7 +5465,8 @@ function calcSessionGoals(allScoredEntries){
     cursor -= 86400000;
   }
 
-  return { earlyDone, lateDone, morningDone, eveningDone, bothDone, morningStreak, earlyCount, lateCount, eveningCount };
+  return { earlyDone, lateDone, morningDone, eveningDone, bothDone, morningStreak,
+           earlyCount, lateCount, eveningCount, bySubject };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5283,37 +5477,68 @@ function calcSessionGoals(allScoredEntries){
 //  doesn't evaporate at midnight just because "today" started fresh.
 // ═══════════════════════════════════════════════════════
 function calcCumulativeTotals(allScoredEntries){
-  // Group every scored, goal-eligible entry by calendar day, with both its
-  // qtype set (for the 8-type goal) and which hour-bucket it falls in (for
-  // morning/evening session detection).
-  const byDay = {}; // dayKey -> { qtypes:Set, early:count, late:count, evening:count }
+  // Group every scored, goal-eligible entry by calendar day + subject,
+  // for both the 8-type daily goal and per-subject morning/evening sessions.
+  const subjectNames = Object.keys(DATA);
+  // byDay: dayKey -> { qtypes:Set, early:count, late:count, evening:count }
+  const byDay = {};
+  // byDaySubj: "dayKey:subject" -> { early:count, late:count, evening:count }
+  const byDaySubj = {};
+
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT || !e.qtype) return;
     const d = new Date(e.ts); d.setHours(0,0,0,0);
-    const key = d.getTime();
-    if(!byDay[key]) byDay[key] = { qtypes:new Set(), early:0, late:0, evening:0 };
-    byDay[key].qtypes.add(e.qtype);
+    const dayKey = d.getTime();
     const hour = new Date(e.ts).getHours();
-    if(hour===6) byDay[key].early++;
-    else if(hour===7) byDay[key].late++;
-    else byDay[key].evening++;
+    // Global day bucket
+    if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set(), early:0, late:0, evening:0 };
+    byDay[dayKey].qtypes.add(e.qtype);
+    if(hour===6) byDay[dayKey].early++;
+    else if(hour===7) byDay[dayKey].late++;
+    else byDay[dayKey].evening++;
+    // Per-subject day bucket
+    const subj = e.subject || '';
+    if(subj){
+      const subjKey = dayKey + ':' + subj;
+      if(!byDaySubj[subjKey]) byDaySubj[subjKey] = { early:0, late:0, evening:0 };
+      if(hour===6) byDaySubj[subjKey].early++;
+      else if(hour===7) byDaySubj[subjKey].late++;
+      else byDaySubj[subjKey].evening++;
+    }
   });
 
   let daysGoalCompleted = 0;
+  // Global (legacy, kept for non-subject-aware points)
   let daysEarlyMorning = 0, daysLateMorning = 0, daysEvening = 0, daysBoth = 0;
+  // Per-subject cumulative session counts (subject -> counts)
+  const subjectSessions = {};
+  subjectNames.forEach(s=>{ subjectSessions[s] = { earlyMorning:0, lateMorning:0, evening:0, both:0 }; });
 
   Object.values(byDay).forEach(day=>{
-    if(day.qtypes.size >= QTYPES.length) daysGoalCompleted++;
+    const activeTypes = getActiveQTypes(); if(activeTypes.every(qt=>day.qtypes.has(qt.id))) daysGoalCompleted++;
     const early = day.early >= MIN_QUESTIONS_FOR_SESSION;
-    const late = day.late >= MIN_QUESTIONS_FOR_SESSION;
-    const evening = day.evening >= MIN_QUESTIONS_FOR_SESSION;
+    const late  = day.late  >= MIN_QUESTIONS_FOR_SESSION;
+    const eve   = day.evening >= MIN_QUESTIONS_FOR_SESSION;
     if(early) daysEarlyMorning++;
-    else if(late) daysLateMorning++; // only count the better tier once per day
-    if(evening) daysEvening++;
-    if((early||late) && evening) daysBoth++;
+    else if(late) daysLateMorning++;
+    if(eve) daysEvening++;
+    if((early||late) && eve) daysBoth++;
   });
 
-  return { daysGoalCompleted, daysEarlyMorning, daysLateMorning, daysEvening, daysBoth };
+  // Tally per-subject session days from byDaySubj
+  Object.entries(byDaySubj).forEach(([key, sc])=>{
+    const subj = key.split(':').slice(1).join(':');
+    if(!subjectSessions[subj]) return;
+    const early = sc.early   >= MIN_QUESTIONS_FOR_SESSION;
+    const late  = sc.late    >= MIN_QUESTIONS_FOR_SESSION;
+    const eve   = sc.evening >= MIN_QUESTIONS_FOR_SESSION;
+    if(early) subjectSessions[subj].earlyMorning++;
+    else if(late) subjectSessions[subj].lateMorning++;
+    if(eve) subjectSessions[subj].evening++;
+    if((early||late) && eve) subjectSessions[subj].both++;
+  });
+
+  return { daysGoalCompleted, daysEarlyMorning, daysLateMorning, daysEvening, daysBoth, subjectSessions };
 }
 
 // Fetches every Lesson Test attempt ever logged and sums the points earned —
@@ -5388,10 +5613,13 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     if((e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) growthPoints += getMarks(e.qtype);
   });
   growthPoints += cumulative.daysGoalCompleted * 10;   // full 8-type goal, any day — big, permanent
-  growthPoints += cumulative.daysEarlyMorning  * 8;    // 6-7am session, any day
-  growthPoints += cumulative.daysLateMorning   * 5;    // 7-8am session, any day
-  growthPoints += cumulative.daysEvening       * 3;    // evening session, any day
-  growthPoints += cumulative.daysBoth          * 5;    // showed up twice in one day, extra
+  // Per-subject morning/evening sessions — each subject earns its own bonus
+  Object.values(cumulative.subjectSessions||{}).forEach(ss=>{
+    growthPoints += ss.earlyMorning * 70;  // 6-7am for this subject
+    growthPoints += ss.lateMorning  * 50;  // 7-8am for this subject
+    growthPoints += ss.evening      * 50;  // evening session for this subject
+    growthPoints += ss.both         * 50;  // both morning+evening for this subject
+  });
   growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
   growthPoints = Math.round(growthPoints);
 
@@ -5429,28 +5657,32 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
     </div>
 
     <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700">⏰ Study Sessions Today</div>
-      </div>
-      <div style="display:flex;gap:6px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
-        <div style="flex:1;background:${sessionGoals.earlyDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.earlyDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
-          <div style="font-size:16px">🌅</div>
-          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.earlyDone?'6-7am ✓':'6-7am'}</div>
-          <div style="font-size:8px;opacity:.7">best time!</div>
-        </div>
-        <div style="flex:1;background:${sessionGoals.lateDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.lateDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
-          <div style="font-size:16px">🌤️</div>
-          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.lateDone?'7-8am ✓':'7-8am'}</div>
-          <div style="font-size:8px;opacity:.7">still morning</div>
-        </div>
-        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${sessionGoals.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:9px;padding:7px 4px;text-align:center">
-          <div style="font-size:16px">🌙</div>
-          <div style="font-size:10px;font-weight:700;margin-top:2px">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:8px;opacity:.7">anytime else</div>
-        </div>
-      </div>
-      ${sessionGoals.bothDone ? `<div style="font-size:12px;color:#7ee787;font-weight:700">🎉 Studied twice today!</div>` : ""}
-      ${sessionGoals.morningStreak>0 ? `<div style="font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px">⏰ Study Sessions Today</div>
+      ${Object.entries(sessionGoals.bySubject||{}).map(([subj,sg])=>{
+        const icon = DATA[subj]?.icon||'📚';
+        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)';
+        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.12)';
+        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)';
+        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':'rgba(255,255,255,.12)';
+        const timeLabel = sg.earlyDone?'6-7am ✓':sg.lateDone?'7-8am ✓':'Morning';
+        return `<div style="margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:4px">${icon} ${subj}</div>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1;background:${morningColor};border:1px solid ${morningBorder};border-radius:8px;padding:6px 4px;text-align:center">
+              <div style="font-size:14px">🌅</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.morningDone?timeLabel:'Morning'}${sg.morningDone?' ✓':''}</div>
+              <div style="font-size:8px;opacity:.6">${sg.morningDone?'+70 pts':'6-8am'}</div>
+            </div>
+            <div style="flex:1;background:${eveningColor};border:1px solid ${eveningBorder};border-radius:8px;padding:6px 4px;text-align:center">
+              <div style="font-size:14px">🌙</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px">${sg.eveningDone?'Evening ✓':'Evening'}</div>
+              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'+50 pts':'any time'}</div>
+            </div>
+            ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +5</div>':''}
+          </div>
+        </div>`;
+      }).join('')}
+      ${sessionGoals.morningStreak>0 ? `<div style="font-size:11px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:14px">
