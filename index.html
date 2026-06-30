@@ -6129,35 +6129,40 @@ async function showWelcomeBackPopup(){
   const morningNudgeHTML = (inMorningWindow && !sessionGoals.morningDone) ? `
     <div style="background:rgba(232,184,75,.15);border:1.5px solid var(--gold,#e8b84b);border-radius:12px;padding:10px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:#8a6500">${currentHour===6 ? "🌅 You're up early — nice!" : "🌤️ Still counts as morning!"}</div>
-      <div style="font-size:11.5px;color:#8a6500;margin-top:2px">Answer ${MIN_QUESTIONS_FOR_SESSION} questions in the next ${60-new Date().getMinutes()} min to lock in ${currentHour===6?"the big morning bonus":"your morning session"}.</div>
+      <div style="font-size:11.5px;color:#8a6500;margin-top:2px">Cover all question types in any subject in the next ${60-new Date().getMinutes()} min to earn the morning bonus.</div>
     </div>` : "";
 
-  // Always show all three session goals, regardless of what time it is right
-  // now — not just a nudge during the morning window. Lets him see at a glance
-  // what he's already locked in today and what's still open.
-  const sessionGoalsHTML = `
-    <div style="background:var(--parchment);border-radius:12px;padding:12px;text-align:left;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">⏰ Study Sessions Today</div>
-      <div style="display:flex;gap:5px;margin-bottom:${sessionGoals.morningStreak>0?'8px':'0'}">
-        <div style="flex:1;background:${sessionGoals.morningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.morningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
-          <div style="font-size:15px">🌅</div>
-          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.morningDone?'Morning ✓':'Morning'}</div>
-          <div style="font-size:8px;color:var(--muted)">best time!</div>
+  // Per-subject session tiles for the login popup — green=done, orange=started, grey=not yet
+  const sessionGoalsHTML = (() => {
+    const rows = Object.entries(sessionGoals.bySubject||{}).map(([subj,sg])=>{
+      const icon = DATA[subj]?.icon||'📚';
+      const mDone = sg.morningDone, eDone = sg.eveningDone;
+      const mStart = sg.mornStarted, eStart = sg.eveStarted;
+      const mBg = mDone?'rgba(76,204,138,.18)':mStart?'rgba(232,184,75,.18)':'#fff';
+      const mBorder = mDone?'var(--green)':mStart?'#e8a020':'var(--border)';
+      const eBg = eDone?'rgba(76,204,138,.18)':eStart?'rgba(232,184,75,.18)':'#fff';
+      const eBorder = eDone?'var(--green)':eStart?'#e8a020':'var(--border)';
+      const mLabel = mDone?'✓ Done':mStart?'Started…':'6–8am';
+      const eLabel = eDone?'✓ Done':eStart?'Started…':'5–10pm';
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);width:90px;text-align:left">${icon} ${subj.split(' ')[0]}</div>
+        <div style="flex:1;background:${mBg};border:1px solid ${mBorder};border-radius:7px;padding:4px;text-align:center">
+          <div style="font-size:10px;font-weight:700;color:var(--navy)">🌅 ${mLabel}</div>
+          <div style="font-size:8px;color:var(--muted)">${mDone?'+70 pts':mStart?'+10 so far':'all types'}</div>
         </div>
-        <div style="flex:1;
-          <div style="font-size:15px">🌤️</div>
-          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)"></div>
-          <div style="font-size:8px;color:var(--muted)">still morning</div>
+        <div style="flex:1;background:${eBg};border:1px solid ${eBorder};border-radius:7px;padding:4px;text-align:center">
+          <div style="font-size:10px;font-weight:700;color:var(--navy)">🌙 ${eLabel}</div>
+          <div style="font-size:8px;color:var(--muted)">${eDone?'+50 pts':eStart?'+10 so far':'all types'}</div>
         </div>
-        <div style="flex:1;background:${sessionGoals.eveningDone?'rgba(76,204,138,.18)':'#fff'};border:1px solid ${sessionGoals.eveningDone?'var(--green)':'var(--border)'};border-radius:8px;padding:6px 3px;text-align:center">
-          <div style="font-size:15px">🌙</div>
-          <div style="font-size:9.5px;font-weight:700;margin-top:1px;color:var(--navy)">${sessionGoals.eveningDone?'Evening ✓':'Evening'}</div>
-          <div style="font-size:8px;color:var(--muted)">5pm–10pm</div>
-        </div>
-      </div>
-      ${sessionGoals.bothDone ? `<div style="font-size:11.5px;color:var(--green);font-weight:700">🎉 Studied twice today!</div>` : ""}
-      ${sessionGoals.morningStreak>0 ? `<div style="font-size:11.5px;color:#b8860b;font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
+      </div>`;
+    }).join('');
+    const streak = sessionGoals.morningStreak>0
+      ? `<div style="font-size:11px;color:#b8860b;font-weight:700;margin-top:6px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : '';
+    return `<div style="background:var(--parchment);border-radius:12px;padding:11px;text-align:left;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px">⏰ Today's Sessions</div>
+      ${rows}${streak}
     </div>`;
+  })();
 
   // Compact Morning/Evening versions of the same checklist, for the popup.
   function popupMiniChecklist(list){
