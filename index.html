@@ -126,6 +126,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .qtype-tab .qt-count{font-size:10px;background:var(--parchment);color:var(--muted);padding:1px 6px;border-radius:20px;font-weight:700}
 .qtype-tab.active .qt-count{background:var(--navy);color:#fff}
 
+/* ── SPEED TIMER ── */
+#speedTimerWrap{margin:0 0 10px;animation:fadeIn .3s}
+#speedTimerBar{height:5px;border-radius:3px;transition:width .5s linear,background .5s;background:var(--green)}
+#speedTimerLabel{font-size:11px;font-weight:700;margin-top:4px;display:flex;justify-content:space-between;align-items:center}
+#speedTimerLabel .timer-pts{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:800;background:var(--green);color:#fff;transition:background .5s}
+
 /* ── QUIZ BODY ── */
 .quiz-body{flex:1;padding:20px 16px;max-width:700px;width:100%;margin:0 auto}
 @media(min-width:820px){.quiz-body{padding:28px 32px}}
@@ -2252,6 +2258,7 @@ function stopTimer(){
   if(qEl) qEl.textContent="";
 }
 function stampQuestion(){
+  stopSpeedTimer();
   const elapsed=Date.now()-_questionStart;
   _questionTimes.push(elapsed);
   _questionStart=Date.now();
@@ -2306,12 +2313,109 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   // single time, without waiting for the Scoreboard to reload. Kept small and
   // auto-dismissing on purpose: this happens often, so it should never feel
   // like an interruption, just a quiet "yes, that counted."
-  if(pct >= MIN_SCORE_FOR_GOAL_CREDIT) showPointsToast(getMarks(currentQType));
+  if(pct >= MIN_SCORE_FOR_GOAL_CREDIT){
+    showPointsToast(getMarks(currentQType));
+    // Speed bonus — only for written types where fast = good recall
+    const sb = getSpeedBonus(currentQType, elapsed);
+    if(sb) setTimeout(()=>showSpeedBonusToast(sb.points, sb.label), 600);
+  }
+}
+
+function showSpeedBonusToast(points, label){
+  let stack = document.getElementById("pointsToastStack");
+  if(!stack){
+    stack = document.createElement("div");
+    stack.id = "pointsToastStack";
+    stack.style.cssText = "position:fixed;top:14px;right:14px;z-index:99997;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none";
+    document.body.appendChild(stack);
+  }
+  const toast = document.createElement("div");
+  toast.style.cssText = "background:#c45000;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(-8px) scale(.9);transition:opacity .25s,transform .25s;white-space:nowrap";
+  toast.textContent = `+${points} Speed Bonus ${label}`;
+  stack.appendChild(toast);
+  requestAnimationFrame(()=>{ toast.style.opacity="1"; toast.style.transform="translateY(0) scale(1)"; });
+  setTimeout(()=>{
+    toast.style.opacity="0"; toast.style.transform="translateY(-8px) scale(.9)";
+    setTimeout(()=>toast.remove(), 250);
+  }, 2200);
 }
 function timeChip(ms){
   const s=Math.round(ms/1000);
   const cls=s<=15?"fast":s>=60?"slow":"";
   return `<span class="time-chip ${cls}">⏱ ${fmtMs(ms)}</span>`;
+}
+
+// ── SPEED TIMER ──
+let _speedTimerInterval = null;
+
+function startSpeedTimer(qtype){
+  stopSpeedTimer();
+  const wrap = document.getElementById("speedTimerWrap");
+  if(!wrap) return;
+  const thresholds = SPEED_BONUS[qtype];
+  if(!thresholds) return;
+
+  const fastMs  = thresholds.fast[0];
+  const goodMs  = thresholds.good[0];
+  const fastPts = thresholds.fast[1];
+  const goodPts = thresholds.good[1];
+  const startMs = Date.now();
+
+  function fmtCountdown(ms){
+    if(ms<=0) return "0s";
+    const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
+    return m>0?`${m}:${String(s).padStart(2,'0')}`:`${s}s`;
+  }
+
+  function tick(){
+    const elapsed = Date.now() - startMs;
+    const bar = document.getElementById("speedTimerBar");
+    const pts = document.getElementById("speedTimerPts");
+    if(!bar){ stopSpeedTimer(); return; }
+
+    if(elapsed <= fastMs){
+      const rem = fastMs - elapsed;
+      bar.style.width = Math.max(0,(rem/fastMs)*100)+"%";
+      bar.style.background = "#4caf82";
+      if(pts){ pts.style.background="#4caf82"; pts.textContent=`⚡ +${fastPts} pts if done in ${fmtCountdown(rem)}`; }
+    } else if(elapsed <= goodMs){
+      const rem = goodMs - elapsed;
+      bar.style.width = Math.max(0,(rem/(goodMs-fastMs))*100)+"%";
+      bar.style.background = "#e8a020";
+      if(pts){ pts.style.background="#e8a020"; pts.textContent=`🕐 +${goodPts} pts if done in ${fmtCountdown(rem)}`; }
+    } else {
+      bar.style.width = "0%";
+      bar.style.background = "#ccc";
+      if(pts){ pts.style.background="#aaa"; pts.textContent="No speed bonus"; }
+      stopSpeedTimer();
+    }
+  }
+
+  tick();
+  _speedTimerInterval = setInterval(tick, 500);
+}
+
+function stopSpeedTimer(){
+  if(_speedTimerInterval){ clearInterval(_speedTimerInterval); _speedTimerInterval=null; }
+}
+
+// Speed bonus thresholds (ms) per question type.
+// Only applies to written types where time reflects genuine recall speed.
+// Returns { points, label } or null if no bonus.
+const SPEED_BONUS = {
+  brief:      { fast:[2*60000, 5, "⚡ Quick recall!"],   good:[4*60000,  2, "🕐 Good pace!"] },
+  reasons:    { fast:[3*60000, 5, "⚡ Quick recall!"],   good:[5*60000,  2, "🕐 Good pace!"] },
+  paragraph:  { fast:[5*60000, 5, "⚡ Fast writer!"],    good:[8*60000,  2, "🕐 Good pace!"] },
+  distinguish:{ fast:[4*60000, 5, "⚡ Quick recall!"],   good:[6*60000,  2, "🕐 Good pace!"] },
+  memorise:   { fast:[3*60000, 5, "⚡ Well memorised!"], good:[5*60000,  2, "🕐 Good pace!"] },
+};
+
+function getSpeedBonus(qtype, ms){
+  const thresholds = SPEED_BONUS[qtype];
+  if(!thresholds) return null;
+  if(ms <= thresholds.fast[0]) return { points: thresholds.fast[1], label: thresholds.fast[2] };
+  if(ms <= thresholds.good[0]) return { points: thresholds.good[1], label: thresholds.good[2] };
+  return null;
 }
 
 // Count unique questions actually learnt (deduped by lesson+qtype+qIndex),
@@ -2525,6 +2629,15 @@ ${q.lines.replace(/</g,"&lt;")}
       <div class="q-text">${q.q}</div>
     </div>
     ${peekBtn}
+    <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
+        <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
+      </div>
+    </div>
     <div class="answer-area" id="answerArea" style="margin-top:10px">
       <textarea class="answer-textarea" id="answerInput"
         placeholder="Study the poem above, then hide it and type it from memory here…"
@@ -2548,6 +2661,7 @@ function togglePeekMem(){
   const showing = panel.classList.toggle("open");
   btn.textContent = showing ? "📕 Hide poem — now type from memory!" : "📖 Show poem again";
   if(ta) ta.disabled = showing; // lock textarea while poem is visible
+  if(!showing) startSpeedTimer("memorise"); // timer starts when poem is hidden
 }
 
 // ── SHUFFLE helper ──
@@ -2940,6 +3054,17 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
       <button onclick="startPartsMode()" style="margin-left:6px;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">Write it in parts</button>
     </div>` : "";
 
+  const speedTimerHTML = SPEED_BONUS[currentQType] ? `
+    <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
+        <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
+      </div>
+    </div>` : "";
+
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">${label}</div>
@@ -2948,6 +3073,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
     </div>
     ${peekBtn}
     ${partsOfferHTML}
+    ${speedTimerHTML}
     <div class="answer-area" id="answerArea">
       <textarea class="answer-textarea" id="answerInput" placeholder="${placeholder}" style="min-height:${minH}px" disabled onpaste="return false" oncopy="return false" oncut="return false" oncontextmenu="return false" oninput="fbLiveState({currentAnswer:this.value, typing:true})"></textarea>
       <div class="answer-actions">${actionBtns}</div>
@@ -2962,7 +3088,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   // Mock exam skips this since there's no peek option there at all.
   if(currentMode==="exam"){
     const ta=document.getElementById("answerInput");
-    if(ta) ta.disabled=false;
+    if(ta){ ta.disabled=false; startSpeedTimer(currentQType); }
   }
 }
 
@@ -3095,6 +3221,8 @@ function togglePartPeek(){
     const hadWrittenSomething = !!(ta && ta.value && ta.value.trim());
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
+    // Start the speed countdown the moment the student closes the peek and begins writing
+    if(!hadWrittenSomething) startSpeedTimer(currentQType);
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
@@ -3408,10 +3536,12 @@ function checkTextAnswer(){
     ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${hintsUsed} time${hintsUsed!==1?"s":""} — score capped at ${HINT_SCORE_CAP[hintsUsed-1]}% = ${pct}%</div>`
     : "";
 
+  const sb = pct>=MIN_SCORE_FOR_GOAL_CREDIT ? getSpeedBonus(currentQType, txtElapsed) : null;
+  const speedChip = sb ? `<span style="background:#c45000;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px">⚡ +${sb.points} Speed Bonus!</span>` : "";
   const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
-      <div><div class="score-label">${lbl} ${timeChip(txtElapsed)}</div>
+      <div><div class="score-label">${lbl} ${timeChip(txtElapsed)}${speedChip}</div>
       <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div>
       ${hintNote}</div>
     </div>
@@ -3465,6 +3595,7 @@ function renderDistinguish(q, qnum, isLast){
        <button class="btn-skip" onclick="skipQuestion(${isLast})">Skip</button>`;
 
   const distPlaceholder = currentMode==="exam" ? null : "Tap 👁 above, then close it to start writing…";
+  if(currentMode==="exam") setTimeout(()=>startSpeedTimer("distinguish"), 50);
 
   fbLiveState({
     mode: currentLesson?.id==="__mock__" ? "mock" : "study",
@@ -3487,6 +3618,15 @@ function renderDistinguish(q, qnum, isLast){
       <div class="q-text distinguish">${q.q || `Distinguish between <strong>${q.termA}</strong> and <strong>${q.termB}</strong>.`}</div>
     </div>
     ${peekBtn}
+    <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
+        <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
+        <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
+      </div>
+    </div>
     <div class="answer-area" id="answerArea">
       <div class="dist-input-grid">
         <div class="dist-input-col">
@@ -3526,6 +3666,7 @@ function togglePeekDist(){
     if(hadWrittenSomething) recordPeekUsed();
     if(taA){ taA.disabled=false; taA.focus(); }
     if(taB) taB.disabled=false;
+    if(!hadWrittenSomething) startSpeedTimer("distinguish");
     if(b){
       const key = getPrevAttemptKey(currentQIndex);
       const used = hintsUsedByQuestion[key] || 0;
@@ -5120,18 +5261,24 @@ function renderHowToEarnPoints(targetId){
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">⚡ Speed Bonus — +5 or +2 per written question</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer written questions fast and well (50%+) to earn extra points on top of the base mark.</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:5px;line-height:1.8">Brief/Reasons: under 2–3 min = +5 · under 4–5 min = +2<br>Paragraph: under 5 min = +5 · under 8 min = +2<br>Distinguish: under 4 min = +5 · under 6 min = +2<br>Memorise: under 3 min = +5 · under 5 min = +2</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📅 Daily Goal — +10 per day</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Score 50%+ on at least one question of every type (all 8) in the same day. Every day you do this adds another +10, forever.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Score 50%+ on at least one question of every active type in the same day. Every day you do this adds another +10, forever.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +8 or +5 per subject per day</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject between 6:00-6:59am for +70, or 7:00-7:59am for +50. Each subject earns its own bonus — cover Social Science AND English in the morning for double points!</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌅 Morning Session — +70 or +50 per subject</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject between 6:00–6:59am for +70, or 7:00–7:59am for +50. Each subject earns its own bonus. Started but not finished = +10.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +3 per subject, +5 bonus for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Answer at least one question of every type that subject has anytime after 8:00am for +50 per subject. Doing both a morning AND evening session in the same subject adds an extra +5 for that subject.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +50 per subject, +50 for both</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject anytime after 8:00am for +50. Both morning AND evening in the same subject on the same day = extra +50. Started but not finished = +10.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -5685,6 +5832,15 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     growthPoints += ss.mornStarted  * 10;  // started morning but didn't finish all types
     growthPoints += ss.eveStarted   * 10;  // started evening but didn't finish all types
   });
+  // Speed bonus: count from all stored log entries
+  let speedBonusTotal = 0;
+  allScoredEntries.forEach(e=>{
+    if((e.pct||0) >= MIN_SCORE_FOR_GOAL_CREDIT && e.timeMs){
+      const sb = getSpeedBonus(e.qtype, e.timeMs);
+      if(sb) speedBonusTotal += sb.points;
+    }
+  });
+  growthPoints += speedBonusTotal;
   growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
   growthPoints = Math.round(growthPoints);
 
