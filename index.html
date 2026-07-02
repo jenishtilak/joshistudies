@@ -1489,9 +1489,36 @@ const DATA = {
                 {
                   q:"Mention the forms of democracy.",
                   answer:"Forms of Democratic government\n\n1. Parliamentary form of government\n2. Presidential form of government",
+                },
+                {
+                  q:"What is Direct Democracy?",
+                  answer:"When the people themselves directly express their will on public affairs, the type of government is called pure or direct democracy. It existed in the city-states of ancient Greece and is still practised in Switzerland."
+                },
+                {
+                  q:"What is Indirect Democracy?",
+                  answer:"When the people express their will on public affairs through their elected representatives, the type of government is called indirect or representative democracy. India follows this form of democracy."
                 }
               ],
-              distinguish:[], paragraph:[], truefalse:[], reasons:[]
+              truefalse:[], reasons:[],
+              distinguish:[
+                {
+                  q:"Distinguish between Direct Democracy and Indirect Democracy.",
+                  termA:"Direct Democracy",
+                  answerA:"When the people themselves directly express their will on public affairs, the type of government is called pure or direct democracy.",
+                  termB:"Indirect Democracy",
+                  answerB:"When the people express their will on public affairs through their elected representatives, the type of government is called indirect or representative democracy."
+                }
+              ],
+              paragraph:[
+                {
+                  q:"What are the challenges to Indian democracy? Explain.",
+                  answer:"India faces several challenges to democracy:\n\n1. Illiteracy: A large section of the population is illiterate and cannot make informed political decisions.\n2. Poverty: Poverty forces people to vote for immediate material benefits rather than good governance.\n3. Gender discrimination: Women are still not given equal participation in political life.\n4. Regionalism: People sometimes place regional interests above national interests.\n5. Casteism, communalism and religious fundamentalism: These divide people along caste, community and religious lines and threaten democratic unity.\n6. Corruption: Corruption at various levels of government undermines democratic institutions.\n7. Criminalisation of politics: The entry of criminals into politics weakens the democratic process.\n8. Political violence: Violence during elections and political activities disrupts free and fair democracy."
+                },
+                {
+                  q:"Explain the conditions necessary for the success of democracy in India.",
+                  answer:"The following conditions are necessary for the success of democracy in India:\n\n1. Empowerment of the poor and illiterates to enjoy the goodness of democracy.\n2. An impartial and efficient press to form public opinion.\n3. Presence of strong public opinion.\n4. Feeling of tolerance and communal harmony among the people.\n5. Powerful and responsible opposition.\n\nWhen these conditions are fulfilled, democracy can truly function as a government of the people, by the people and for the people."
+                }
+              ]
             }
           },
           { id:"c2", unit:"Unit 2", title:"Election, Political Parties and Pressure Groups", month:"July",
@@ -5515,13 +5542,32 @@ function calcDailyGoal(allScoredEntries){
   }
 
   const doneToday = new Set();
+  // Per-subject: which qtypes done today in each subject
+  const subjectNames = Object.keys(DATA);
+  const doneBySubject = {};
+  subjectNames.forEach(s=>{ doneBySubject[s] = new Set(); });
+
   allScoredEntries.forEach(e=>{
-    if(e.ts >= todayMs && e.qtype && (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) doneToday.add(e.qtype);
+    if(e.ts >= todayMs && e.qtype && (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT){
+      doneToday.add(e.qtype);
+      const subj = e.subject||'';
+      if(doneBySubject[subj]) doneBySubject[subj].add(e.qtype);
+    }
   });
 
   const checklist = activeTypes.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneToday.has(qt.id) }));
   const doneCount = checklist.filter(c=>c.done).length;
   const completedToday = doneCount >= activeCount;
+
+  // Per-subject checklist: only types that exist in that subject
+  const subjectChecklists = {};
+  subjectNames.forEach(s=>{
+    const subjTypes = getActiveQTypesForSubject(s);
+    subjectChecklists[s] = subjTypes.map(qt=>({
+      id:qt.id, label:qt.label, icon:qt.icon,
+      done: doneBySubject[s].has(qt.id)
+    }));
+  });
 
   const morningChecklist = buildChecklistForWindow(6, 8);
   const eveningChecklist = buildChecklistForWindow(null, null);
@@ -5544,7 +5590,7 @@ function calcDailyGoal(allScoredEntries){
     cursor -= 86400000;
   }
 
-  return { checklist, doneCount, total:activeCount, completedToday, streak, morningChecklist, eveningChecklist };
+  return { checklist, doneCount, total:activeCount, completedToday, streak, morningChecklist, eveningChecklist, subjectChecklists };
 }
 
 
@@ -5911,26 +5957,33 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       ${sessionGoals.morningStreak>0 ? `<div style="font-size:11px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
     </div>
 
-    <div style="display:flex;gap:10px;margin-bottom:14px">
-      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:11px;font-weight:700">🌅 Morning</div>
-          <div style="font-size:11px;font-weight:800">${dailyGoal.morningChecklist.doneCount}/${dailyGoal.morningChecklist.total}</div>
-        </div>
-        <div style="font-size:9px;opacity:.65;margin-bottom:6px">${sessionGoals.morningDone?'✓ Morning done':'6-8am · not yet'}${sessionGoals.morningStreak>0?` · 🔥${sessionGoals.morningStreak}d`:''}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.morningChecklist.checklist)}</div>
+    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700">📋 Today's Goal — Question Types</div>
+        <div style="font-size:11px;font-weight:800;opacity:.8">${dailyGoal.doneCount}/${dailyGoal.total} types</div>
       </div>
-      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:11px;font-weight:700">🌙 Evening</div>
-          <div style="font-size:11px;font-weight:800">${dailyGoal.eveningChecklist.doneCount}/${dailyGoal.eveningChecklist.total}</div>
-        </div>
-        <div style="font-size:9px;opacity:.65;margin-bottom:6px">${sessionGoals.eveningDone?'✓ done today':'not yet'}${sessionGoals.bothDone?' · 🎉 both!':''}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${miniChecklistHTML(dailyGoal.eveningChecklist.checklist)}</div>
-      </div>
+      ${Object.entries(dailyGoal.subjectChecklists||{}).map(([subj,list])=>{
+        if(!list.length) return '';
+        const icon = DATA[subj]?.icon||'📚';
+        const doneCount = list.filter(c=>c.done).length;
+        const allDone = doneCount === list.length;
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div style="font-size:10px;font-weight:700;opacity:.85">${icon} ${subj}</div>
+            <div style="font-size:9px;font-weight:800;color:${allDone?'#7ee787':'rgba(255,255,255,.5)'}">${allDone?'✅ Complete':doneCount+'/'+list.length}</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">
+            ${list.map(c=>`
+              <div style="display:flex;align-items:center;gap:3px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)'};border:1px solid ${c.done?'rgba(126,231,135,.4)':'rgba(255,255,255,.12)'};border-radius:6px;padding:2px 6px">
+                <span style="font-size:10px">${c.done?'✅':c.icon}</span>
+                <span style="font-size:8.5px;${c.done?'text-decoration:line-through;opacity:.6':''}">${c.label}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+      ${dailyGoal.streak>0 ? `<div style="font-size:11px;color:var(--gold,#e8b84b);font-weight:700;margin-top:6px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?' (today included)':''}</div>` : ''}
+      ${dailyGoal.completedToday ? `<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">🎉 Full daily goal complete!</div>` : ''}
     </div>
-    ${dailyGoal.completedToday ? `<div style="text-align:center;font-size:12px;color:#7ee787;font-weight:700;margin-bottom:10px">🎉 Full daily goal complete — both sessions covered all 8 types!</div>` : ""}
-    ${dailyGoal.streak>0 ? `<div style="text-align:center;font-size:12px;color:var(--gold,#e8b84b);font-weight:700;margin-bottom:14px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?" (today included)":""}</div>` : ""}
 
     <details style="margin-bottom:4px">
       <summary style="cursor:pointer;font-size:12px;font-weight:700;opacity:.85;padding:6px 2px;list-style:none">📊 More stats (coverage, mastery, trend, totals) ▾</summary>
@@ -6326,29 +6379,31 @@ async function showWelcomeBackPopup(){
     </div>`;
   })();
 
-  // Compact Morning/Evening versions of the same checklist, for the popup.
-  function popupMiniChecklist(list){
-    return list.map(c=>`
-      <div style="display:flex;align-items:center;gap:3px;background:${c.done?'rgba(76,204,138,.15)':'#fff'};border:1px solid ${c.done?'var(--green)':'var(--border)'};border-radius:6px;padding:3px 5px">
-        <span style="font-size:10px">${c.done?'✅':c.icon}</span>
-        <span style="font-size:8.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
-      </div>`).join("");
-  }
-  const morningTypesHTML = `
-    <div style="flex:1;background:#fff;border-radius:10px;padding:8px;text-align:left">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <div style="font-size:10px;font-weight:700;color:var(--navy)">🌅 Morning</div>
-        <div style="font-size:10px;font-weight:800;color:var(--navy)">${dailyGoal.morningChecklist.doneCount}/${dailyGoal.morningChecklist.total}</div>
+  // Per-subject checklist for popup — shows which types done in which subject
+  const goalTypesHTML = `
+    <div style="background:var(--parchment);border-radius:10px;padding:10px;text-align:left;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--navy)">📋 Today's Goal</div>
+        <div style="font-size:10px;font-weight:800;color:var(--navy)">${dailyGoal.doneCount}/${dailyGoal.total} types</div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:3px">${popupMiniChecklist(dailyGoal.morningChecklist.checklist)}</div>
-    </div>`;
-  const eveningTypesHTML = `
-    <div style="flex:1;background:#fff;border-radius:10px;padding:8px;text-align:left">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <div style="font-size:10px;font-weight:700;color:var(--navy)">🌙 Evening</div>
-        <div style="font-size:10px;font-weight:800;color:var(--navy)">${dailyGoal.eveningChecklist.doneCount}/${dailyGoal.eveningChecklist.total}</div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:3px">${popupMiniChecklist(dailyGoal.eveningChecklist.checklist)}</div>
+      ${Object.entries(dailyGoal.subjectChecklists||{}).map(([subj,list])=>{
+        if(!list.length) return '';
+        const icon = DATA[subj]?.icon||'📚';
+        const done = list.filter(c=>c.done).length;
+        const allDone = done===list.length;
+        return \`<div style="margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <div style="font-size:9.5px;font-weight:700;color:var(--navy)">\${icon} \${subj}</div>
+            <div style="font-size:9px;font-weight:800;color:\${allDone?'var(--green)':'var(--muted)'}">\${allDone?'✅':done+'/'+list.length}</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">
+            \${list.map(c=>\`<div style="display:flex;align-items:center;gap:2px;background:\${c.done?'rgba(76,204,138,.15)':'#fff'};border:1px solid \${c.done?'var(--green)':'var(--border)'};border-radius:5px;padding:2px 5px">
+              <span style="font-size:9px">\${c.done?'✅':c.icon}</span>
+              <span style="font-size:7.5px;\${c.done?'text-decoration:line-through;opacity:.6':''}">\${c.label}</span>
+            </div>\`).join('')}
+          </div>
+        </div>\`;
+      }).join('')}
     </div>`;
 
   overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
@@ -6365,13 +6420,10 @@ async function showWelcomeBackPopup(){
     ${morningNudgeHTML}
     ${sessionGoalsHTML}
 
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      ${morningTypesHTML}
-      ${eveningTypesHTML}
-    </div>
+    ${goalTypesHTML}
     ${dailyGoal.completedToday
-      ? `<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:16px">🎉 Both sessions covered all 8 types — goal complete!</div>`
-      : `<div style="font-size:11.5px;color:var(--muted);margin-bottom:16px">Cover the remaining types in a morning or evening session to finish today's goal.</div>`}
+      ? `<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-bottom:12px">🎉 Daily goal complete!</div>`
+      : `<div style="font-size:11px;color:var(--muted);margin-bottom:12px">Complete the remaining types above to finish today's goal.</div>`}
     ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:#b8860b;font-weight:700;margin-bottom:16px">🔥 ${dailyGoal.streak} day streak</div>` : ""}
 
     <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;margin-top:0;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>
