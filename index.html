@@ -688,13 +688,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
 <!-- SCOREBOARD PANEL (standalone floating) -->
 <div class="report-panel" id="scoreboardPanel" onclick="if(event.target===this)closeScoreboardPanel()">
-  <div class="report-sheet" style="position:relative">
-    <button onclick="closeScoreboardPanel()" style="position:sticky;top:0;float:right;margin-top:-4px;background:#e05c5c;color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:15px;font-weight:700;cursor:pointer;z-index:10">✕</button>
-    <div class="report-handle"></div>
-    <div class="report-title">🏆 Scoreboard</div>
-    <div id="studentScoreboardTotal" style="background:var(--navy);color:#fff;border-radius:12px;padding:14px 16px;margin:10px 0;font-size:13px"></div>
-    <div id="scoreboardHowToEarn" style="margin-top:14px"></div>
-    <button class="report-close" style="width:100%;margin-top:14px" onclick="closeScoreboardPanel()">Done</button>
+  <div class="report-sheet" style="background:var(--navy);padding:20px 20px 32px">
+    <div class="report-handle" style="background:rgba(255,255,255,.2)"></div>
+    <div id="studentScoreboardTotal" style="color:#fff;font-size:13px"></div>
+    <button onclick="closeScoreboardPanel()" style="width:100%;margin-top:16px;padding:11px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>
   </div>
 </div>
 
@@ -1512,7 +1509,7 @@ const DATA = {
               paragraph:[
                 {
                   q:"What are the challenges to Indian democracy? Explain.",
-                  answer:"India faces several challenges to democracy:\n\n1. Illiteracy: A large section of the population is illiterate and cannot make informed political decisions.\n2. Poverty: Poverty forces people to vote for immediate material benefits rather than good governance.\n3. Gender discrimination: Women are still not given equal participation in political life.\n4. Regionalism: People sometimes place regional interests above national interests.\n5. Casteism, communalism and religious fundamentalism: These divide people along caste, community and religious lines and threaten democratic unity.\n6. Corruption: Corruption at various levels of government undermines democratic institutions.\n7. Criminalisation of politics: The entry of criminals into politics weakens the democratic process.\n8. Political violence: Violence during elections and political activities disrupts free and fair democracy."
+                  answer:"The challenges to Indian democracy are:\n\n1. Illiteracy\n2. Poverty\n3. Gender discrimination\n4. Regionalism\n5. Casteism, communalism and religious fundamentalism\n6. Corruption\n7. Criminalisation of politics\n8. Political violence"
                 },
                 {
                   q:"Explain the conditions necessary for the success of democracy in India.",
@@ -5896,145 +5893,129 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
   const sessionCount = Object.keys(bySession).length;
   const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
   const subjectBreakdown = calcSubjectBreakdown(allScoredEntries||[]);
+  const trendArrow = trend>60?"↗":trend<40?"↘":"→";
+  const trendColor = trend>60?"#7ee787":trend<40?"#ffa07a":"rgba(255,255,255,.5)";
+  const W = "rgba(255,255,255,";
 
-  const masteryLabel = masteryScore>=80 ? "🌟 Excellent mastery!" : masteryScore>=60 ? "📈 Good progress!" : masteryScore>=40 ? "🌱 Keep growing!" : "💪 Just getting started!";
-  const trendArrow = trend>60 ? "↗ improving" : trend<40 ? "↘ slipping" : "→ steady";
-  const trendColor = trend>60 ? "#7ee787" : trend<40 ? "#ffa07a" : "#d8d8d8";
+  // ── HERO ──
+  var hero = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">'
+    +'<div>'
+      +'<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:'+W+'.5);margin-bottom:3px">Growth Points</div>'
+      +'<div style="font-size:44px;font-weight:900;color:var(--gold,#e8b84b);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums">'+growthPoints.toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:'+W+'.35);margin-top:4px">never resets · keeps climbing</div>'
+    +'</div>'
+    +'<div style="text-align:right">'
+      +'<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:'+W+'.5);margin-bottom:3px">Mastery</div>'
+      +'<div style="font-size:28px;font-weight:900;color:#fff;line-height:1">'+masteryScore+'<span style="font-size:12px;color:'+W+'.4)">/100</span></div>'
+      +'<div style="font-size:11px;color:'+trendColor+';font-weight:700;margin-top:4px">'+trendArrow+' '+coverage+'% covered</div>'
+    +'</div>'
+  +'</div>'
+  // Stats pill row
+  +'<div style="display:flex;justify-content:space-between;background:'+W+'.07);border-radius:10px;padding:9px 12px;margin-bottom:16px">'
+    +[
+      [allUnique.size, 'unique Qs'],
+      [grandAttempts, 'attempts'],
+      [fmtMs(grandTimeMs), 'time'],
+      [sessionCount, 'sessions'],
+    ].concat(mockStats.attempts ? [[mockStats.avgScore!==null?mockStats.avgScore+'%':'—','mock avg']] : [])
+    .map(function(p){ return '<div style="text-align:center"><div style="font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">'+p[0]+'</div><div style="font-size:9px;color:'+W+'.4);margin-top:1px">'+p[1]+'</div></div>'; }).join('')
+  +'</div>'
+  +'<div style="height:1px;background:'+W+'.1);margin-bottom:14px"></div>';
 
-  // Renders a compact version of the same 8-type checklist, used for the
-  // Morning and Evening trackers — smaller chips since they sit side by side.
-  function miniChecklistHTML(list){
-    return list.map(c=>`
-      <div style="display:flex;align-items:center;gap:4px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.08)'};border:1px solid ${c.done?'rgba(126,231,135,.5)':'rgba(255,255,255,.15)'};border-radius:7px;padding:3px 6px">
-        <span style="font-size:11px">${c.done?'✅':c.icon}</span>
-        <span style="font-size:9.5px;${c.done?'text-decoration:line-through;opacity:.7':''}">${c.label}</span>
-      </div>`).join("");
-  }
+  // ── SESSION TILES ──
+  var sLabel = '<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">⏰ Today\'s Sessions</div>';
+  var sRows = Object.entries(sessionGoals.bySubject||{}).map(function(e){
+    var subj=e[0], sg=e[1];
+    var icon=(DATA[subj]&&DATA[subj].icon)||'📚';
+    function dot(done, started, emoji, pts){
+      var bg  = done?W+'.25)':started?'rgba(255,140,0,.2)':W+'.06)';
+      var brd = done?W+'.55)':started?'rgba(255,140,0,.45)':W+'.12)';
+      var ptsDiv = (done||started)?('<div style="font-size:8px;font-weight:800;color:'+(done?'#7ee787':'#e8a020')+';margin-top:2px">'+pts+'</div>'):'';
+      return '<div style="width:44px;text-align:center;background:'+bg+';border:1px solid '+brd+';border-radius:9px;padding:6px 4px">'
+        +'<div style="font-size:17px">'+emoji+'</div>'+ptsDiv+'</div>';
+    }
+    var mPts=sg.morningDone?(sg.earlyDone?'+70':'+50'):'+10';
+    var ePts=sg.eveningDone?'+50':'+10';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">'
+      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+      +'<div style="display:flex;gap:6px">'+dot(sg.morningDone,sg.mornStarted,'🌅',mPts)+dot(sg.eveningDone,sg.eveStarted,'🌙',ePts)+'</div>'
+      +(sg.bothDone?'<div style="font-size:10px;color:#7ee787;font-weight:700">+50 🎉</div>':(!sg.morningDone&&!sg.eveningDone&&!sg.mornStarted&&!sg.eveStarted?'<div style="font-size:10px;color:'+W+'.3)">not started</div>':''))
+      +'</div>';
+  }).join('');
+  var streakLine = sessionGoals.morningStreak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:2px;margin-bottom:4px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'';
 
-  return `
-    <div style="text-align:center;margin-bottom:14px">
-      <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">🏆 ${STUDENT_NAME}'s Growth Points</div>
-      <div style="font-size:48px;font-weight:900;margin:4px 0;color:var(--gold,#e8b84b)">${growthPoints}</div>
-      <div style="font-size:11px;opacity:.75">Keeps climbing — never resets, never goes down</div>
-      <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)">
-        <div><div style="font-size:20px;font-weight:800">${masteryScore}</div><div style="font-size:9px;opacity:.7">Mastery Score /100</div></div>
-      </div>
-      <div style="font-size:11px;font-weight:700;margin-top:4px">${masteryLabel}</div>
-    </div>
+  // ── DAILY GOAL bars (tap to expand types) ──
+  var gLabel = '<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
+    +'<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">📋 Daily Goal — tap to see types</div>';
+  var gBars = Object.entries(dailyGoal.subjectChecklists||{}).map(function(e){
+    var subj=e[0], list=e[1];
+    if(!list.length) return '';
+    var icon=(DATA[subj]&&DATA[subj].icon)||'📚';
+    var done=list.filter(function(c){return c.done;}).length;
+    var total=list.length;
+    var pct=Math.round(done/total*100);
+    var allDone=done===total;
+    var barCol=allDone?'#7ee787':done>0?'#e8a020':W+'.15)';
+    var chips=list.map(function(c){
+      var bg=c.done?W+'.18)':W+'.06)';
+      var brd=c.done?'rgba(126,231,135,.4)':W+'.1)';
+      var txt=c.done?'text-decoration:line-through;opacity:.5':'color:'+W+'.85)';
+      return '<div style="display:inline-flex;align-items:center;gap:3px;background:'+bg+';border:1px solid '+brd+';border-radius:5px;padding:3px 7px;margin:2px">'
+        +'<span style="font-size:10px">'+(c.done?'✅':c.icon)+'</span>'
+        +'<span style="font-size:9px;'+txt+'">'+c.label+'</span>'
+        +'</div>';
+    }).join('');
+    return '<details style="margin-bottom:8px">'
+      +'<summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none">'
+        +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+        +'<div style="flex:1;height:7px;background:'+W+'.1);border-radius:4px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:'+barCol+';border-radius:4px"></div>'
+        +'</div>'
+        +'<div style="font-size:10px;font-weight:700;min-width:30px;text-align:right;color:'+(allDone?'#7ee787':W+'.45)')+'">'+done+'/'+total+'</div>'
+      +'</summary>'
+      +'<div style="padding:8px 0 2px;display:flex;flex-wrap:wrap;gap:2px">'+chips+'</div>'
+      +'</details>';
+  }).join('');
+  var gFooter=dailyGoal.completedToday?'<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">🎉 Goal complete!'+(dailyGoal.streak>1?' · 🔥 '+dailyGoal.streak+' day streak':'')+'</div>':dailyGoal.streak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px">🔥 '+dailyGoal.streak+' day streak</div>':'';
 
-    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:10px">⏰ Study Sessions Today</div>
-      ${Object.entries(sessionGoals.bySubject||{}).map(([subj,sg])=>{
-        const icon = DATA[subj]?.icon||'📚';
-        const req = sg.required || 0;
-        // Progress labels show X/N types done when incomplete
-        const mStarted = !sg.morningDone && sg.progMorning > 0;
-        const eStarted = !sg.eveningDone && sg.progEvening > 0;
-        const mProg = sg.morningDone ? '' : (mStarted ? ` ${sg.progMorning}/${req}` : '');
-        const eProg = sg.eveningDone ? '' : (eStarted ? ` ${sg.progEvening}/${req}` : '');
-        const morningColor = sg.morningDone?'rgba(126,231,135,.2)':mStarted?'rgba(255,140,0,.18)':'rgba(255,255,255,.06)';
-        const morningBorder = sg.morningDone?'rgba(126,231,135,.5)':mStarted?'rgba(255,140,0,.6)':'rgba(255,255,255,.12)';
-        const eveningColor = sg.eveningDone?'rgba(126,231,135,.2)':eStarted?'rgba(255,140,0,.18)':'rgba(255,255,255,.06)';
-        const eveningBorder = sg.eveningDone?'rgba(126,231,135,.5)':eStarted?'rgba(255,140,0,.6)':'rgba(255,255,255,.12)';
-        const timeLabel = sg.earlyDone?'6-7am':sg.lateDone?'7-8am':'6-8am';
-        return `<div style="margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;opacity:.8;margin-bottom:4px">${icon} ${subj}</div>
-          <div style="display:flex;gap:6px">
-            <div style="flex:1;background:${morningColor};border:1px solid ${morningBorder};border-radius:8px;padding:6px 4px;text-align:center">
-              <div style="font-size:14px">🌅</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.morningDone?'inherit':mStarted?'#c45000':'inherit'}">${sg.morningDone?timeLabel+' ✓':mStarted?'In progress'+mProg:'Morning'}</div>
-              <div style="font-size:8px;opacity:.6">${sg.morningDone?'✅ +70 pts':mStarted?'🟠 +10 for trying':'6-8am · all '+req+' types'}</div>
-            </div>
-            <div style="flex:1;background:${eveningColor};border:1px solid ${eveningBorder};border-radius:8px;padding:6px 4px;text-align:center">
-              <div style="font-size:14px">🌙</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px;color:${sg.eveningDone?'inherit':eStarted?'#c45000':'inherit'}">${sg.eveningDone?'Evening ✓':eStarted?'In progress'+eProg:'Evening'}</div>
-              <div style="font-size:8px;opacity:.6">${sg.eveningDone?'✅ +50 pts':eStarted?'🟠 +10 for trying':'after 8am · all '+req+' types'}</div>
-            </div>
-            ${sg.bothDone?'<div style="display:flex;align-items:center;font-size:10px;color:#7ee787;font-weight:700">🎉 +50</div>':''}
-          </div>
-        </div>`;
-      }).join('')}
-      ${sessionGoals.morningStreak>0 ? `<div style="font-size:11px;color:var(--gold,#e8b84b);font-weight:700;margin-top:4px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : ""}
-    </div>
+  // ── BY SUBJECT (collapsed) ──
+  var bySubj='<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
+    +'<details><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;user-select:none;padding:2px 0">'
+      +'<span style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5)">📘 By Subject</span>'
+      +'<span style="font-size:10px;color:'+W+'.35)">tap to expand</span>'
+    +'</summary>'
+    +'<div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">'
+      +subjectBreakdown.map(function(s){
+        return '<div style="display:flex;align-items:center;gap:10px">'
+          +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+s.icon+' '+s.name.split(' ')[0]+'</div>'
+          +'<div style="flex:1;height:6px;background:'+W+'.1);border-radius:3px;overflow:hidden">'
+            +'<div style="height:100%;width:'+s.coverage+'%;background:#7ee787;border-radius:3px"></div>'
+          +'</div>'
+          +'<div style="font-size:10px;color:'+W+'.45);min-width:50px;text-align:right">'+s.coverage+'% · '+s.mastery+'%M</div>'
+        +'</div>';
+      }).join('')
+    +'</div></details>';
 
-    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:12px;font-weight:700">📋 Today's Goal — Question Types</div>
-        <div style="font-size:11px;font-weight:800;opacity:.8">${dailyGoal.doneCount}/${dailyGoal.total} types</div>
-      </div>
-      ${Object.entries(dailyGoal.subjectChecklists||{}).map(([subj,list])=>{
-        if(!list.length) return '';
-        const icon = DATA[subj]?.icon||'📚';
-        const doneCount = list.filter(c=>c.done).length;
-        const allDone = doneCount === list.length;
-        return `<div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <div style="font-size:10px;font-weight:700;opacity:.85">${icon} ${subj}</div>
-            <div style="font-size:9px;font-weight:800;color:${allDone?'#7ee787':'rgba(255,255,255,.5)'}">${allDone?'✅ Complete':doneCount+'/'+list.length}</div>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px">
-            ${list.map(c=>`
-              <div style="display:flex;align-items:center;gap:3px;background:${c.done?'rgba(126,231,135,.2)':'rgba(255,255,255,.06)'};border:1px solid ${c.done?'rgba(126,231,135,.4)':'rgba(255,255,255,.12)'};border-radius:6px;padding:2px 6px">
-                <span style="font-size:10px">${c.done?'✅':c.icon}</span>
-                <span style="font-size:8.5px;${c.done?'text-decoration:line-through;opacity:.6':''}">${c.label}</span>
-              </div>`).join('')}
-          </div>
-        </div>`;
-      }).join('')}
-      ${dailyGoal.streak>0 ? `<div style="font-size:11px;color:var(--gold,#e8b84b);font-weight:700;margin-top:6px">🔥 ${dailyGoal.streak} day streak${dailyGoal.completedToday?' (today included)':''}</div>` : ''}
-      ${dailyGoal.completedToday ? `<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">🎉 Full daily goal complete!</div>` : ''}
-    </div>
+  // ── HOW TO EARN (collapsed) ──
+  function earnRow(ic,t,d){ return '<div style="border-bottom:1px solid '+W+'.08);padding:9px 0"><div style="font-size:11px;font-weight:700;color:#fff">'+ic+' '+t+'</div><div style="font-size:10px;color:'+W+'.55);margin-top:2px;line-height:1.5">'+d+'</div></div>'; }
+  var howToEarn='<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
+    +'<details><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;user-select:none;padding:2px 0">'
+      +'<span style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5)">💡 How do I earn points?</span>'
+      +'<span style="font-size:10px;color:'+W+'.35)">tap to expand</span>'
+    +'</summary>'
+    +'<div style="margin-top:10px">'
+      +earnRow('✏️','Each question (50%+)','+1 MCQ/Fill/TF · +2 Brief/Reasons · +3 Distinguish · +5 Match/Para')
+      +earnRow('⚡','Speed Bonus','+5 fast · +2 normal · Brief, Reasons, Paragraph, Distinguish, Memorise')
+      +earnRow('📅','Daily Goal — +10/day','Answer 50%+ in every active question type today')
+      +earnRow('🌅','Morning Session — +70 or +50/subject','Cover all types 6–8am · started = +10')
+      +earnRow('🌙','Evening Session — +50/subject','Cover all types after 8am · both sessions = +50 extra · started = +10')
+      +earnRow('🧪','Lesson Test — 30 to 100 pts','60%=30 · 80%=40 · 90%=50 · 100%=100')
+      +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
+    +'</div></details>';
 
-    <details style="margin-bottom:4px">
-      <summary style="cursor:pointer;font-size:12px;font-weight:700;opacity:.85;padding:6px 2px;list-style:none">📊 More stats (coverage, mastery, trend, totals) ▾</summary>
-      <div style="display:flex;gap:10px;margin:10px 0 14px">
-        <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
-          <div style="font-size:17px;font-weight:800">${coverage}%</div>
-          <div style="font-size:10px;opacity:.8">📚 Syllabus Covered</div>
-          <div style="font-size:9px;opacity:.6">${allUnique.size}/${totalAvailable} questions tried</div>
-        </div>
-        <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
-          <div style="font-size:17px;font-weight:800">${mastery}%</div>
-          <div style="font-size:10px;opacity:.8">🎯 Mastery (weighted)</div>
-          <div style="font-size:9px;opacity:.6">harder questions count more</div>
-        </div>
-        <div style="flex:1;background:rgba(255,255,255,.1);border-radius:10px;padding:8px;text-align:center">
-          <div style="font-size:17px;font-weight:800;color:${trendColor}">${trendArrow}</div>
-          <div style="font-size:10px;opacity:.8">📊 Recent Trend</div>
-          <div style="font-size:9px;opacity:.6">vs earlier attempts</div>
-        </div>
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:10px;display:flex;gap:20px;flex-wrap:wrap">
-      <div><div style="font-size:18px;font-weight:800">${allUnique.size}</div><div style="font-size:11px;opacity:.8">Unique Questions Learnt</div></div>
-      <div><div style="font-size:18px;font-weight:800">${grandAttempts}</div><div style="font-size:11px;opacity:.8">Total Attempts</div></div>
-      <div><div style="font-size:18px;font-weight:800">${fmtMs(grandTimeMs)}</div><div style="font-size:11px;opacity:.8">Total Time Spent</div></div>
-      </div>
-      ${mockStats.attempts ? `
-      <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:10px;margin-top:10px;display:flex;gap:20px;flex-wrap:wrap">
-        <div><div style="font-size:18px;font-weight:800">🎯 ${mockStats.uniqueCount}</div><div style="font-size:11px;opacity:.8">Mock Exam Questions</div></div>
-        <div><div style="font-size:18px;font-weight:800">${mockStats.attempts}</div><div style="font-size:11px;opacity:.8">Mock Exam Attempts</div></div>
-        <div><div style="font-size:18px;font-weight:800">${mockStats.avgScore!==null?mockStats.avgScore+'%':'—'}</div><div style="font-size:11px;opacity:.8">Mock Exam Avg Score</div></div>
-      </div>` : ""}
-      <div style="font-size:11px;opacity:.65;margin-top:10px;text-align:center">${sessionCount} session${sessionCount!==1?"s":""} so far</div>
-    </details>
-
-    <details style="margin-top:10px">
-      <summary style="cursor:pointer;font-size:12px;font-weight:700;opacity:.85;padding:6px 2px;list-style:none">📘 By Subject ▾</summary>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-        ${subjectBreakdown.map(s=>`
-          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-size:12.5px;font-weight:700">${s.icon} ${s.name}</div>
-              <div style="font-size:10px;opacity:.7">${s.attempts} attempt${s.attempts!==1?"s":""}</div>
-            </div>
-            <div style="display:flex;gap:14px">
-              <div><div style="font-size:15px;font-weight:800">${s.coverage}%</div><div style="font-size:9px;opacity:.7">Covered (${s.uniqueCount}/${s.totalAvailable})</div></div>
-              <div><div style="font-size:15px;font-weight:800">${s.mastery}%</div><div style="font-size:9px;opacity:.7">Mastery</div></div>
-            </div>
-          </div>`).join("") || `<div style="font-size:11.5px;opacity:.7;text-align:center">No activity yet — try a question in any subject!</div>`}
-      </div>
-    </details>`;
+  return hero + sLabel + sRows + streakLine + gLabel + gBars + gFooter + bySubj + howToEarn;
 }
+
 
 function renderScoreboardSessionsHTML(bySession){
   const sessionIds = Object.keys(bySession).sort((a,b)=>bySession[b].firstTs - bySession[a].firstTs);
@@ -6333,102 +6314,92 @@ async function showWelcomeBackPopup(){
   const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
   const totalTestPoints = await fetchTotalTestPoints();
   const { growthPoints, masteryScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
-  const masteryLabel = masteryScore>=80 ? "🌟 Excellent mastery!" : masteryScore>=60 ? "📈 Great progress so far!" : masteryScore>=40 ? "🌱 You're growing steadily!" : "💪 Let's build some momentum!";
   celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
 
-  // Logging in during the 6-8am window with no morning session yet is the
-  // single best moment to encourage the early-rising habit — call it out
-  // specifically rather than burying it in the regular checklist.
-  const currentHour = new Date().getHours();
-  const inMorningWindow = currentHour===6 || currentHour===7;
-  const morningNudgeHTML = (inMorningWindow && !sessionGoals.morningDone) ? `
-    <div style="background:rgba(232,184,75,.15);border:1.5px solid var(--gold,#e8b84b);border-radius:12px;padding:10px;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:700;color:#8a6500">${currentHour===6 ? "🌅 You're up early — nice!" : "🌤️ Still counts as morning!"}</div>
-      <div style="font-size:11.5px;color:#8a6500;margin-top:2px">Cover all question types in any subject in the next ${60-new Date().getMinutes()} min to earn the morning bonus.</div>
-    </div>` : "";
+  var W = "rgba(255,255,255,";
+  var gold = "var(--gold,#e8b84b)";
 
-  // Per-subject session tiles for the login popup — green=done, orange=started, grey=not yet
-  const sessionGoalsHTML = (() => {
-    const rows = Object.entries(sessionGoals.bySubject||{}).map(([subj,sg])=>{
-      const icon = DATA[subj]?.icon||'📚';
-      const mDone = sg.morningDone, eDone = sg.eveningDone;
-      const mStart = sg.mornStarted, eStart = sg.eveStarted;
-      const mBg = mDone?'rgba(76,204,138,.18)':mStart?'rgba(255,140,0,.18)':'#fff';
-      const mBorder = mDone?'var(--green)':mStart?'#ff8c00':'var(--border)';
-      const eBg = eDone?'rgba(76,204,138,.18)':eStart?'rgba(255,140,0,.18)':'#fff';
-      const eBorder = eDone?'var(--green)':eStart?'#ff8c00':'var(--border)';
-      const mLabel = mDone?'✓ Done':mStart?'Started…':'6–8am';
-      const eLabel = eDone?'✓ Done':eStart?'Started…':'After 8am';
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-        <div style="font-size:11px;font-weight:700;color:var(--navy);width:90px;text-align:left">${icon} ${subj.split(' ')[0]}</div>
-        <div style="flex:1;background:${mBg};border:1px solid ${mBorder};border-radius:7px;padding:4px;text-align:center">
-          <div style="font-size:10px;font-weight:700;color:var(--navy)">🌅 ${mLabel}</div>
-          <div style="font-size:8px;color:var(--muted)">${mDone?'+70 pts':mStart?'+10 so far':'all types'}</div>
-        </div>
-        <div style="flex:1;background:${eBg};border:1px solid ${eBorder};border-radius:7px;padding:4px;text-align:center">
-          <div style="font-size:10px;font-weight:700;color:var(--navy)">🌙 ${eLabel}</div>
-          <div style="font-size:8px;color:var(--muted)">${eDone?'+50 pts':eStart?'+10 so far':'anytime after 8am'}</div>
-        </div>
-      </div>`;
-    }).join('');
-    const streak = sessionGoals.morningStreak>0
-      ? `<div style="font-size:11px;color:#b8860b;font-weight:700;margin-top:6px">🔥 ${sessionGoals.morningStreak} day morning streak</div>` : '';
-    return `<div style="background:var(--parchment);border-radius:12px;padding:11px;text-align:left;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px">⏰ Today's Sessions</div>
-      ${rows}${streak}
-    </div>`;
-  })();
-
-  // Per-subject checklist for popup — shows which types done in which subject
-  function buildPopupSubjChecklist(subj, list){
-    if(!list.length) return '';
-    const icon = DATA[subj]&&DATA[subj].icon ? DATA[subj].icon : '📚';
-    const done = list.filter(function(c){return c.done;}).length;
-    const allDone = done===list.length;
-    const chips = list.map(function(c){
-      return '<div style="display:flex;align-items:center;gap:2px;background:'+(c.done?'rgba(76,204,138,.15)':'#fff')+';border:1px solid '+(c.done?'var(--green)':'var(--border)')+';border-radius:5px;padding:2px 5px">'
-        +'<span style="font-size:9px">'+(c.done?'✅':c.icon)+'</span>'
-        +'<span style="font-size:7.5px;'+(c.done?'text-decoration:line-through;opacity:.6':'')+'">'+(c.label)+'</span>'
-        +'</div>';
-    }).join('');
-    return '<div style="margin-bottom:6px">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
-        +'<div style="font-size:9.5px;font-weight:700;color:var(--navy)">'+icon+' '+subj+'</div>'
-        +'<div style="font-size:9px;font-weight:800;color:'+(allDone?'var(--green)':'var(--muted)')+'">'+(allDone?'✅':done+'/'+list.length)+'</div>'
-      +'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:3px">'+chips+'</div>'
-      +'</div>';
+  // Session dot tiles — same pattern as scoreboard
+  function pDot(done, started, emoji, pts){
+    var bg  = done?W+".25)":started?"rgba(255,140,0,.2)":W+".06)";
+    var brd = done?W+".55)":started?"rgba(255,140,0,.45)":W+".12)";
+    var ptsDiv = (done||started)?('<div style="font-size:8px;font-weight:800;color:'+(done?'#7ee787':'#e8a020')+';margin-top:2px">'+pts+'</div>'):'';
+    return '<div style="width:44px;text-align:center;background:'+bg+';border:1px solid '+brd+';border-radius:9px;padding:6px 4px">'
+      +'<div style="font-size:17px">'+emoji+'</div>'+ptsDiv+'</div>';
   }
-  const goalTypesHTML = '<div style="background:var(--parchment);border-radius:10px;padding:10px;text-align:left;margin-bottom:8px">'
-    +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
-      +"<div style=\"font-size:10px;font-weight:700;color:var(--navy)\">📋 Today's Goal</div>"
-      +'<div style="font-size:10px;font-weight:800;color:var(--navy)">'+dailyGoal.doneCount+'/'+dailyGoal.total+' types</div>'
-    +'</div>'
-    +Object.entries(dailyGoal.subjectChecklists||{}).map(function(e){ return buildPopupSubjChecklist(e[0],e[1]); }).join('')
+
+  var sessionRows = Object.entries(sessionGoals.bySubject||{}).map(function(e){
+    var subj=e[0], sg=e[1];
+    var icon=(DATA[subj]&&DATA[subj].icon)||"📚";
+    var mPts=sg.morningDone?(sg.earlyDone?"+70":"+50"):"+10";
+    var ePts=sg.eveningDone?"+50":"+10";
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+      +'<div style="display:flex;gap:6px">'+pDot(sg.morningDone,sg.mornStarted,'🌅',mPts)+pDot(sg.eveningDone,sg.eveStarted,'🌙',ePts)+'</div>'
+      +(sg.bothDone?'<div style="font-size:10px;color:#7ee787;font-weight:700">+50 🎉</div>':'')
     +'</div>';
+  }).join('');
 
-  overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-    <div style="font-size:30px;margin-bottom:4px">👋</div>
-    <div style="font-size:17px;font-weight:800;color:var(--navy);margin-bottom:10px">Welcome back, ${STUDENT_NAME}!</div>
+  // Goal bars — same as scoreboard
+  var goalBars = Object.entries(dailyGoal.subjectChecklists||{}).map(function(e){
+    var subj=e[0], list=e[1];
+    if(!list.length) return '';
+    var icon=(DATA[subj]&&DATA[subj].icon)||"📚";
+    var done=list.filter(function(c){return c.done;}).length;
+    var total=list.length;
+    var pct=Math.round(done/total*100);
+    var allDone=done===total;
+    var barCol=allDone?"#7ee787":done>0?"#e8a020":W+".15)";
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">'
+      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+      +'<div style="flex:1;height:7px;background:'+W+'.1);border-radius:4px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+barCol+';border-radius:4px"></div>'
+      +'</div>'
+      +'<div style="font-size:10px;font-weight:700;min-width:28px;text-align:right;color:'+(allDone?'#7ee787':W+'.45)')+'">'+done+'/'+total+'</div>'
+    +'</div>';
+  }).join('');
 
-    <div style="background:var(--navy);color:#fff;border-radius:14px;padding:14px;margin-bottom:14px">
-      <div style="font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:.5px">Growth Points</div>
-      <div style="font-size:40px;font-weight:900;margin:2px 0;color:var(--gold,#e8b84b)">${growthPoints}</div>
-      <div style="font-size:10px;opacity:.7">Keeps climbing — never resets</div>
-      <div style="font-size:12px;font-weight:700;margin-top:6px">${masteryLabel}</div>
-    </div>
+  // Morning nudge (6–8am only)
+  var currentHour = new Date().getHours();
+  var nudge = (currentHour===6||currentHour===7)&&!sessionGoals.morningDone
+    ? '<div style="background:rgba(232,184,75,.18);border:1px solid rgba(232,184,75,.4);border-radius:10px;padding:10px;margin-bottom:14px">'
+        +'<div style="font-size:12px;font-weight:700;color:'+gold+'">'+(currentHour===6?"🌅 You're up early — nice!":"🌤️ Still counts as morning!")+'</div>'
+        +'<div style="font-size:11px;color:rgba(232,184,75,.9);margin-top:3px">Cover all types in any subject before 8am to earn the morning bonus.</div>'
+      +'</div>' : '';
 
-    ${morningNudgeHTML}
-    ${sessionGoalsHTML}
+  var streakLine = sessionGoals.morningStreak>0
+    ?'<div style="font-size:11px;color:'+gold+';font-weight:700;margin-top:2px;margin-bottom:8px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'' ;
 
-    ${goalTypesHTML}
-    ${dailyGoal.completedToday
-      ? `<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-bottom:12px">🎉 Daily goal complete!</div>`
-      : `<div style="font-size:11px;color:var(--muted);margin-bottom:12px">Complete the remaining types above to finish today's goal.</div>`}
-    ${dailyGoal.streak>0 ? `<div style="font-size:12px;color:#b8860b;font-weight:700;margin-bottom:16px">🔥 ${dailyGoal.streak} day streak</div>` : ""}
+  var goalFooter = dailyGoal.completedToday
+    ?'<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:6px">🎉 Goal complete!'+(dailyGoal.streak>1?' · 🔥 '+dailyGoal.streak+' day streak':'')+'</div>'
+    :dailyGoal.streak>0?'<div style="font-size:11px;color:'+gold+';font-weight:700;margin-top:4px">🔥 '+dailyGoal.streak+' day streak</div>':'';
 
-    <button onclick="document.getElementById('welcomeBackPopup').remove()" style="width:100%;margin-top:0;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>
-  </div>`;
+  var divider = '<div style="height:1px;background:'+W+'.12);margin:12px 0"></div>';
+  var lbl = function(t){ return '<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">'+t+'</div>'; };
+
+  overlay.innerHTML = '<div style="background:var(--navy,#1a2744);border-radius:20px;padding:22px 20px 20px;max-width:340px;width:100%;box-shadow:0 12px 48px rgba(0,0,0,.4);color:#fff">'
+    // Hero
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">'
+      +'<div>'
+        +'<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:'+W+'.5);margin-bottom:3px">Growth Points</div>'
+        +'<div style="font-size:42px;font-weight:900;color:'+gold+';letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums">'+growthPoints.toLocaleString()+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:'+W+'.5);margin-bottom:3px">Mastery</div>'
+        +'<div style="font-size:26px;font-weight:900;line-height:1">'+masteryScore+'<span style="font-size:12px;color:'+W+'.4)">/100</span></div>'
+      +'</div>'
+    +'</div>'
+    +divider
+    +nudge
+    +lbl("⏰ Today's Sessions")
+    +sessionRows
+    +streakLine
+    +divider
+    +lbl('📋 Daily Goal')
+    +goalBars
+    +goalFooter
+    +'<button onclick="document.getElementById(\'welcomeBackPopup\').remove()" style="width:100%;margin-top:18px;padding:12px;background:'+W+'.12);color:#fff;border:1px solid '+W+'.25);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start studying →</button>'
+  +'</div>';
 }
 
 // Write one log entry to Firestore under the student's phone number,
