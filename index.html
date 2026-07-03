@@ -547,7 +547,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .report-empty{font-size:14px;color:var(--muted);text-align:center;padding:40px 0}
 .report-close{width:100%;padding:12px;background:var(--parchment);border:none;border-radius:10px;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;font-family:inherit;margin-top:16px}
 
-/* ── MODAL OVERLAY (shared for mock exam) ── */
+/* ── MODAL OVERLAY (shared for practice test) ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.hidden{display:none}
 
@@ -645,7 +645,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)">
     <button onclick="openScoreboardPanel()" style="width:100%;padding:9px;background:rgba(184,134,11,.15);color:#b8860b;border:1px solid rgba(184,134,11,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🏆 Scoreboard</button>
     <button onclick="openReport()" style="width:100%;padding:9px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📊 Session Report</button>
-    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🎯 Mock Exam</button>
+    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📝 Practice Test</button>
     <button onclick="openSpellingPanel()" style="width:100%;padding:9px;background:rgba(76,204,138,.15);color:var(--green);border:1px solid rgba(76,204,138,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🔤 Spelling Game</button>
   </div>
 </aside>
@@ -665,7 +665,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="lesson-pane">
     <div class="part-heading" id="partHeading"></div>
     <div class="mock-exam-bar">
-      <button class="btn-mock-exam" onclick="openMockExam()">🎯 Mock Exam</button>
+      <button class="btn-mock-exam" onclick="openMockExam()">📝 Practice Test</button>
       <span class="mock-exam-hint">Test yourself across multiple lessons</span>
     </div>
     <div class="lesson-grid"  id="lessonGrid"></div>
@@ -705,18 +705,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
     <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap">
       <button class="report-tab-btn active" id="reportTabBtnTopics" onclick="showReportTab('topics')">This Session</button>
       <button class="report-tab-btn" id="reportTabBtnPast" onclick="showReportTab('past')">📂 Past Sessions</button>
-      <button class="report-tab-btn" id="reportTabBtnMock" onclick="showReportTab('mockexams')">🎯 Mock Exams</button>
+      <button class="report-tab-btn" id="reportTabBtnMock" onclick="showReportTab('mockexams')">📝 Practice Tests</button>
     </div>
 
     <div id="reportTabTopics"><div id="reportBody"></div></div>
 
     <div id="reportTabPast" style="display:none">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Your last 5 sessions — study activity and any mock exams taken.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Your last 5 sessions — study activity and any practice tests taken.</p>
       <div id="studentPastSessionsList"></div>
     </div>
 
     <div id="reportTabMock" style="display:none">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every mock exam you've taken.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every practice test you've taken.</p>
       <div id="studentMockExamsList"></div>
       <button id="studentMockExamsLoadMore" onclick="loadMoreStudentMockExams()" style="display:none;width:100%;margin-top:10px;padding:10px;background:var(--parchment);border:1.5px solid var(--border);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;color:var(--navy)">Load older exams ↓</button>
     </div>
@@ -731,10 +731,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 <div class="modal-overlay hidden" id="mockExamModal">
   <div class="mock-exam-box">
     <div class="mock-header">
-      <div class="mock-title">🎯 Mock Exam</div>
+      <div class="mock-title">📝 Practice Test</div>
       <button class="mock-close" onclick="closeMockExam()">✕</button>
     </div>
-    <div class="mock-sub">Select lessons to include in your mock exam</div>
+    <div class="mock-sub">Select lessons to include in your practice test</div>
 
     <!-- Subject tabs -->
     <div class="mock-subject-tabs" id="mockSubjectTabs"></div>
@@ -750,7 +750,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 
     <div class="mock-footer">
       <div class="mock-count" id="mockCount">0 questions selected</div>
-      <button class="btn-start-mock" id="startMockBtn" onclick="startMockExam()" disabled>Start Mock Exam →</button>
+      <button class="btn-start-mock" id="startMockBtn" onclick="startMockExam()" disabled>Start Practice Test →</button>
     </div>
   </div>
 </div>
@@ -760,7 +760,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="nav-item active" onclick="setNav(this)"><span class="nav-icon">📖</span>Lessons</div>
   <div class="nav-item"        onclick="setNav(this);openScoreboardPanel()"><span class="nav-icon">🏆</span>Scoreboard</div>
   <div class="nav-item"        onclick="setNav(this);openReport()"><span class="nav-icon">📊</span>Report</div>
-  <div class="nav-item"        onclick="setNav(this);openMockExam()"><span class="nav-icon">🎯</span>Mock Exam</div>
+  <div class="nav-item"        onclick="setNav(this);openMockExam()"><span class="nav-icon">🎯</span>Practice Test</div>
   <div class="nav-item"        onclick="setNav(this);openSpellingPanel()"><span class="nav-icon">🔤</span>Spelling</div>
 </nav>
 
@@ -802,7 +802,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <!-- MOCK EXAM ANSWER SHEET -->
   <div class="mock-answer-sheet" id="mockAnswerSheet"></div>
 
-  <!-- Mock exam submit button - fixed at bottom -->
+  <!-- Practice test submit button - fixed at bottom -->
   <div class="mock-submit-bar" id="mockSubmitBar" style="display:none">
     <div class="mock-submit-progress" id="mockSubmitProgress">0 / 0 answered</div>
     <button class="mock-submit-btn" onclick="submitMockExam()">Submit Exam ✓</button>
@@ -1931,7 +1931,7 @@ sessionSpellErrors.push = function(entry){
   return _sessionSpellErrorsPush(entry);
 };
 let currentMode = "study";  // always study — exam mode removed
-const examAnswers = [];       // used by mock exam tracking — const so it can never be reassigned (only cleared via .length=0)
+const examAnswers = [];       // used by practice test tracking — const so it can never be reassigned (only cleared via .length=0)
 // Mirror every exam answer to Firestore the moment it's recorded, without touching every call site.
 const _examAnswersPush = examAnswers.push.bind(examAnswers);
 examAnswers.push = function(entry){
@@ -1951,7 +1951,7 @@ let _questionTimes = [];  // ms per question
 // A "session" = one continuous period the app was open. Used to group
 // scoreboard stats (unique questions, attempts, time spent) per visit.
 const currentSessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
-// A "mock exam attempt" = one full run through Start Mock Exam → Submit.
+// A "practice test attempt" = one full run through Start Practice Test → Submit.
 // Separate from currentSessionId so multiple exams in one sitting don't merge together.
 let currentMockExamId = null;
 
@@ -2235,7 +2235,7 @@ function startLesson(lesson){
 
 function renderQTypeTabs(){
   const wrap=document.getElementById("qtypeTabs");
-  // Hide tabs entirely in mock exam — questions span many lessons/types
+  // Hide tabs entirely in practice test — questions span many lessons/types
   if(currentLesson && currentLesson.id==="__mock__"){
     wrap.innerHTML=""; return;
   }
@@ -2570,7 +2570,7 @@ function jumpToQuestion(idx){
 // ═══════════════════════════════════════════════════════
 function renderCurrentQuestion(){
   if(currentMode==="revise") return;
-  if(currentLesson?.id==="__mock__") return; // mock exam uses renderMockQuestion directly
+  if(currentLesson?.id==="__mock__") return; // practice test uses renderMockQuestion directly
   // Reset per-question timer
   _questionStart=Date.now();
   const qEl=document.getElementById("qTimer");
@@ -2845,8 +2845,8 @@ function toggleFillPeek(){
 function checkFillFromDOM(isLast){
   const qs=currentLesson.questions[currentQType];
   const q=qs[currentQIndex];
-  // isLast is passed in from render time (correct for both study mode and mock exam).
-  // Recalculating it here from qs.length is wrong in mock exam, since the mock
+  // isLast is passed in from render time (correct for both study mode and practice test).
+  // Recalculating it here from qs.length is wrong in practice test, since the mock
   // wrapper array always has length 1 regardless of position in the overall exam.
   if(isLast===undefined) isLast = currentQIndex>=qs.length-1; // fallback for any old callers
   if(currentMode==="exam") examNextFill(q.answers, isLast);
@@ -3109,7 +3109,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
     </div>`:""}`;
   // Writing starts locked — the student must open and close the peek at least
   // once (an explicit "I'm ready to write" action) before the textarea unlocks.
-  // Mock exam skips this since there's no peek option there at all.
+  // Practice test skips this since there's no peek option there at all.
   // Start speed timer immediately when question appears — time is running from the moment
   // the student sees the question, whether they peek or not.
   setTimeout(()=>startSpeedTimer(currentQType), 50);
@@ -3493,7 +3493,7 @@ function examNextText(isLast){
   // Log spelling errors to session report
   diff.forEach(d=>{
     if(d.type==="misspelled")
-      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
+      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType, subject:currentSubject});
   });
   sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
@@ -3548,7 +3548,7 @@ function checkTextAnswer(){
   // Collect spelling errors for session report
   diff.forEach(d=>{
     if(d.type==="misspelled")
-      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType});
+      sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType, subject:currentSubject});
   });
   sessionResults.push({pct, qtype:currentQType});
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
@@ -3938,7 +3938,7 @@ function tryAgainQuestion(){
 // ── NEXT ──
 let _mockNavLock = false;
 function nextQuestion(){
-  // Mock exam flow
+  // Practice test flow
   if(currentLesson.id==="__mock__"){
     if(_mockNavLock) return;
     _mockNavLock = true;
@@ -3977,7 +3977,7 @@ let mockSelected  = new Set();   // lesson ids
 let mockQTypes    = new Set(["mcq","fill","match","brief","truefalse","reasons","distinguish","paragraph"]);
 let mockQuestions = [];          // flat list of {q, qtype, lesson} objects
 let mockQIndex    = 0;
-let isLessonTest  = false;       // true when this run is a single-lesson Test, not a multi-lesson Mock Exam
+let isLessonTest  = false;       // true when this run is a single-lesson Test, not a multi-lesson Practice Test
 let lessonTestLesson = null;     // the lesson being tested, when isLessonTest is true
 
 function openMockExam(){
@@ -4089,7 +4089,7 @@ function findLessonById(id){
 }
 
 // Looks up which top-level subject (Science / Social Science / English) a
-// given lesson id belongs to — needed because mock exam log entries only
+// given lesson id belongs to — needed because practice test log entries only
 // store the lessonId, not the subject name directly.
 function findSubjectForLesson(lessonId){
   for(const [subjName, subj] of Object.entries(DATA))
@@ -4137,6 +4137,7 @@ function calcSubjectBreakdown(allScoredEntries){
     const uniqueKeys = new Set(entries.map(e=>`${e.lessonId}|${e.qtype}|${e.qIndex}`));
     const totalAvailable = countAvailableQuestionsForSubject(name);
     const coverage = totalAvailable>0 ? Math.min(100, Math.round((uniqueKeys.size/totalAvailable)*100)) : 0;
+    const timeMs = entries.reduce((a,e)=>a+(e.timeMs||0),0);
 
     let mastery = 0;
     if(entries.length){
@@ -4150,12 +4151,12 @@ function calcSubjectBreakdown(allScoredEntries){
     }
 
     const icon = DATA[name]?.icon || "📘";
-    return { name, icon, coverage, mastery, attempts: entries.length, uniqueCount: uniqueKeys.size, totalAvailable };
+    return { name, icon, coverage, mastery, attempts: entries.length, uniqueCount: uniqueKeys.size, totalAvailable, timeMs };
   }).filter(s=>s.attempts>0 || s.totalAvailable>0); // skip subjects with literally nothing in them
 }
 
 // Tests the ENTIRE lesson in one go — every question, every type — as a single
-// timed, no-peek attempt. Reuses the same exam engine as Mock Exam, just
+// timed, no-peek attempt. Reuses the same exam engine as Practice Test, just
 // auto-scoped to one lesson instead of a multi-lesson picker, and tagged so
 // completion awards Test-specific bonus points instead of just a score.
 function startLessonTest(lessonId){
@@ -4189,7 +4190,7 @@ function startMockExam(){
   mockQIndex = 0;
   mockExamStates = Array.from({length:mockQuestions.length},()=>({answered:false,skipped:false,pct:null}));
   mockSavedAnswers = Array.from({length:mockQuestions.length},()=>null);
-  // Each mock exam attempt gets its own ID, separate from the page-load sessionId —
+  // Each practice test attempt gets its own ID, separate from the page-load sessionId —
   // otherwise multiple exams taken in one sitting would collapse into a single group.
   currentMockExamId = "exam_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
   closeMockExam();
@@ -4204,7 +4205,7 @@ function startMockExam(){
   const ov = document.getElementById("quizOverlay");
   ov.classList.add("visible");
   ov.scrollTo(0,0);
-  const _qlt=document.getElementById("quizLessonTitle"); if(_qlt) _qlt.textContent=`🎯 Mock Exam — ${mockSubject}`;
+  const _qlt=document.getElementById("quizLessonTitle"); if(_qlt) _qlt.textContent=`📝 Practice Test — ${mockSubject}`;
   const _qpl2=document.getElementById("quizPartLabel"); if(_qpl2) _qpl2.textContent=`${mockSelected.size} lesson${mockSelected.size!==1?"s":""} · ${mockQuestions.length} questions`;
   document.getElementById("summaryScreen").classList.remove("visible");
   document.getElementById("answerPaper").classList.remove("visible");
@@ -4219,7 +4220,7 @@ function startMockExam(){
   // Set up a virtual lesson for mock mode
   currentLesson = {
     id:"__mock__",
-    title:"Mock Exam",
+    title:"Practice Test",
     questions: buildMockQuestionsMap()
   };
   currentQType = mockQuestions[0].qtype;
@@ -4292,7 +4293,7 @@ function renderMockQuestion(){
   // Render mock nav bar
   renderMockNavBar();
 
-  // In mock exam, always pass isLast=false — end detection happens in nextQuestion()
+  // In practice test, always pass isLast=false — end detection happens in nextQuestion()
   const renderIsLast = false;
 
   // Render question
@@ -4554,10 +4555,9 @@ function scoreMockCurrentQuestion(){
 // the whole lesson, with a strong jump at 100% to make true perfection feel
 // distinctly special rather than just "one tier better."
 function calcTestPoints(pct){
-  if(pct>=100) return 100;
-  if(pct>=90)  return 50;
-  if(pct>=80)  return 40;
-  if(pct>=60)  return 30;
+  if(pct>=100) return 700;
+  if(pct>=80)  return 500;
+  if(pct>=60)  return 300;
   return 0;
 }
 
@@ -4627,14 +4627,14 @@ function showMockResults(){
   setTimeout(()=>ov.scrollTo(0,0),50);
 
   // Award and announce bonus points based on the score tier — for BOTH a
-  // single-lesson Test and a full multi-lesson Mock Exam. Mock Exam earns
+  // single-lesson Test and a full multi-lesson Practice Test. Practice Test earns
   // slightly more per tier since it covers more ground in one sitting.
   //
   // The tier bonus is then scaled by how genuinely difficult the chosen mix
   // of question types is — picking only MCQ/Fill/True-False (all 1-mark)
   // should not earn the same completion bonus as a mix that includes Brief,
   // Distinguish, or Paragraph. Without this, a student could deselect every
-  // hard question type in the Mock Exam picker, answer only easy ones, and
+  // hard question type in the Practice Test picker, answer only easy ones, and
   // still collect the full tiered bonus for comparatively little effort.
   const avgMarksWeight = mockResults.length
     ? mockResults.reduce((sum,r)=>sum+getMarks(r.qtype),0) / mockResults.length
@@ -4647,7 +4647,7 @@ function showMockResults(){
   if(points>0){
     fbLogEntry("testPoints", {
       lessonId: isLessonTest ? (lessonTestLesson?.id||"") : "",
-      lessonTitle: isLessonTest ? (lessonTestLesson?.title||"") : `Mock Exam (${mockSelected.size} lesson${mockSelected.size!==1?"s":""})`,
+      lessonTitle: isLessonTest ? (lessonTestLesson?.title||"") : `Practice Test (${mockSelected.size} lesson${mockSelected.size!==1?"s":""})`,
       pct: avg,
       points,
       rawPoints,
@@ -4658,8 +4658,8 @@ function showMockResults(){
   setTimeout(()=>showTestPointsPopup(avg, points, isLessonTest, difficultyMultiplier), 400);
 }
 
-// Point tiers for a full multi-lesson Mock Exam — same shape as Lesson Test
-// but a bit richer per tier, since a mock exam spans more material at once.
+// Point tiers for a full multi-lesson Practice Test — same shape as Lesson Test
+// but a bit richer per tier, since a practice test spans more material at once.
 function calcMockExamPoints(pct){
   if(pct>=100) return 120;
   if(pct>=90)  return 65;
@@ -4681,7 +4681,7 @@ function showTestPointsPopup(pct, points, isLessonTestRun, difficultyMultiplier)
   }
   const tier = pct>=100?"🏆 Perfect Score!":pct>=90?"🌟 Outstanding!":pct>=80?"🎉 Great Job!":pct>=60?"👍 Good Work!":"💪 Keep Practising!";
   const tierColor = pct>=90?"var(--gold,#e8b84b)":pct>=60?"var(--green,#4ccc8a)":"var(--muted,#888)";
-  const runLabel = isLessonTestRun ? "lesson test" : "mock exam";
+  const runLabel = isLessonTestRun ? "lesson test" : "practice test";
   const showDifficultyNote = !isLessonTestRun && difficultyMultiplier!==undefined && difficultyMultiplier < 0.95;
   overlay.innerHTML = `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)">
     <div style="font-size:40px;margin-bottom:8px">${pct>=80?"🎊":pct>=60?"✨":"📘"}</div>
@@ -4838,7 +4838,7 @@ function buildMockAnswerSheet(avg, totalMs){
 
   return `
   <div class="mas-header">
-    <div class="mas-title">🎯 Mock Exam — Answer Sheet</div>
+    <div class="mas-title">📝 Practice Test — Answer Sheet</div>
     <div class="mas-meta">${mockSubject} · ${answered}/${mockQuestions.length} answered · ⏱ ${fmtMs(totalMs)}</div>
     <div class="mas-mark-row">
       <div style="display:flex;flex-direction:column;align-items:center">
@@ -4871,7 +4871,7 @@ function downloadMockAnswerSheet(){
   if(!sheet) return;
   const dateStr = new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Mock Exam Answer Sheet — ${dateStr}</title>
+    <title>Practice Test Answer Sheet — ${dateStr}</title>
     <style>
       body{font-family:system-ui,sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#1a2744}
       .mas-q-card{border-radius:10px;padding:14px;margin-bottom:12px;border:1.5px solid #ddd}
@@ -4990,7 +4990,7 @@ document.addEventListener("drop", function(e){
 let _navKeyLock = false;
 // Shared "go to previous / go to next" logic — used by both arrow-key navigation
 // and swipe gestures, so the rules stay identical (e.g. can't swipe forward past
-// an unanswered question, mock exam submits via the real button not a shortcut).
+// an unanswered question, practice test submits via the real button not a shortcut).
 function navigatePrev(){
   if(currentLesson?.id==="__mock__"){
     jumpMockQuestion(mockQIndex-1);
@@ -5242,7 +5242,7 @@ function closeSpellingPanel(){
   document.getElementById("spellingPanel").classList.remove("visible");
 }
 
-// ── STANDALONE SCOREBOARD PANEL (its own floating icon, alongside Mock Exam / Spelling) ──
+// ── STANDALONE SCOREBOARD PANEL (its own floating icon, alongside Practice Test / Spelling) ──
 function openScoreboardPanel(){
   document.getElementById("scoreboardPanel").classList.add("visible");
   buildStudentScoreboard();
@@ -5306,7 +5306,7 @@ function renderHowToEarnPoints(targetId){
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Lesson Test — 30 to 100 points</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 30 points, 80%+ for 40, 90%+ for 50, and a perfect 100% earns a full 100 points.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 300 points, 80%+ for 500, and a perfect 100% earns 700 points.</div>
         </div>
 
         <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-top:2px">⚠️ Answers below 50% don't count toward any of this — quality matters, not just clicking through.</div>
@@ -5428,7 +5428,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
     grandTimeMs += e.timeMs || 0;
   });
 
-  // Mock exam answers — counted separately for the "Mock Exam" stat row,
+  // Practice test answers — counted separately for the "Practice Test" stat row,
   // and also folded into unique-questions / attempts / time so the grand total reflects everything.
   let mockAttempts = 0, mockTimeMs = 0, mockScoreSum = 0, mockScoreCount = 0;
   const mockUnique = new Set();
@@ -5459,7 +5459,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
 
   // Flat list of every scored entry (study + mock combined) — used by the Growth Score
   // calculation for mastery-weighting and the improvement trend, independent of how
-  // sessions/mock exams happen to be grouped. Entries with no resolvable timestamp
+  // sessions/practice tests happen to be grouped. Entries with no resolvable timestamp
   // are skipped entirely here, rather than guessed, since the daily goal and session
   // goals both depend on knowing exactly which calendar day each entry belongs to.
   const allScoredEntries = [];
@@ -5474,8 +5474,8 @@ function aggregateScoreboardData(logsSnap, examSnap){
     const e = d.data();
     const tsMs = resolveTs(e);
     if(typeof e.pct === "number" && tsMs!==null){
-      // Mock exam answers don't carry a `subject` field directly — fall back
-      // to looking up the lesson, since mock exams can span multiple lessons
+      // Practice test answers don't carry a `subject` field directly — fall back
+      // to looking up the lesson, since practice tests can span multiple lessons
       // that may belong to different subjects.
       const lesson = findLessonById(e.lessonId);
       allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx });
@@ -5810,6 +5810,42 @@ async function fetchTotalTestPoints(){
   }
 }
 
+// ═══════════════════════════════════════════════════════
+//  DAILY TIME BONUS — +100 points for each subject the student spends at
+//  least 30 minutes on today. Counts ALL time (any score), since this is
+//  about genuine time invested studying, not correctness — a separate signal
+//  from the type-coverage session bonus above.
+// ═══════════════════════════════════════════════════════
+const DAILY_TIME_BONUS_MS = 30 * 60 * 1000; // 30 minutes
+const DAILY_TIME_BONUS_POINTS = 100;
+
+function calcDailyTimeBonus(allScoredEntries){
+  const startOfToday = new Date();
+  startOfToday.setHours(0,0,0,0);
+  const todayMs = startOfToday.getTime();
+
+  const subjectNames = Object.keys(DATA);
+  const timeToday = {};
+  subjectNames.forEach(s=>{ timeToday[s] = 0; });
+
+  allScoredEntries.forEach(e=>{
+    if(e.ts < todayMs) return;
+    const subj = e.subject || '';
+    if(timeToday[subj] !== undefined) timeToday[subj] += (e.timeMs || 0);
+  });
+
+  const bySubject = {};
+  let pointsEarned = 0;
+  subjectNames.forEach(s=>{
+    const ms = timeToday[s];
+    const done = ms >= DAILY_TIME_BONUS_MS;
+    if(done) pointsEarned += DAILY_TIME_BONUS_POINTS;
+    bySubject[s] = { ms, done, pct: Math.min(100, Math.round((ms/DAILY_TIME_BONUS_MS)*100)) };
+  });
+
+  return { bySubject, pointsEarned };
+}
+
 function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const totalAvailable = countTotalAvailableQuestions();
   const coverage = totalAvailable>0 ? Math.min(100, Math.round((allUnique.size/totalAvailable)*100)) : 0;
@@ -5884,14 +5920,19 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   });
   growthPoints += speedBonusTotal;
   growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
+
+  // Daily time bonus: +100 per subject with 30+ minutes spent today
+  const dailyTimeBonus = calcDailyTimeBonus(allScoredEntries);
+  growthPoints += dailyTimeBonus.pointsEarned;
+
   growthPoints = Math.round(growthPoints);
 
-  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints };
+  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus };
 }
 
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
   const sessionCount = Object.keys(bySession).length;
-  const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
+  const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
   const subjectBreakdown = calcSubjectBreakdown(allScoredEntries||[]);
   const trendArrow = trend>60?"↗":trend<40?"↘":"→";
   const trendColor = trend>60?"#7ee787":trend<40?"#ffa07a":"rgba(255,255,255,.5)";
@@ -5917,8 +5958,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       [grandAttempts, 'attempts'],
       [fmtMs(grandTimeMs), 'time'],
       [sessionCount, 'sessions'],
-    ].concat(mockStats.attempts ? [[mockStats.avgScore!==null?mockStats.avgScore+'%':'—','mock avg']] : [])
-    .map(function(p){ return '<div style="text-align:center"><div style="font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">'+p[0]+'</div><div style="font-size:9px;color:'+W+'.4);margin-top:1px">'+p[1]+'</div></div>'; }).join('')
+    ].map(function(p){ return '<div style="text-align:center"><div style="font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">'+p[0]+'</div><div style="font-size:9px;color:'+W+'.4);margin-top:1px">'+p[1]+'</div></div>'; }).join('')
   +'</div>'
   +'<div style="height:1px;background:'+W+'.1);margin-bottom:14px"></div>';
 
@@ -5943,6 +5983,26 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +'</div>';
   }).join('');
   var streakLine = sessionGoals.morningStreak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:2px;margin-bottom:4px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'';
+
+  // ── TIME BONUS bars — +100 per subject with 30+ min studied today ──
+  var tLabel = '<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
+    +'<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">⏱ 30-Min Bonus — +100 per subject</div>';
+  var tBars = Object.entries(dailyTimeBonus.bySubject||{}).map(function(e){
+    var subj=e[0], t=e[1];
+    var icon=(DATA[subj]&&DATA[subj].icon)||'📚';
+    var barCol = t.done?'#7ee787':t.pct>0?'#e8a020':W+'.15)';
+    var mins = Math.floor(t.ms/60000);
+    var label = t.done?'✅ 30+ min':mins+'/30 min';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">'
+      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+      +'<div style="flex:1;height:7px;background:'+W+'.1);border-radius:4px;overflow:hidden">'
+        +'<div style="height:100%;width:'+t.pct+'%;background:'+barCol+';border-radius:4px"></div>'
+      +'</div>'
+      +'<div style="font-size:10px;font-weight:700;min-width:64px;text-align:right;color:'+(t.done?'#7ee787':W+'.45)')+'">'+label+'</div>'
+    +'</div>';
+  }).join('');
+  var tFooter = dailyTimeBonus.pointsEarned>0
+    ? '<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">+'+dailyTimeBonus.pointsEarned+' points earned today</div>' : '';
 
   // ── DAILY GOAL bars (tap to expand types) ──
   var gLabel = '<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
@@ -5984,14 +6044,17 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +'<span style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5)">📘 By Subject</span>'
       +'<span style="font-size:10px;color:'+W+'.35)">tap to expand</span>'
     +'</summary>'
-    +'<div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">'
+    +'<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">'
       +subjectBreakdown.map(function(s){
-        return '<div style="display:flex;align-items:center;gap:10px">'
-          +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+s.icon+' '+s.name.split(' ')[0]+'</div>'
-          +'<div style="flex:1;height:6px;background:'+W+'.1);border-radius:3px;overflow:hidden">'
-            +'<div style="height:100%;width:'+s.coverage+'%;background:#7ee787;border-radius:3px"></div>'
+        return '<div>'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+            +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+s.icon+' '+s.name.split(' ')[0]+'</div>'
+            +'<div style="flex:1;height:6px;background:'+W+'.1);border-radius:3px;overflow:hidden">'
+              +'<div style="height:100%;width:'+s.coverage+'%;background:#7ee787;border-radius:3px"></div>'
+            +'</div>'
+            +'<div style="font-size:10px;color:'+W+'.45);min-width:50px;text-align:right">'+s.coverage+'% · '+s.mastery+'%M</div>'
           +'</div>'
-          +'<div style="font-size:10px;color:'+W+'.45);min-width:50px;text-align:right">'+s.coverage+'% · '+s.mastery+'%M</div>'
+          +'<div style="font-size:9px;color:'+W+'.35);margin-left:86px;margin-top:2px">⏱ '+fmtMs(s.timeMs||0)+' spent</div>'
         +'</div>';
       }).join('')
     +'</div></details>';
@@ -6009,11 +6072,12 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +earnRow('📅','Daily Goal — +10/day','Answer 50%+ in every active question type today')
       +earnRow('🌅','Morning Session — +70 or +50/subject','Cover all types 6–8am · started = +10')
       +earnRow('🌙','Evening Session — +50/subject','Cover all types after 8am · both sessions = +50 extra · started = +10')
-      +earnRow('🧪','Lesson Test — 30 to 100 pts','60%=30 · 80%=40 · 90%=50 · 100%=100')
+      +earnRow('⏱','30-Min Bonus — +100/subject/day','Spend 30+ minutes on any subject today, any score counts')
+      +earnRow('📝','Practice Test — 300 to 700 pts','60%+=300 · 80%+=500 · 100%=700')
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
 
-  return hero + sLabel + sRows + streakLine + gLabel + gBars + gFooter + bySubj + howToEarn;
+  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + bySubj + howToEarn;
 }
 
 
@@ -6468,7 +6532,7 @@ function openAdminMirror(){
       <button onclick="showAdminTab('live')" id="tabBtnLive" class="admin-tab-btn active">🔴 Live</button>
       <button onclick="showAdminTab('scoreboard')" id="tabBtnScoreboard" class="admin-tab-btn">🏆 Scoreboard</button>
       <button onclick="showAdminTab('past')" id="tabBtnPast" class="admin-tab-btn">📂 Past Sessions</button>
-      <button onclick="showAdminTab('mockexams')" id="tabBtnMockExams" class="admin-tab-btn">🎯 Mock Exams</button>
+      <button onclick="showAdminTab('mockexams')" id="tabBtnMockExams" class="admin-tab-btn">📝 Practice Tests</button>
     </div>
 
     <div id="adminTabLive">
@@ -6482,7 +6546,7 @@ function openAdminMirror(){
       </div>
       <h3 style="font-family:Georgia,serif;color:#1a2744">🕘 Recent Activity (Today)</h3>
       <div id="adminLogList" style="font-size:13px"></div>
-      <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Mock Exam Answers (Today)</h3>
+      <h3 style="margin-top:24px;font-family:Georgia,serif;color:#1a2744">📝 Practice Test Answers (Today)</h3>
       <div id="adminExamList" style="font-size:13px"></div>
       <button onclick="downloadAdminMirror()" style="margin-top:20px;padding:10px 20px;background:#1a2744;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download Full Report</button>
     </div>
@@ -6494,12 +6558,12 @@ function openAdminMirror(){
     </div>
 
     <div id="adminTabPast" style="display:none">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Showing the last 5 sessions. Each includes both study activity and any mock exam taken during it.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Showing the last 5 sessions. Each includes both study activity and any practice test taken during it.</p>
       <div id="pastSessionsList"></div>
     </div>
 
     <div id="adminTabMockExams" style="display:none">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every mock exam ${STUDENT_NAME} has taken, grouped by exam attempt — view full answers or download.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every practice test ${STUDENT_NAME} has taken, grouped by exam attempt — view full answers or download.</p>
       <div id="mockExamsList"></div>
       <button id="mockExamsLoadMore" onclick="loadMoreMockExams()" style="display:none;width:100%;margin-top:10px;padding:10px;background:#fff;border:1.5px solid #1a2744;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;color:#1a2744">Load older exams ↓</button>
     </div>
@@ -6518,7 +6582,7 @@ function openAdminMirror(){
     if(!box) return;
     if(!snap.exists()){ box.innerHTML = "<p style='opacity:.7;margin:0'>Waiting for activity…</p>"; return; }
     const s = snap.data();
-    const modeLabel = s.mode==="mock" ? "🎯 Mock Exam" : "📖 Practice Mode";
+    const modeLabel = s.mode==="mock" ? "📝 Practice Test" : "📖 Practice Mode";
 
     // Build an options list that looks like the real .mcq-option cards when we can tell
     // the student's answer apart from the correct one (MCQ / True-False style answers).
@@ -6563,7 +6627,7 @@ function openAdminMirror(){
   });
 
   // Live listener — logs (today only — this is "recent activity," not full history;
-  // use Past Sessions or Mock Exams tabs for anything older).
+  // use Past Sessions or Practice Tests tabs for anything older).
   const logsQ = query(collection(db, "sessions", currentUserPhone, "logs"), orderBy("ts", "desc"));
   onSnapshot(logsQ, snap => {
     const list = document.getElementById("adminLogList");
@@ -6595,7 +6659,7 @@ function openAdminMirror(){
       const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : null;
       return tsMs!==null && tsMs >= startOfToday.getTime();
     });
-    if(!todayDocs.length){ list.innerHTML = "<p style='color:#999'>No mock exam activity today. See the Mock Exams tab for past attempts.</p>"; return; }
+    if(!todayDocs.length){ list.innerHTML = "<p style='color:#999'>No practice test activity today. See the Practice Tests tab for past attempts.</p>"; return; }
     list.innerHTML = todayDocs.map(d=>{
       const e = d.data();
       const isOk = (e.pct||0) >= 80;
@@ -6735,7 +6799,7 @@ function viewPastSession(sid){
       <span style="color:var(--muted,#666)">Student's answer: ${(e.userText||"").slice(0,150)}</span><br>
       <span style="color:var(--green,#2a9d5c)">Correct answer: ${(e.modelText||"").slice(0,150)}</span>
       <span style="float:right;font-weight:700;color:${(e.pct||0)>=80?'var(--green,#2a9d5c)':'var(--red,#c0392b)'}">${e.pct!==undefined?e.pct+"%":""}</span>
-    </div>`).join("") || "<p style='color:var(--muted)'>No mock exam in this session.</p>";
+    </div>`).join("") || "<p style='color:var(--muted)'>No practice test in this session.</p>";
 
   const spellRows = (s.spellEntries||[]).map(e=>`
     <div style="padding:6px 10px;border-bottom:1px solid #eee;font-size:13px">
@@ -6750,7 +6814,7 @@ function viewPastSession(sid){
     <h2 style="font-family:Georgia,serif;color:var(--navy,#1a2744)">${dateLabel}</h2>
     <h3 style="font-family:Georgia,serif;color:var(--navy,#1a2744);margin-top:20px">📖 Study Activity</h3>
     ${studyRows}
-    <h3 style="font-family:Georgia,serif;color:var(--navy,#1a2744);margin-top:20px">🎯 Mock Exam</h3>
+    <h3 style="font-family:Georgia,serif;color:var(--navy,#1a2744);margin-top:20px">📝 Practice Test</h3>
     ${mockRows}
     <h3 style="font-family:Georgia,serif;color:var(--navy,#1a2744);margin-top:20px">✏️ Spelling to Learn</h3>
     ${spellRows}
@@ -6775,7 +6839,7 @@ function downloadPastSession(sid){
   s.entries.forEach(e=>{
     html += `<tr><td>${e.lessonTitle||"—"}</td><td>${e.qtype||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td><td>${e.timeMs?fmtMs(e.timeMs):""}</td></tr>`;
   });
-  html += `</table><h2>Mock Exam (${s.mockEntries.length})</h2>
+  html += `</table><h2>Practice Test (${s.mockEntries.length})</h2>
     <table><tr><th>Question</th><th>Student's Answer</th><th>Correct Answer</th><th>Score</th></tr>`;
   s.mockEntries.forEach(e=>{
     html += `<tr><td>${e.q||""}</td><td>${e.userText||""}</td><td>${e.modelText||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td></tr>`;
@@ -6798,7 +6862,7 @@ function downloadPastSession(sid){
   URL.revokeObjectURL(url);
 }
 
-// Cache of mock-exam attempts (grouped by sessionId, since one mock exam = one session's worth of examAnswers).
+// Cache of mock-exam attempts (grouped by sessionId, since one practice test = one session's worth of examAnswers).
 let _mockExamsCache = null;
 let _mockExamsAllIds = [];   // all exam IDs, newest first, fully loaded once per call
 let _mockExamsShown = 0;     // how many are currently rendered
@@ -6820,7 +6884,7 @@ async function buildMockExamsList(targetId, loadMoreBtnId){
 
   const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
   if(examSnap.empty){
-    list.innerHTML = "<p style='color:var(--muted)'>No mock exams taken yet.</p>";
+    list.innerHTML = "<p style='color:var(--muted)'>No practice tests taken yet.</p>";
     const lm = document.getElementById(loadMoreBtnId); if(lm) lm.style.display = "none";
     return;
   }
@@ -6888,7 +6952,7 @@ function renderMockExamsPage(targetId, loadMoreBtnId){
   }
 }
 
-// Full answer-by-answer view for one mock exam attempt — selected vs correct answer for every question.
+// Full answer-by-answer view for one practice test attempt — selected vs correct answer for every question.
 function viewMockExam(eid){
   const ex = _mockExamsCache?.[eid];
   if(!ex) return;
@@ -6922,13 +6986,13 @@ function viewMockExam(eid){
   detail.innerHTML = `
     <button onclick="document.getElementById('mockExamDetail').remove()"
       style="position:fixed;top:8px;right:12px;background:#e05c5c;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;z-index:300001">✕ Close</button>
-    <h2 style="font-family:Georgia,serif;color:var(--navy,#1a2744)">🎯 Mock Exam — ${dateLabel}</h2>
+    <h2 style="font-family:Georgia,serif;color:var(--navy,#1a2744)">📝 Practice Test — ${dateLabel}</h2>
     ${rows}
     <button onclick="downloadMockExamAttempt('${eid}')" style="margin-top:10px;padding:10px 20px;background:var(--navy,#1a2744);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">⬇ Download This Exam</button>
   `;
 }
 
-// Downloads one mock exam attempt as a standalone HTML report.
+// Downloads one practice test attempt as a standalone HTML report.
 function downloadMockExamAttempt(eid){
   const ex = _mockExamsCache?.[eid];
   if(!ex) return;
@@ -6936,11 +7000,11 @@ function downloadMockExamAttempt(eid){
   const total = ex.answers.length;
   const avgScore = Math.round(ex.answers.reduce((a,e)=>a+(e.pct||0),0)/total);
 
-  let html = `<html><head><meta charset="utf-8"><title>Study Buddy Mock Exam Report</title>
+  let html = `<html><head><meta charset="utf-8"><title>Study Buddy Practice Test Report</title>
     <style>body{font-family:Georgia,serif;padding:24px;color:#222}h2{color:#1a2744}
     table{width:100%;border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}</style>
     </head><body>
-    <h1>🎯 Study Buddy — Mock Exam Report</h1>
+    <h1>🎯 Study Buddy — Practice Test Report</h1>
     <p>Student: ${STUDENT_NAME} · Taken: ${dateLabel} · Average score: ${avgScore}%</p>
     <table><tr><th>#</th><th>Question</th><th>Student's Answer</th><th>Correct Answer</th><th>Score</th></tr>`;
   ex.answers.forEach((e,i)=>{
@@ -6966,6 +7030,9 @@ let _spellingWords = [];   // deduped {word, lessonTitle, missCount} pulled from
 let _spellingIdx = 0;
 let _spellingScore = 0;
 let _spellingRoundSize = 0;
+let _spellingSubject = "";
+
+let _spellingAllBySubject = {}; // subject -> [{word, lessonTitle, missCount}]
 
 async function openSpellingGame(){
   const root = document.getElementById("spellingGameRoot");
@@ -6983,49 +7050,94 @@ async function openSpellingGame(){
     root.innerHTML = `
       <div style="text-align:center;padding:30px 16px">
         <div style="font-size:40px;margin-bottom:10px">🎉</div>
-        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Mock Exam, any misspelled words will show up here for you to practise.</p>
+        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Practice Test, any misspelled words will show up here for you to practise.</p>
       </div>`;
     return;
   }
 
-  // Dedupe by the correct spelling, keep the most recent lesson reference, count repeats
-  const byWord = {};
+  // Dedupe by the correct spelling PER SUBJECT, keep most recent lesson, count repeats
+  const bySubjWord = {};
   snap.forEach(d=>{
     const e = d.data();
     const key = (e.correct||"").toLowerCase().trim();
     if(!key) return;
-    if(!byWord[key]) byWord[key] = { word: e.correct, lessonTitle: e.lessonTitle, missCount: 0 };
-    byWord[key].missCount++;
+    const subj = e.subject || "Other";
+    if(!bySubjWord[subj]) bySubjWord[subj] = {};
+    if(!bySubjWord[subj][key]) bySubjWord[subj][key] = { word: e.correct, lessonTitle: e.lessonTitle, missCount: 0 };
+    bySubjWord[subj][key].missCount++;
   });
 
-  _spellingWords = Object.values(byWord).sort((a,b)=>b.missCount - a.missCount); // most-missed first
+  _spellingAllBySubject = {};
+  Object.keys(bySubjWord).forEach(subj=>{
+    _spellingAllBySubject[subj] = Object.values(bySubjWord[subj]).sort((a,b)=>b.missCount - a.missCount);
+  });
 
-  if(!_spellingWords.length){
+  if(!Object.keys(_spellingAllBySubject).length){
     root.innerHTML = `
       <div style="text-align:center;padding:30px 16px">
         <div style="font-size:40px;margin-bottom:10px">🎉</div>
-        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Mock Exam, any misspelled words will show up here for you to practise.</p>
+        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Practice Test, any misspelled words will show up here for you to practise.</p>
       </div>`;
     return;
   }
 
+  renderSpellingSubjectPicker(root);
+}
+
+// Shows one tile per subject with its own mistake count — student picks which
+// subject to practise so the words stay relevant to what they're studying now.
+function renderSpellingSubjectPicker(root){
+  const subjects = Object.keys(_spellingAllBySubject);
+  const totalWords = subjects.reduce((a,s)=>a+_spellingAllBySubject[s].length, 0);
+
+  if(subjects.length === 1){
+    // Only one subject has mistakes — skip the picker, go straight in
+    startSpellingSubject(subjects[0]);
+    return;
+  }
+
+  root.innerHTML = `
+    <div style="text-align:center;padding:16px 4px">
+      <div style="font-size:36px;margin-bottom:8px">🔤</div>
+      <h3 style="font-family:Georgia,serif;color:var(--navy);margin-bottom:4px">Spelling Practice</h3>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:18px">${totalWords} word${totalWords!==1?"s":""} from your mistakes — choose a subject to practise</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${subjects.map(subj=>{
+          const icon = DATA[subj]?.icon || "📚";
+          const count = _spellingAllBySubject[subj].length;
+          return `<button onclick="startSpellingSubject('${subj.replace(/'/g,"\\'")}')"
+            style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--parchment);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="font-size:14px;font-weight:700;color:var(--navy)">${icon} ${subj}</span>
+            <span style="font-size:12px;color:var(--muted);font-weight:700">${count} word${count!==1?"s":""} →</span>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+
+function startSpellingSubject(subject){
+  _spellingWords = _spellingAllBySubject[subject] || [];
+  _spellingSubject = subject;
+  if(!_spellingWords.length) return;
   _spellingIdx = 0;
   _spellingScore = 0;
-  _spellingRoundSize = Math.min(10, _spellingWords.length); // a manageable round, not the whole backlog at once
-
+  _spellingRoundSize = Math.min(10, _spellingWords.length);
+  const root = document.getElementById("spellingGameRoot");
   renderSpellingRoundIntro(root);
 }
 
 function renderSpellingRoundIntro(root){
+  const icon = DATA[_spellingSubject]?.icon || "🔤";
   root.innerHTML = `
     <div style="text-align:center;padding:20px 16px">
-      <div style="font-size:36px;margin-bottom:10px">🔤</div>
-      <h3 style="font-family:Georgia,serif;color:var(--navy);margin-bottom:6px">Spelling Practice</h3>
+      <div style="font-size:36px;margin-bottom:10px">${icon}</div>
+      <h3 style="font-family:Georgia,serif;color:var(--navy);margin-bottom:2px">${_spellingSubject||"Spelling Practice"}</h3>
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
-        ${_spellingWords.length} word${_spellingWords.length!==1?"s":""} from your real mistakes in Practice Mode and Mock Exams.
-        This round: ${_spellingRoundSize} word${_spellingRoundSize!==1?"s":""}, starting with the ones you've missed most.
+        ${_spellingWords.length} word${_spellingWords.length!==1?"s":""} from your real mistakes in this subject.
+        This round: ${_spellingRoundSize} word${_spellingRoundSize!==1?"s":""}, starting with the ones you've missed most. <b>+1 point</b> per correct spelling.
       </p>
       <button onclick="startSpellingRound()" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start ▶</button>
+      ${Object.keys(_spellingAllBySubject).length>1 ? `<div style="margin-top:12px"><button onclick="renderSpellingSubjectPicker(document.getElementById('spellingGameRoot'))" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">← choose a different subject</button></div>` : ""}
     </div>`;
 }
 
@@ -7087,7 +7199,14 @@ function checkSpellingAnswer(){
   if(isCorrect){
     _spellingScore++;
     feedback.style.color = "var(--green)";
-    feedback.textContent = "✓ Correct!";
+    feedback.textContent = "✓ Correct! +1 point";
+    // Log as its own scored entry so it counts toward Growth Points —
+    // 1 mark, 100%, tagged with the subject the word came from.
+    fbLogEntry("logs", {
+      qtype: "spelling", pct: 100, timeMs: 0,
+      subject: _spellingSubject || "", lessonId: "spelling", qIndex: _spellingIdx,
+      lessonTitle: item.lessonTitle || "Spelling Practice"
+    });
   } else {
     feedback.style.color = "var(--red)";
     feedback.innerHTML = `Not quite — it's <b>${item.word}</b>`;
@@ -7108,10 +7227,12 @@ function renderSpellingRoundResult(root){
     <div style="text-align:center;padding:20px 16px">
       <div style="font-size:40px;margin-bottom:10px">${pct>=80?"🏆":pct>=50?"👍":"💪"}</div>
       <h3 style="font-family:Georgia,serif;color:var(--navy);margin-bottom:6px">${_spellingScore} / ${_spellingRoundSize} correct</h3>
+      <p style="color:var(--gold,#b8860b);font-size:13px;font-weight:700;margin-bottom:8px">+${_spellingScore} point${_spellingScore!==1?"s":""} earned</p>
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
-        ${remaining>0 ? `${remaining} more word${remaining!==1?"s":""} from your mistake list still to practise.` : "You've covered every word in your mistake list!"}
+        ${remaining>0 ? `${remaining} more word${remaining!==1?"s":""} in ${_spellingSubject} still to practise.` : `You've covered every word in ${_spellingSubject}!`}
       </p>
-      <button onclick="openSpellingGame()" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Play Again</button>
+      <button onclick="startSpellingSubject('${(_spellingSubject||"").replace(/'/g,"\\'")}')" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;margin-right:8px">Play Again</button>
+      ${Object.keys(_spellingAllBySubject).length>1 ? `<button onclick="renderSpellingSubjectPicker(document.getElementById('spellingGameRoot'))" style="padding:12px 20px;background:var(--parchment);color:var(--navy);border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Other Subject</button>` : ""}
     </div>`;
 }
 
@@ -7156,7 +7277,7 @@ async function downloadAdminMirror(){
     const e = d.data();
     html += `<tr><td>${e.lessonTitle||"—"}</td><td>${e.qtype||""}</td><td>${e.pct!==undefined?e.pct+"%":""}</td><td>${e.timeMs?fmtMs(e.timeMs):""}</td><td>${e.ts?.toDate?e.ts.toDate().toLocaleString():""}</td></tr>`;
   });
-  html += `</table><h2>Mock Exam Answers (${examSnap.size})</h2>
+  html += `</table><h2>Practice Test Answers (${examSnap.size})</h2>
     <table><tr><th>Question</th><th>Student's Answer</th><th>Correct Answer</th><th>Score</th></tr>`;
   examSnap.forEach(d=>{
     const e = d.data();
