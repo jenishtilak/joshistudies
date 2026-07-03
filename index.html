@@ -934,8 +934,101 @@ const DATA = {
                   options:["Spring balance","Beam balance","Physical balance","Digital balance"],
                   correct:0
                 },
+                {
+                  q:"Assertion (A): The scientifically correct expression is \"The mass of the bag is 10 kg\".\nReason (R): In everyday life, we use the term weight instead of mass.",
+                  options:["Both A and R are true but R is not the correct reason","Both A and R are true and R is the correct reason","A is true but R is false","A is false but R is true"],
+                  correct:0
+                },
+                {
+                  q:"Assertion (A): 0°C = 273.16 K. For our convenience we take it as 273 K after rounding off the decimal.\nReason (R): To convert a temperature on the Celsius scale we have to add 273 to the given temperature.",
+                  options:["Both A and R are true but R is not the correct reason","Both A and R are true and R is the correct reason","A is true but R is false","A is false but R is true"],
+                  correct:1
+                },
+                {
+                  q:"Assertion (A): Distance between two celestial bodies is measured in terms of light year.\nReason (R): The distance travelled by light in one year is one light year.",
+                  options:["Both A and R are true but R is not the correct reason","Both A and R are true and R is the correct reason","A is true but R is false","A is false but R is true"],
+                  correct:3
+                },
               ],
-              fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]
+              fill:[
+                { sentence:"Metre is the unit of ___.", answers:["length"] },
+                { sentence:"1 kg of rice is weighed by ___.", answers:["Beam balance"] },
+                { sentence:"Thickness of a cricket ball is measured by ___.", answers:["Vernier caliper"] },
+                { sentence:"Radius of a thin wire is measured by ___.", answers:["screw gauge"] },
+                { sentence:"A physical balance measures small differences in mass up to ___.", answers:["1mg"] },
+              ],
+              match:[
+                {
+                  q:"Match the fundamental quantities with their SI units.",
+                  left:["Length","Mass","Time","Temperature"],
+                  right:["kilogram","second","metre","kelvin"],
+                  correct:[2,0,1,3]
+                },
+                {
+                  q:"Match the measuring instruments with the objects they measure.",
+                  left:["Screw gauge","Vernier caliper","Beam balance","Digital balance"],
+                  right:["Gold ornaments","Cricket ball","Vegetables","Coins"],
+                  correct:[3,0,2,1]
+                },
+              ],
+              brief:[
+                {
+                  q:"Define measurement.",
+                  answer:"Measurement is the determination of the size or magnitude of a quantity. It is about assigning a number as a characteristic of an object or event which can be compared with other objects or events."
+                },
+                {
+                  q:"Define standard unit.",
+                  answer:"A unit is a standard quantity with which the unknown quantities are compared. It is defined as a specific magnitude of a physical quantity that has been adopted by law or convention."
+                },
+                {
+                  q:"What is the full form of SI system?",
+                  answer:"SI stands for Systeme Internationale d'Unites which means International System of Units."
+                },
+                {
+                  q:"Define least count of any device.",
+                  answer:"The smallest measurement that can be taken by a measuring instrument is called its least count. For example, the least count of a Vernier caliper is 0.1 mm and the least count of a screw gauge is 0.01 mm."
+                },
+                {
+                  q:"What do you know about pitch of a screw gauge?",
+                  answer:"The pitch of the screw is the distance moved by the tip of the screw for one complete rotation of the head. It is equal to 1 mm in typical screw gauges."
+                },
+                {
+                  q:"Can you find the diameter of a thin rod of length 2 m using the ruler from instrument box?",
+                  answer:"No. The ruler in the instrument box is only about 15 cm long. A thin rod of length 2 m cannot be measured using it. We need a metre scale or measuring tape."
+                },
+                {
+                  q:"Write the need of a standard unit.",
+                  answer:"A standard unit is needed so that measurements made by different people at different places can be compared. Without a standard unit, communication of measurements would be confusing and inaccurate."
+                },
+                {
+                  q:"How will you measure the least count using Vernier caliper?",
+                  answer:"The first step in using the Vernier caliper is to find out its least count, range and zero error.\n\nLeast count of the instrument (LC) = Value of one main scale division / Total number of vernier scale divisions.\n\nThe main scale division will be in centimetre, further divided into millimetre. The value of the smallest main scale division is 1 mm. In the Vernier scale there will be 10 divisions.\n\nLC = 1mm / 10 = 0.1 mm = 0.01 cm"
+                },
+              ],
+              truefalse:[
+                { q:"The SI unit of electric current is kilogram.", answer:false, correction:"The SI unit of electric current is ampere. Kilogram is the SI unit of mass." },
+                { q:"Kilometre is one of the SI units of measurement.", answer:true },
+                { q:"In everyday life, we use the term weight instead of mass.", answer:true },
+                { q:"A physical balance is more sensitive than a beam balance.", answer:true },
+                { q:"One Celsius degree is an interval of 1K and zero degree Celsius is 273.15 K.", answer:true },
+                { q:"With the help of Vernier caliper we can have an accuracy of 0.1 mm and with screw gauge we can have an accuracy of 0.01 mm.", answer:true },
+              ],
+              reasons:[],
+              distinguish:[
+                {
+                  q:"Differentiate mass and weight.",
+                  termA:"Mass",
+                  answerA:"1. It is a fundamental quantity.\n2. It has magnitude alone — scalar quantity.\n3. It is the amount of matter contained in a body.\n4. Remains the same everywhere.\n5. It is measured using physical balance.\n6. Its unit is kilogram.",
+                  termB:"Weight",
+                  answerB:"1. It is a derived quantity.\n2. It has magnitude and direction — vector quantity.\n3. It is the normal force exerted by the surface of the object against gravitational pull.\n4. Varies from place to place.\n5. It is measured using spring balance.\n6. Its unit is newton."
+                },
+              ],
+              paragraph:[
+                {
+                  q:"Write the rules for writing symbols of units in SI system.",
+                  answer:"The rules for writing symbols of units in SI system are:\n\n1. The units named after scientists are not written with a capital initial letter. E.g. newton, henry, ampere and watt.\n2. The symbols of the units named after scientists should be written by the initial capital letter. E.g. N for newton, H for henry, A for ampere and W for watt.\n3. Small letters are used as symbols for units not derived from a proper noun. E.g. m for metre, kg for kilogram.\n4. No full stop or other punctuation marks should be used within or at the end of symbols. E.g. 50 m not as 50 m.\n5. The symbols of the units are not expressed in plural form. E.g. 10 kg not as 10 kgs.\n6. When temperature is expressed in kelvin, the degree sign is omitted. E.g. 283 K not as 283° K."
+                },
+              ]
             }
           },
           { id:"sp2",  unit:"Unit 2",  title:"Motion",                        month:"July",     questions:{mcq:[],fill:[],match:[],brief:[],truefalse:[],reasons:[],distinguish:[],paragraph:[]} },
