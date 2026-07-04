@@ -2476,7 +2476,9 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     }
     // Update mastery keys live so lesson cards update without reload
     _answeredQuestionKeys.add(qKey);
-    if(pct >= 80) _masteredQuestionKeys.add(qKey);
+    // Parts mode = student saw each part split up, don't award mastery
+    if(pct >= 80 && !_answeredInPartsMode) _masteredQuestionKeys.add(qKey);
+    if(_answeredInPartsMode && pct >= 80) console.log("Parts mode: score="+pct+"% but mastery not awarded — student must answer all at once");
 
     // Speed bonus — only for written types where fast = good recall
     const sb = getSpeedBonus(currentQType, elapsed);
@@ -2484,6 +2486,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
 
     // Show points breakdown after a short delay
     var totalEarned = marks + (sb ? sb.points : 0);
+    var inParts = _answeredInPartsMode;
     setTimeout(function(){
       var panel = document.getElementById("resultPanel");
       if(panel){
@@ -2494,6 +2497,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
           +'</div>';
         if(isFirstAttempt) breakdown += '<div style="color:var(--muted);margin-top:2px">🆕 New question bonus: ×2</div>';
         if(sb) breakdown += '<div style="color:var(--muted);margin-top:2px">⚡ Speed bonus: +'+sb.points+'</div>';
+        if(inParts) breakdown += '<div style="color:#e8a020;margin-top:4px;font-weight:700">✍️ Answered in parts — not counted as mastered. Try answering all at once to master this question!</div>';
         breakdown += '</div>';
         panel.insertAdjacentHTML("beforeend", breakdown);
       }
@@ -3397,7 +3401,7 @@ function startPartsMode(){
   if(!parts) return;
   // Carry over anything already typed in the main textarea as a starting point for part 1.
   const existing = document.getElementById("answerInput")?.value || "";
-  partsModeState = { parts, currentPart: 0, written: parts.map(()=>""), scores: parts.map(()=>null), originalQuestion: q.q };
+  partsModeState = { parts, currentPart: 0, written: parts.map(()=>""), scores: parts.map(()=>null), originalQuestion: q.q, usedPartsMode: true };
   if(existing.trim()) partsModeState.written[0] = existing;
   renderPartsStep();
 }
@@ -3548,10 +3552,13 @@ function goToPart(targetIdx){
 // Called when the student finishes the LAST part — combines everything written
 // and scores it immediately, exactly as if they'd written it all in one box.
 // No extra "Check Answer" click needed; finishing the parts IS the submission.
+let _answeredInPartsMode = false; // set true when finishPartsMode fires — mastery not awarded
+
 function finishPartsMode(){
   const s = partsModeState;
   if(!s) return;
   const combined = s.written.map(w=>w.trim()).filter(Boolean).join(" ");
+  _answeredInPartsMode = true; // signal to logQuestion: no mastery for this attempt
   partsModeState = null;
   renderCurrentQuestion();
   setTimeout(()=>{
@@ -3562,6 +3569,7 @@ function finishPartsMode(){
     }
     fbLiveState({ currentAnswer: combined, typing:false });
     checkTextAnswer(); // score it right away
+    _answeredInPartsMode = false; // reset after checkTextAnswer runs
   }, 0);
 }
 
