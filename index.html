@@ -2728,11 +2728,13 @@ function jumpToQuestion(idx){
 // ═══════════════════════════════════════════════════════
 // Load answered + mastered question keys from Firebase on login (not just on scoreboard open)
 async function loadMasteryKeys(){
-  if(!window._fb || !currentUserPhone) return;
-  if(_answeredKeysLoaded) return; // already loaded
+  if(!window._fb || !currentUserPhone){ console.log("loadMasteryKeys: skipped, no fb or phone"); return; }
+  if(_answeredKeysLoaded){ console.log("loadMasteryKeys: already loaded"); return; }
   const { db, collection, query, orderBy, getDocs } = window._fb;
   try{
+    console.log("loadMasteryKeys: fetching logs...");
     const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
+    console.log("loadMasteryKeys: got", logsSnap.size, "log entries");
     logsSnap.forEach(function(d){
       var e = d.data();
       var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
@@ -2740,8 +2742,9 @@ async function loadMasteryKeys(){
       if((e.pct||0) >= 80) _masteredQuestionKeys.add(key);
     });
     _answeredKeysLoaded = true;
+    console.log("loadMasteryKeys: answered=", _answeredQuestionKeys.size, "mastered=", _masteredQuestionKeys.size);
     // Re-render lesson cards with updated mastery info
-    if(typeof renderLessons === "function") renderLessons();
+    try{ renderLessons(); console.log("loadMasteryKeys: renderLessons OK"); }catch(e2){ console.log("loadMasteryKeys: renderLessons skipped -", e2.message); }
   }catch(e){ console.error("loadMasteryKeys error:", e); }
 }
 
