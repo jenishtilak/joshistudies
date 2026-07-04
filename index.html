@@ -6524,8 +6524,9 @@ function checkPasscode(){
     const ws = document.getElementById("welcomeScreen");
     ws.classList.add("fade-out");
     setTimeout(()=>ws.classList.add("gone"), 420);
+    loadCompleteLessons(); // load for both admin and student
     if(isAdminUser) showAdminBar();
-    else{ loadCompleteLessons(); setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
+    else{ setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
   } else {
     const inp = document.getElementById("passcodeInput");
     const err = document.getElementById("wlError");
@@ -7543,21 +7544,30 @@ init();
 // ═══════════════════════════════════════════════════════
 
 async function loadCompleteLessons(){
-  if(!window._fb || !currentUserPhone) return;
+  if(!window._fb || !currentUserPhone){ console.log("loadCompleteLessons: no fb or phone"); return; }
   const { db, doc, getDoc } = window._fb;
   try{
-    const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","completeLessons"));
+    const ref = doc(db,"sessions",currentUserPhone,"settings","completeLessons");
+    console.log("loadCompleteLessons: fetching from", ref.path);
+    const snap = await getDoc(ref);
+    console.log("loadCompleteLessons: exists=", snap.exists(), "data=", snap.exists()?snap.data():null);
     if(snap.exists()) _completeLessons = snap.data() || {};
-  }catch(e){ /* silent */ }
+  }catch(e){ console.error("loadCompleteLessons error:", e); }
 }
 
 async function toggleLessonComplete(lessonId){
   _completeLessons[lessonId] = !_completeLessons[lessonId];
   if(!_completeLessons[lessonId]) delete _completeLessons[lessonId];
+  console.log("toggleLessonComplete:", lessonId, "now:", JSON.stringify(_completeLessons));
   // Save to Firebase
   if(window._fb && currentUserPhone){
     const { db, doc, setDoc } = window._fb;
-    try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","completeLessons"), _completeLessons); }catch(e){}
+    try{
+      var ref = doc(db,"sessions",currentUserPhone,"settings","completeLessons");
+      console.log("saving to:", ref.path, "data:", JSON.stringify(_completeLessons));
+      await setDoc(ref, _completeLessons);
+      console.log("saved OK");
+    }catch(e){ console.error("toggleLessonComplete save error:", e); }
   }
   renderAdminLessons();
 }
