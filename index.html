@@ -2519,38 +2519,69 @@ function startSpeedTimer(qtype){
   const goodPts = thresholds.good[1];
   const startMs = Date.now();
 
+  // Set challenge text
+  var fastMins = Math.round(fastMs/60000);
+  var challenge = document.getElementById("speedChallenge");
+  var challenges = [
+    "⚡ Can you nail this in "+fastMins+" min? +"+fastPts+" bonus!",
+    "🏃 Race the clock — "+fastMins+" min for +"+fastPts+" pts!",
+    "🔥 Quick fire! Finish in "+fastMins+" min = +"+fastPts+"!",
+    "💪 Challenge: beat "+fastMins+" min for +"+fastPts+" bonus!",
+    "🎯 Speed round — "+fastMins+" min target!",
+  ];
+  if(challenge) challenge.textContent = challenges[Math.floor(Math.random()*challenges.length)];
+
   function fmtCountdown(ms){
     if(ms<=0) return "0s";
     const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
     return m>0?`${m}:${String(s).padStart(2,'0')}`:`${s}s`;
   }
 
+  const nudge15x = Math.round(goodMs * 1.5);
+  const nudge2x  = goodMs * 2;
+  const nudge3x  = goodMs * 3;
+
   function tick(){
     const elapsed = Date.now() - startMs;
     const bar = document.getElementById("speedTimerBar");
     const pts = document.getElementById("speedTimerPts");
-    if(!bar){ stopSpeedTimer(); return; }
+    const nudge = document.getElementById("speedNudge");
+    if(!bar) return;
 
     if(elapsed <= fastMs){
       const rem = fastMs - elapsed;
       bar.style.width = Math.max(0,(rem/fastMs)*100)+"%";
       bar.style.background = "#4caf82";
-      if(pts){ pts.style.background="#4caf82"; pts.textContent=`⚡ +${fastPts} pts if done in ${fmtCountdown(rem)}`; }
+      if(pts){ pts.style.background="#4caf82"; pts.textContent="⚡ +"+fastPts+" pts if done in "+fmtCountdown(rem); }
+      if(nudge) nudge.textContent = "";
     } else if(elapsed <= goodMs){
       const rem = goodMs - elapsed;
       bar.style.width = Math.max(0,(rem/(goodMs-fastMs))*100)+"%";
       bar.style.background = "#e8a020";
-      if(pts){ pts.style.background="#e8a020"; pts.textContent=`🕐 +${goodPts} pts if done in ${fmtCountdown(rem)}`; }
+      if(pts){ pts.style.background="#e8a020"; pts.textContent="🕐 +"+goodPts+" pts if done in "+fmtCountdown(rem); }
+      if(nudge) nudge.textContent = "";
     } else {
       bar.style.width = "0%";
       bar.style.background = "#ccc";
       if(pts){ pts.style.background="#aaa"; pts.textContent="No speed bonus"; }
-      stopSpeedTimer();
+      // Nudge messages — escalate over time
+      if(nudge){
+        if(elapsed >= nudge3x){
+          nudge.textContent = "🚀 Skip this one and come back later!";
+          nudge.style.color = "#e05c5c";
+        } else if(elapsed >= nudge2x){
+          nudge.textContent = "⏰ Too long on this one — move on and retry later";
+          nudge.style.color = "#e8a020";
+        } else if(elapsed >= nudge15x){
+          nudge.textContent = "💡 Write what you know — you can always retry!";
+          nudge.style.color = "var(--muted)";
+        }
+      }
     }
   }
 
   tick();
-  _speedTimerInterval = setInterval(tick, 250);
+  _speedTimerInterval = setInterval(tick, 500);
 }
 
 function stopSpeedTimer(){
@@ -2842,6 +2873,7 @@ ${q.lines.replace(/</g,"&lt;")}
     </div>
     ${peekBtn}
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-align:center" id="speedChallenge">⚡ Challenge: Can you finish this one fast?</div>
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
         <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
@@ -2849,6 +2881,7 @@ ${q.lines.replace(/</g,"&lt;")}
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
         <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
       </div>
+      <div id="speedNudge" style="font-size:11px;font-weight:600;margin-top:6px;text-align:center;min-height:16px"></div>
     </div>
     <div class="answer-area" id="answerArea" style="margin-top:10px">
       <textarea class="answer-textarea" id="answerInput"
@@ -3268,6 +3301,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
 
   const speedTimerHTML = SPEED_BONUS[currentQType] ? `
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-align:center" id="speedChallenge">⚡ Challenge: Can you finish this one fast?</div>
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
         <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
@@ -3275,6 +3309,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
         <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
       </div>
+      <div id="speedNudge" style="font-size:11px;font-weight:600;margin-top:6px;text-align:center;min-height:16px"></div>
     </div>` : "";
 
   document.getElementById("quizBody").innerHTML=`
@@ -3830,6 +3865,7 @@ function renderDistinguish(q, qnum, isLast){
     </div>
     ${peekBtn}
     <div id="speedTimerWrap" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-align:center" id="speedChallenge">⚡ Challenge: Can you finish this one fast?</div>
       <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
         <div id="speedTimerBar" style="height:100%;width:100%;background:#4caf82;border-radius:3px"></div>
       </div>
@@ -3837,6 +3873,7 @@ function renderDistinguish(q, qnum, isLast){
         <span style="font-size:10px;color:var(--muted)">Speed Bonus</span>
         <span id="speedTimerPts" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
       </div>
+      <div id="speedNudge" style="font-size:11px;font-weight:600;margin-top:6px;text-align:center;min-height:16px"></div>
     </div>
     <div class="answer-area" id="answerArea">
       <div class="dist-input-grid">
