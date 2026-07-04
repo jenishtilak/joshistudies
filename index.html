@@ -2183,12 +2183,17 @@ function renderLessons(){
     }
     const coveragePct = totalQ>0 ? Math.round(masteredCount/totalQ*100) : 0;
     const triedPct    = totalQ>0 ? Math.round(triedCount/totalQ*100) : 0;
+    const isLessonComplete = !!_completeLessons[lesson.id];
+    const allMastered = isLessonComplete && totalQ>0 && masteredCount>=totalQ;
+    const masteryLabel = allMastered ? '<span style="font-size:9px;color:var(--green);font-weight:700">🏆 +200 earned!</span>'
+      : isLessonComplete ? '<span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">'+masteredCount+'/'+totalQ+' mastered · 🏆 +200</span>'
+      : '<span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">'+masteredCount+'/'+totalQ+' mastered</span>';
     const coverageBar = totalQ>0 ? `<div style="margin-top:6px;display:flex;align-items:center;gap:6px">
       <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;position:relative">
         <div style="position:absolute;height:100%;width:${triedPct}%;background:var(--gold);border-radius:2px;opacity:.35"></div>
         <div style="position:absolute;height:100%;width:${coveragePct}%;background:var(--green);border-radius:2px"></div>
       </div>
-      <span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">${masteredCount}/${totalQ} mastered</span>
+      ${masteryLabel}
     </div>` : "";
     card.innerHTML=`
       <div class="lesson-num">${i+1}</div>
@@ -6102,9 +6107,13 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const dailyTimeBonus = calcDailyTimeBonus(allScoredEntries);
   growthPoints += dailyTimeBonus.pointsEarned;
 
+  // Lesson mastery bonus: +200 for each complete lesson fully mastered
+  const lessonMastery = calcLessonMasteryBonus();
+  growthPoints += lessonMastery.totalBonus;
+
   growthPoints = Math.round(growthPoints);
 
-  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus };
+  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus, lessonMastery };
 }
 
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
@@ -6264,6 +6273,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +earnRow('🌅','Morning Session — +70 or +50/subject','Cover all types 6–8am · started = +10')
       +earnRow('🌙','Evening Session — +50/subject','Cover all types after 8am · both sessions = +50 extra · started = +10')
       +earnRow('⏱','30-Min Bonus — +100/subject/day','Spend 30+ minutes on any subject today, any score counts')
+      +earnRow('🏆','Lesson Mastery — +200 per lesson','Master every question (80%+ twice) in a complete lesson')
       +earnRow('📝','Practice Test — 300 to 700 pts','60%+=300 · 80%+=500 · 100%=700')
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
@@ -6515,7 +6525,7 @@ function checkPasscode(){
     ws.classList.add("fade-out");
     setTimeout(()=>ws.classList.add("gone"), 420);
     if(isAdminUser) showAdminBar();
-    else setTimeout(()=>showWelcomeBackPopup(), 550); // let the welcome screen fade out first
+    else{ loadCompleteLessons(); setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
   } else {
     const inp = document.getElementById("passcodeInput");
     const err = document.getElementById("wlError");
@@ -6724,6 +6734,7 @@ function openAdminMirror(){
       <button onclick="showAdminTab('scoreboard')" id="tabBtnScoreboard" class="admin-tab-btn">🏆 Scoreboard</button>
       <button onclick="showAdminTab('past')" id="tabBtnPast" class="admin-tab-btn">📂 Past Sessions</button>
       <button onclick="showAdminTab('mockexams')" id="tabBtnMockExams" class="admin-tab-btn">📝 Practice Tests</button>
+      <button onclick="showAdminTab('lessons')" id="tabBtnLessons" class="admin-tab-btn">📚 Lessons</button>
     </div>
 
     <div id="adminTabLive">
@@ -6751,6 +6762,11 @@ function openAdminMirror(){
     <div id="adminTabPast" style="display:none">
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Showing the last 5 sessions. Each includes both study activity and any practice test taken during it.</p>
       <div id="pastSessionsList"></div>
+    </div>
+
+    <div id="adminTabLessons" style="display:none">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Toggle lessons as "Complete" once all questions are added. Only complete lessons qualify for the 🏆 Lesson Mastery bonus (+200 pts).</p>
+      <div id="adminLessonsList"></div>
     </div>
 
     <div id="adminTabMockExams" style="display:none">
@@ -6869,10 +6885,13 @@ function showAdminTab(tab){
   document.getElementById("adminTabScoreboard").style.display = tab==="scoreboard" ? "block" : "none";
   document.getElementById("adminTabPast").style.display = tab==="past" ? "block" : "none";
   document.getElementById("adminTabMockExams").style.display = tab==="mockexams" ? "block" : "none";
+  document.getElementById("adminTabLessons").style.display = tab==="lessons" ? "block" : "none";
+  if(tab==="lessons") renderAdminLessons();
   document.getElementById("tabBtnLive").classList.toggle("active", tab==="live");
   document.getElementById("tabBtnScoreboard").classList.toggle("active", tab==="scoreboard");
   document.getElementById("tabBtnPast").classList.toggle("active", tab==="past");
   document.getElementById("tabBtnMockExams").classList.toggle("active", tab==="mockexams");
+  document.getElementById("tabBtnLessons").classList.toggle("active", tab==="lessons");
   if(tab==="scoreboard"){ buildScoreboard(); renderHowToEarnPoints("adminHowToEarn"); }
   if(tab==="past") buildPastSessionsList();
   if(tab==="mockexams") buildMockExamsList();
@@ -7225,6 +7244,7 @@ let _spellingSubject = "";
 let _answeredQuestionKeys = new Set(); // tracks lessonId|qtype|qIndex keys already answered (loaded from Firebase on scoreboard open)
 let _answeredKeysLoaded = false;
 let _masteredQuestionKeys = new Set(); // questions scored 80%+ at least twice
+let _completeLessons = {}; // lessonId -> true/false, loaded from Firebase
 
 let _spellingAllBySubject = {}; // subject -> [{word, lessonTitle, missCount}]
 
@@ -7517,6 +7537,89 @@ function togglePasscodeVisibility(){
 }
 
 init();
+
+// ═══════════════════════════════════════════════════════
+//  LESSON MASTERY — complete flag + bonus
+// ═══════════════════════════════════════════════════════
+
+async function loadCompleteLessons(){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, doc, getDoc } = window._fb;
+  try{
+    const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","completeLessons"));
+    if(snap.exists()) _completeLessons = snap.data() || {};
+  }catch(e){ /* silent */ }
+}
+
+async function toggleLessonComplete(lessonId){
+  _completeLessons[lessonId] = !_completeLessons[lessonId];
+  if(!_completeLessons[lessonId]) delete _completeLessons[lessonId];
+  // Save to Firebase
+  if(window._fb && currentUserPhone){
+    const { db, doc, setDoc } = window._fb;
+    try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","completeLessons"), _completeLessons); }catch(e){}
+  }
+  renderAdminLessons();
+}
+
+function renderAdminLessons(){
+  var box = document.getElementById("adminLessonsList");
+  if(!box) return;
+  var html = "";
+  Object.entries(DATA).forEach(function(subjEntry){
+    var subjName = subjEntry[0], subjData = subjEntry[1];
+    var icon = subjData.icon || "📚";
+    html += '<div style="margin-bottom:20px">';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px">'+icon+' '+subjName+'</div>';
+    Object.entries(subjData.parts).forEach(function(partEntry){
+      var partName = partEntry[0], partData = partEntry[1];
+      partData.lessons.forEach(function(lesson){
+        var totalQ = Object.values(lesson.questions).reduce(function(a,arr){return a+arr.length;},0);
+        var isComplete = !!_completeLessons[lesson.id];
+        var bgColor = isComplete ? "rgba(76,175,130,.1)" : "#fff";
+        var borderColor = isComplete ? "var(--green)" : "var(--border)";
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;margin-bottom:6px;background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:10px">';
+        html += '<div>';
+        html += '<div style="font-size:13px;font-weight:700;color:var(--navy)">'+lesson.title+'</div>';
+        html += '<div style="font-size:11px;color:var(--muted)">'+lesson.unit+' · '+totalQ+' questions · '+partName+'</div>';
+        html += '</div>';
+        html += '<button onclick="toggleLessonComplete(&quot;'+lesson.id+'&quot;)" style="padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:1.5px solid '+(isComplete?'var(--green)':'var(--border)')+';background:'+(isComplete?'var(--green)':'#fff')+';color:'+(isComplete?'#fff':'var(--navy)')+'">'+(isComplete?'✅ Complete':'Mark Complete')+'</button>';
+        html += '</div>';
+      });
+    });
+    html += '</div>';
+  });
+  box.innerHTML = html;
+}
+
+// Calculate lesson mastery bonus — +200 for each complete lesson where all questions are mastered (80%+ twice)
+function calcLessonMasteryBonus(){
+  var totalBonus = 0;
+  var lessonStatus = []; // {lessonId, title, icon, totalQ, masteredQ, complete, bonusEarned}
+  Object.entries(DATA).forEach(function(subjEntry){
+    var subjName = subjEntry[0], subjData = subjEntry[1];
+    var icon = subjData.icon || "📚";
+    Object.values(subjData.parts).forEach(function(partData){
+      partData.lessons.forEach(function(lesson){
+        var totalQ = Object.values(lesson.questions).reduce(function(a,arr){return a+arr.length;},0);
+        var masteredQ = 0;
+        Object.entries(lesson.questions).forEach(function(pair){
+          var qt = pair[0], arr = pair[1];
+          for(var k=0;k<arr.length;k++){
+            if(_masteredQuestionKeys.has(lesson.id+"_"+qt+"_"+k)) masteredQ++;
+          }
+        });
+        var isComplete = !!_completeLessons[lesson.id];
+        var bonusEarned = (isComplete && totalQ > 0 && masteredQ >= totalQ) ? 200 : 0;
+        if(bonusEarned) totalBonus += bonusEarned;
+        lessonStatus.push({lessonId:lesson.id, title:lesson.title, icon:icon, totalQ:totalQ, masteredQ:masteredQ, complete:isComplete, bonusEarned:bonusEarned});
+      });
+    });
+  });
+  return { totalBonus: totalBonus, lessons: lessonStatus };
+}
+
+
 </script>
 </body>
 </html>
