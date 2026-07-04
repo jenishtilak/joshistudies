@@ -454,9 +454,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 @media(min-width:820px){.q-nav-bar{top:57px}}
 .q-nav-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--parchment);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:var(--muted)}
 .q-nav-dot.current{border-color:var(--navy);background:var(--navy);color:#fff}
-.q-nav-dot.answered-good{border-color:var(--navy);background:var(--navy);color:#fff}
-.q-nav-dot.answered-mid{border-color:var(--navy);background:var(--navy);color:#fff}
-.q-nav-dot.answered-poor{border-color:var(--navy);background:var(--navy);color:#fff}
+.q-nav-dot.answered-good{border-color:var(--green);background:var(--green);color:#fff}
+.q-nav-dot.answered-mid{border-color:var(--gold);background:var(--gold);color:#fff}
+.q-nav-dot.answered-poor{border-color:var(--red);background:rgba(224,92,92,.15);color:var(--red)}
 .q-nav-dot.skipped{border-color:var(--muted);background:#fff;color:var(--muted);opacity:.5}
 .q-nav-prev,.q-nav-next{padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;color:var(--navy);transition:all .15s;font-family:inherit}
 .q-nav-prev:disabled,.q-nav-next:disabled{opacity:.3;cursor:default}
@@ -2185,9 +2185,13 @@ function renderLessons(){
     const triedPct    = totalQ>0 ? Math.round(triedCount/totalQ*100) : 0;
     const isLessonComplete = !!_completeLessons[lesson.id];
     const allMastered = isLessonComplete && totalQ>0 && masteredCount>=totalQ;
-    const masteryLabel = allMastered ? '<span style="font-size:9px;color:var(--green);font-weight:700">🏆 +200 earned!</span>'
-      : isLessonComplete ? '<span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">'+masteredCount+'/'+totalQ+' mastered · 🏆 +200</span>'
+    const masteryLabel = allMastered
+      ? '<span style="font-size:10px;color:var(--green);font-weight:800;white-space:nowrap">🏆 Mastered! +200</span>'
+      : isLessonComplete
+        ? '<span style="font-size:10px;color:var(--gold);font-weight:700;white-space:nowrap">'+masteredCount+'/'+totalQ+' · 🏆 master all for +200</span>'
       : '<span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">'+masteredCount+'/'+totalQ+' mastered</span>';
+    const completeBadge = isLessonComplete && !allMastered
+      ? '<div style="font-size:9px;background:var(--gold-light);color:#8a6500;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-block;margin-top:4px">🏆 Master all '+totalQ+' questions to earn +200 pts</div>' : '';
     const coverageBar = totalQ>0 ? `<div style="margin-top:6px;display:flex;align-items:center;gap:6px">
       <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;position:relative">
         <div style="position:absolute;height:100%;width:${triedPct}%;background:var(--gold);border-radius:2px;opacity:.35"></div>
@@ -2201,6 +2205,7 @@ function renderLessons(){
         <div class="lesson-name">${lesson.title}</div>
         <div class="lesson-meta">${lesson.unit} · ${totalQ} question${totalQ!==1?"s":""} · ${lesson.month}</div>
         ${coverageBar}
+        ${completeBadge}
         <div class="lesson-card-modes">
           <button class="btn-revise" onclick="event.stopPropagation();openRevise(${JSON.stringify(lesson.id)})">📖 Revise</button>
           <button class="btn-practice" onclick="event.stopPropagation();openLesson(lessons_${i})">✏️ Practice</button>
@@ -2721,6 +2726,14 @@ function jumpToQuestion(idx){
 // ═══════════════════════════════════════════════════════
 //  RENDER CURRENT QUESTION
 // ═══════════════════════════════════════════════════════
+// Returns a small badge showing whether this question is mastered, tried, or new
+function getQuestionStatusBadge(lessonId, qtype, qIndex){
+  var key = (lessonId||"")+"_"+(qtype||"")+"_"+(qIndex||0);
+  if(_masteredQuestionKeys.has(key)) return '<span style="display:inline-block;font-size:9px;font-weight:700;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">✅ Mastered</span>';
+  if(_answeredQuestionKeys.has(key)) return '<span style="display:inline-block;font-size:9px;font-weight:700;background:var(--gold-light);color:#8a6500;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">📝 Attempted</span>';
+  return '<span style="display:inline-block;font-size:9px;font-weight:700;background:rgba(100,149,237,.15);color:#4169e1;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">🆕 New</span>';
+}
+
 function renderCurrentQuestion(){
   if(currentMode==="revise") return;
   if(currentLesson?.id==="__mock__") return; // practice test uses renderMockQuestion directly
@@ -2802,7 +2815,7 @@ ${q.lines.replace(/</g,"&lt;")}
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">🎤 Quote from Memory</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="q-text">${q.q}</div>
     </div>
     ${peekBtn}
@@ -2873,7 +2886,7 @@ function renderMCQ(q, qnum, isLast){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Choose the Correct Answer</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="q-text">${q.q}</div>
       <div class="mcq-options">${opts}</div>
     </div>
@@ -2967,7 +2980,7 @@ function renderFill(q, qnum, isLast){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Fill in the Blanks</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="fill-sentence">${html}</div>
     </div>
     ${peekBtn}
@@ -3089,7 +3102,7 @@ function renderMatch(q, qnum, isLast){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Match the Following</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="match-grid">${leftRows}</div>
     </div>
     ${peekBtn}
@@ -3245,7 +3258,7 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">${label}</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="q-text">${q.q}</div>
     </div>
     ${peekBtn}
@@ -3519,7 +3532,7 @@ function renderTrueFalse(q, qnum, isLast){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">True or False</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="q-text">${q.statement||q.q}</div>
       <div class="mcq-options" style="margin-top:14px">
         <div class="mcq-option" id="tfopt0" data-val="true" data-correct="${q.answer}" data-reason="${(q.reason||"").replace(/"/g,"&quot;")}" onclick="selectTFFromEl(this,${isLast})">
@@ -3790,7 +3803,7 @@ function renderDistinguish(q, qnum, isLast){
   document.getElementById("quizBody").innerHTML=`
     <div class="question-card">
       <div class="q-label">Distinguish Between</div>
-      <div class="q-num">${qnum}</div>
+      <div class="q-num">${qnum}${currentMode!=="exam"?getQuestionStatusBadge(currentLesson?.id,currentQType,currentQIndex):""}</div>
       <div class="q-text distinguish">${q.q || `Distinguish between <strong>${q.termA}</strong> and <strong>${q.termB}</strong>.`}</div>
     </div>
     ${peekBtn}
@@ -5501,15 +5514,11 @@ async function buildStudentScoreboard(){
 
   // Build set of previously-answered question keys for first-attempt bonus + mastery tracking
   if(!_answeredKeysLoaded){
-    var masteryCount = {};
     allScoredEntries.forEach(function(e){
       var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
       _answeredQuestionKeys.add(key);
-      // Count how many times scored 80%+ for mastery badge
-      if((e.pct||0) >= 80){
-        masteryCount[key] = (masteryCount[key]||0) + 1;
-        if(masteryCount[key] >= 2) _masteredQuestionKeys.add(key);
-      }
+      // Mastered = scored 80%+ at least once
+      if((e.pct||0) >= 80) _masteredQuestionKeys.add(key);
     });
     _answeredKeysLoaded = true;
   }
@@ -6273,7 +6282,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +earnRow('🌅','Morning Session — +70 or +50/subject','Cover all types 6–8am · started = +10')
       +earnRow('🌙','Evening Session — +50/subject','Cover all types after 8am · both sessions = +50 extra · started = +10')
       +earnRow('⏱','30-Min Bonus — +100/subject/day','Spend 30+ minutes on any subject today, any score counts')
-      +earnRow('🏆','Lesson Mastery — +200 per lesson','Master every question (80%+ twice) in a complete lesson')
+      +earnRow('🏆','Lesson Mastery — +200 per lesson','Score 80%+ on every question in a complete lesson')
       +earnRow('📝','Practice Test — 300 to 700 pts','60%+=300 · 80%+=500 · 100%=700')
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
@@ -7552,6 +7561,8 @@ async function loadCompleteLessons(){
     const snap = await getDoc(ref);
     console.log("loadCompleteLessons: exists=", snap.exists(), "data=", snap.exists()?snap.data():null);
     if(snap.exists()) _completeLessons = snap.data() || {};
+    // Re-render lesson cards now that we know which are complete
+    if(typeof renderLessons === "function") renderLessons();
   }catch(e){ console.error("loadCompleteLessons error:", e); }
 }
 
@@ -7585,16 +7596,40 @@ function renderAdminLessons(){
       var partName = partEntry[0], partData = partEntry[1];
       partData.lessons.forEach(function(lesson){
         var totalQ = Object.values(lesson.questions).reduce(function(a,arr){return a+arr.length;},0);
+        // Count mastered + tried by student
+        var masteredQ = 0, triedQ = 0;
+        Object.entries(lesson.questions).forEach(function(pair){
+          var qt = pair[0], arr = pair[1];
+          for(var k=0;k<arr.length;k++){
+            var key = lesson.id+"_"+qt+"_"+k;
+            if(_masteredQuestionKeys.has(key)) masteredQ++;
+            if(_answeredQuestionKeys.has(key)) triedQ++;
+          }
+        });
         var isComplete = !!_completeLessons[lesson.id];
-        var bgColor = isComplete ? "rgba(76,175,130,.1)" : "#fff";
-        var borderColor = isComplete ? "var(--green)" : "var(--border)";
-        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;margin-bottom:6px;background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:10px">';
+        var allMastered = isComplete && totalQ>0 && masteredQ>=totalQ;
+        var bgColor = allMastered ? "rgba(76,175,130,.2)" : isComplete ? "rgba(76,175,130,.1)" : "#fff";
+        var borderColor = allMastered ? "var(--green)" : isComplete ? "var(--green)" : "var(--border)";
+        var masteryPct = totalQ>0 ? Math.round(masteredQ/totalQ*100) : 0;
+        var barColor = masteryPct>=100 ? "var(--green)" : masteryPct>0 ? "var(--gold)" : "var(--border)";
+        html += '<div style="padding:12px;margin-bottom:6px;background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:10px">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
         html += '<div>';
-        html += '<div style="font-size:13px;font-weight:700;color:var(--navy)">'+lesson.title+'</div>';
+        html += '<div style="font-size:13px;font-weight:700;color:var(--navy)">'+lesson.title+(allMastered?' 🏆':'')+'</div>';
         html += '<div style="font-size:11px;color:var(--muted)">'+lesson.unit+' · '+totalQ+' questions · '+partName+'</div>';
         html += '</div>';
         html += '<button onclick="toggleLessonComplete(&quot;'+lesson.id+'&quot;)" style="padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:1.5px solid '+(isComplete?'var(--green)':'var(--border)')+';background:'+(isComplete?'var(--green)':'#fff')+';color:'+(isComplete?'#fff':'var(--navy)')+'">'+(isComplete?'✅ Complete':'Mark Complete')+'</button>';
+        html += '</div>'; // close flex row
+        // Mastery progress bar
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">';
+        html += '<div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">';
+        html += '<div style="height:100%;width:'+masteryPct+'%;background:'+barColor+';border-radius:3px"></div>';
         html += '</div>';
+        html += '<div style="font-size:10px;font-weight:700;color:'+(allMastered?'var(--green)':masteredQ>0?'var(--gold)':'var(--muted)')+'">'+masteredQ+'/'+totalQ+' mastered</div>';
+        html += '</div>';
+        // Tried vs mastered detail
+        html += '<div style="font-size:10px;color:var(--muted);margin-top:4px">📝 '+triedQ+' tried · ✅ '+masteredQ+' mastered (80%+) · '+(totalQ-triedQ)+' not attempted</div>';
+        html += '</div>'; // close card
       });
     });
     html += '</div>';
