@@ -2169,11 +2169,33 @@ function renderLessons(){
     const sc=vals.length?Math.round(vals.reduce((a,v)=>a+v,0)/vals.length):undefined;
     const totalQ=Object.values(lesson.questions).reduce((a,arr)=>a+arr.length,0);
     const badge=sc!==undefined?`<div class="lesson-score-badge ${sc>=80?"good":sc>=50?"mid":"poor"}">${sc}%</div>`:"";
+    // Count mastered (80%+ twice) and tried questions in this lesson
+    var masteredCount = 0, triedCount = 0;
+    if(_answeredKeysLoaded){
+      Object.entries(lesson.questions).forEach(function(pair){
+        var qt=pair[0], arr=pair[1];
+        for(var k=0;k<arr.length;k++){
+          var key = lesson.id+"_"+qt+"_"+k;
+          if(_masteredQuestionKeys.has(key)) masteredCount++;
+          if(_answeredQuestionKeys.has(key)) triedCount++;
+        }
+      });
+    }
+    const coveragePct = totalQ>0 ? Math.round(masteredCount/totalQ*100) : 0;
+    const triedPct    = totalQ>0 ? Math.round(triedCount/totalQ*100) : 0;
+    const coverageBar = totalQ>0 ? `<div style="margin-top:6px;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;position:relative">
+        <div style="position:absolute;height:100%;width:${triedPct}%;background:var(--gold);border-radius:2px;opacity:.35"></div>
+        <div style="position:absolute;height:100%;width:${coveragePct}%;background:var(--green);border-radius:2px"></div>
+      </div>
+      <span style="font-size:9px;color:var(--muted);font-weight:700;white-space:nowrap">${masteredCount}/${totalQ} mastered</span>
+    </div>` : "";
     card.innerHTML=`
       <div class="lesson-num">${i+1}</div>
       <div class="lesson-info">
         <div class="lesson-name">${lesson.title}</div>
         <div class="lesson-meta">${lesson.unit} · ${totalQ} question${totalQ!==1?"s":""} · ${lesson.month}</div>
+        ${coverageBar}
         <div class="lesson-card-modes">
           <button class="btn-revise" onclick="event.stopPropagation();openRevise(${JSON.stringify(lesson.id)})">📖 Revise</button>
           <button class="btn-practice" onclick="event.stopPropagation();openLesson(lessons_${i})">✏️ Practice</button>
@@ -2431,7 +2453,16 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   // auto-dismissing on purpose: this happens often, so it should never feel
   // like an interruption, just a quiet "yes, that counted."
   if(pct >= MIN_SCORE_FOR_GOAL_CREDIT){
-    showPointsToast(getMarks(currentQType));
+    const qKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+currentQIndex;
+    const isFirstAttempt = !_answeredQuestionKeys.has(qKey);
+    const baseMarks = getMarks(currentQType);
+    const marks = isFirstAttempt ? baseMarks * 2 : baseMarks;
+    if(isFirstAttempt){
+      _answeredQuestionKeys.add(qKey); // mark as answered now
+      showPointsToast(marks, "🆕 New question! 2× points");
+    } else {
+      showPointsToast(marks);
+    }
     // Speed bonus — only for written types where fast = good recall
     const sb = getSpeedBonus(currentQType, elapsed);
     if(sb) setTimeout(()=>showSpeedBonusToast(sb.points, sb.label), 600);
@@ -2568,7 +2599,8 @@ function loadQTypeSession(qtypeId){
 }
 
 function startQTypeSession(){
-  const total=(currentLesson.questions[currentQType]||[]).length;
+  const qs = currentLesson.questions[currentQType]||[];
+  const total = qs.length;
   const existing=loadQTypeSession(currentQType);
   if(existing){
     // Restore previous progress for this qtype
@@ -2577,6 +2609,25 @@ function startQTypeSession(){
     questionStates=existing.questionStates.map(s=>({...s}));
     studyAnswerCache=existing.studyAnswerCache.map(c=>c?{...c}:null);
   } else {
+    // Weighted order: unanswered questions first, then already-answered ones.
+    // Within each group, keep original order so the lesson flow makes sense.
+    if(_answeredKeysLoaded && currentLesson.id !== "__mock__"){
+      const lid = currentLesson.id||"";
+      const qt  = currentQType||"";
+      const newOrder = [];
+      const answeredOrder = [];
+      for(var i=0; i<total; i++){
+        var key = lid+"_"+qt+"_"+i;
+        if(_answeredQuestionKeys.has(key)) answeredOrder.push(i);
+        else newOrder.push(i);
+      }
+      // Reorder the actual questions array: new first, then answered
+      const reordered = newOrder.concat(answeredOrder);
+      const origQs = qs.slice(); // copy before reorder
+      for(var j=0; j<reordered.length; j++){
+        qs[j] = origQs[reordered[j]];
+      }
+    }
     currentQIndex=0;
     sessionResults=[];
     questionStates=Array.from({length:total},()=>({answered:false,skipped:false,pct:null}));
@@ -2620,12 +2671,16 @@ function renderNavBar(){
   qs.forEach((_,i)=>{
     const dot=document.createElement("div");
     dot.className="q-nav-dot";
-    dot.textContent=i+1;
+    const qMasteryKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+i;
+    const isMastered = _masteredQuestionKeys.has(qMasteryKey);
+    dot.textContent = isMastered ? "✓" : (i+1);
+    if(isMastered) dot.title = "Mastered — try a new one!";
     if(i===currentQIndex) dot.classList.add("current");
     else if(questionStates[i]?.answered){
       const p=questionStates[i].pct;
       dot.classList.add(p>=80?"answered-good":p>=50?"answered-mid":"answered-poor");
     } else if(questionStates[i]?.skipped) dot.classList.add("skipped");
+    else if(isMastered) dot.classList.add("answered-good");
     dot.onclick=()=>jumpToQuestion(i);
     bar.appendChild(dot);
   });
@@ -5435,10 +5490,39 @@ async function buildStudentScoreboard(){
     return;
   }
 
-  const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
+  const agg = aggregateScoreboardData(logsSnap, examSnap);
+  const allScoredEntries = agg.allScoredEntries;
+  let grandTimeMs = agg.grandTimeMs;
+
+  // Build set of previously-answered question keys for first-attempt bonus + mastery tracking
+  if(!_answeredKeysLoaded){
+    var masteryCount = {};
+    allScoredEntries.forEach(function(e){
+      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
+      _answeredQuestionKeys.add(key);
+      // Count how many times scored 80%+ for mastery badge
+      if((e.pct||0) >= 80){
+        masteryCount[key] = (masteryCount[key]||0) + 1;
+        if(masteryCount[key] >= 2) _masteredQuestionKeys.add(key);
+      }
+    });
+    _answeredKeysLoaded = true;
+  }
+
+  // Merge current session entries that may not yet be in Firebase
+  // so the 30-min time bonus and stats update immediately.
+  const existingKeys = new Set(allScoredEntries.map(function(e){ return (e.ts||0)+"_"+(e.qIndex||0)+"_"+(e.qtype||""); }));
+  sessionLog.forEach(function(e){
+    var key = (e.ts||0)+"_"+(e.qIndex||0)+"_"+(e.qtype||"");
+    if(!existingKeys.has(key)){
+      allScoredEntries.push(e);
+      grandTimeMs += e.timeMs || 0;
+    }
+  });
+
   const totalTestPoints = await fetchTotalTestPoints();
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
-  celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
+  totalBox.innerHTML = renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints);
+  celebrateDailyGoalIfJustCompleted(agg.allUnique, allScoredEntries, totalTestPoints);
 }
 
 // Fires a fireworks burst the first time the daily goal is seen as complete
@@ -6053,9 +6137,26 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       [sessionCount, 'sessions'],
     ].map(function(p){ return '<div style="text-align:center"><div style="font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">'+p[0]+'</div><div style="font-size:9px;color:'+W+'.4);margin-top:1px">'+p[1]+'</div></div>'; }).join('')
   +'</div>'
-  +'<div style="height:1px;background:'+W+'.1);margin-bottom:14px"></div>';
+  // Discovery streak — new unique questions today
+  +(function(){
+    var startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    var todayMs = startOfToday.getTime();
+    var seenBefore = {};
+    var newToday = 0;
+    allScoredEntries.forEach(function(e){
+      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
+      if(e.ts < todayMs){ seenBefore[key]=true; }
+    });
+    allScoredEntries.forEach(function(e){
+      if(e.ts < todayMs) return;
+      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
+      if(!seenBefore[key]){ seenBefore[key]=true; newToday++; }
+    });
+    return newToday > 0 ? '<div style="text-align:center;margin-top:8px;font-size:11px;font-weight:700;color:#7ee787">🆕 '+newToday+' new question'+(newToday!==1?'s':'')+' explored today!</div>' : '';
+  }())
+  +'<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>';
 
-  // ── SESSION TILES ──
+  // ── SESSION TILES + TIME BONUS (merged per subject) ──
   var sLabel = '<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">⏰ Today\'s Sessions</div>';
   var sRows = Object.entries(sessionGoals.bySubject||{}).map(function(e){
     var subj=e[0], sg=e[1];
@@ -6069,33 +6170,29 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
     }
     var mPts=sg.morningDone?(sg.earlyDone?'+70':'+50'):'+10';
     var ePts=sg.eveningDone?'+50':'+10';
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">'
-      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
-      +'<div style="display:flex;gap:6px">'+dot(sg.morningDone,sg.mornStarted,'🌅',mPts)+dot(sg.eveningDone,sg.eveStarted,'🌙',ePts)+'</div>'
-      +(sg.bothDone?'<div style="font-size:10px;color:#7ee787;font-weight:700">+50 🎉</div>':(!sg.morningDone&&!sg.eveningDone&&!sg.mornStarted&&!sg.eveStarted?'<div style="font-size:10px;color:'+W+'.3)">not started</div>':''))
-      +'</div>';
-  }).join('');
-  var streakLine = sessionGoals.morningStreak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:2px;margin-bottom:4px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'';
-
-  // ── TIME BONUS bars — +100 per subject with 30+ min studied today ──
-  var tLabel = '<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
-    +'<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5);margin-bottom:10px">⏱ 30-Min Bonus — +100 per subject</div>';
-  var tBars = Object.entries(dailyTimeBonus.bySubject||{}).map(function(e){
-    var subj=e[0], t=e[1];
-    var icon=(DATA[subj]&&DATA[subj].icon)||'📚';
-    var barCol = t.done?'#7ee787':t.pct>0?'#e8a020':W+'.15)';
-    var mins = Math.floor(t.ms/60000);
-    var label = t.done?'✅ 30+ min':mins+'/30 min';
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">'
-      +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
-      +'<div style="flex:1;height:7px;background:'+W+'.1);border-radius:4px;overflow:hidden">'
-        +'<div style="height:100%;width:'+t.pct+'%;background:'+barCol+';border-radius:4px"></div>'
+    // 30-min time bonus for this subject
+    var tb = (dailyTimeBonus.bySubject||{})[subj] || {ms:0, done:false, pct:0};
+    var mins = Math.floor(tb.ms/60000);
+    var timeBarCol = tb.done?'#7ee787':tb.pct>0?'#e8a020':W+'.15)';
+    var timeLabel = tb.done?'✅ +100':mins+'/30m';
+    var timeLabelCol = tb.done?'#7ee787':W+'.45)';
+    return '<div style="margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+icon+' '+subj.split(' ')[0]+'</div>'
+        +'<div style="display:flex;gap:6px">'+dot(sg.morningDone,sg.mornStarted,'🌅',mPts)+dot(sg.eveningDone,sg.eveStarted,'🌙',ePts)+'</div>'
+        +(sg.bothDone?'<div style="font-size:10px;color:#7ee787;font-weight:700">+50 🎉</div>':'')
       +'</div>'
-      +'<div style="font-size:10px;font-weight:700;min-width:64px;text-align:right;color:'+(t.done?'#7ee787':W+'.45)')+'">'+label+'</div>'
+      // Time bar below the dots
+      +'<div style="display:flex;align-items:center;gap:6px;margin:4px 0 0 86px">'
+        +'<div style="flex:1;height:4px;background:'+W+'.1);border-radius:2px;overflow:hidden">'
+          +'<div style="height:100%;width:'+tb.pct+'%;background:'+timeBarCol+';border-radius:2px"></div>'
+        +'</div>'
+        +'<div style="font-size:9px;font-weight:700;color:'+timeLabelCol+';min-width:42px;text-align:right">'+timeLabel+'</div>'
+      +'</div>'
     +'</div>';
   }).join('');
-  var tFooter = dailyTimeBonus.pointsEarned>0
-    ? '<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">+'+dailyTimeBonus.pointsEarned+' points earned today</div>' : '';
+  var streakLine = sessionGoals.morningStreak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:2px;margin-bottom:4px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'';
+  var tLabel = '', tBars = '', tFooter = '';
 
   // ── DAILY GOAL bars (tap to expand types) ──
   var gLabel = '<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
@@ -6161,6 +6258,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
     +'</summary>'
     +'<div style="margin-top:10px">'
       +earnRow('✏️','Each question (50%+)','+1 MCQ/Fill/TF · +2 Brief/Reasons · +3 Distinguish · +5 Match/Para')
+      +earnRow('🆕','New Question Bonus — 2× points','First time answering a question earns double points!')
       +earnRow('⚡','Speed Bonus','+5 fast · +2 normal · Brief, Reasons, Paragraph, Distinguish, Memorise')
       +earnRow('📅','Daily Goal — +10/day','Answer 50%+ in every active question type today')
       +earnRow('🌅','Morning Session — +70 or +50/subject','Cover all types 6–8am · started = +10')
@@ -7124,6 +7222,9 @@ let _spellingIdx = 0;
 let _spellingScore = 0;
 let _spellingRoundSize = 0;
 let _spellingSubject = "";
+let _answeredQuestionKeys = new Set(); // tracks lessonId|qtype|qIndex keys already answered (loaded from Firebase on scoreboard open)
+let _answeredKeysLoaded = false;
+let _masteredQuestionKeys = new Set(); // questions scored 80%+ at least twice
 
 let _spellingAllBySubject = {}; // subject -> [{word, lessonTitle, missCount}]
 
