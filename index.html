@@ -2726,6 +2726,25 @@ function jumpToQuestion(idx){
 // ═══════════════════════════════════════════════════════
 //  RENDER CURRENT QUESTION
 // ═══════════════════════════════════════════════════════
+// Load answered + mastered question keys from Firebase on login (not just on scoreboard open)
+async function loadMasteryKeys(){
+  if(!window._fb || !currentUserPhone) return;
+  if(_answeredKeysLoaded) return; // already loaded
+  const { db, collection, query, orderBy, getDocs } = window._fb;
+  try{
+    const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
+    logsSnap.forEach(function(d){
+      var e = d.data();
+      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
+      _answeredQuestionKeys.add(key);
+      if((e.pct||0) >= 80) _masteredQuestionKeys.add(key);
+    });
+    _answeredKeysLoaded = true;
+    // Re-render lesson cards with updated mastery info
+    if(typeof renderLessons === "function") renderLessons();
+  }catch(e){ console.error("loadMasteryKeys error:", e); }
+}
+
 // Returns a small badge showing whether this question is mastered, tried, or new
 function getQuestionStatusBadge(lessonId, qtype, qIndex){
   var key = (lessonId||"")+"_"+(qtype||"")+"_"+(qIndex||0);
@@ -6533,7 +6552,7 @@ function checkPasscode(){
     const ws = document.getElementById("welcomeScreen");
     ws.classList.add("fade-out");
     setTimeout(()=>ws.classList.add("gone"), 420);
-    loadCompleteLessons(); // load for both admin and student
+    loadCompleteLessons(); loadMasteryKeys(); // load for both admin and student
     if(isAdminUser) showAdminBar();
     else{ setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
   } else {
