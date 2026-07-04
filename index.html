@@ -2441,20 +2441,21 @@ function showPointsToast(amount, label){
 }
 
 function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
+  const origIdx = getOriginalQIndex(currentQIndex);
   const entry = {
     subject: currentSubject||'',
     part: currentPart||'',
     lessonId: currentLesson?.id||'',
     lessonTitle: currentLesson?.title||'',
     qtype: currentQType||'',
-    qIndex: currentQIndex,
+    qIndex: origIdx,
     pct, timeMs: elapsed
   };
   sessionLog.push({...entry, ts: Date.now()});
   fbLogEntry("logs", entry);
   // Forward the SAME feedback the student is looking at — not just a number —
   // so the admin's live view genuinely mirrors what the student sees on screen.
-  fbLiveState({ answered:true, lastScore: pct, isCorrect: !!isCorrect, feedbackHTML: feedbackHTML||"" });
+  fbLiveState({ answered:true, lastScore: pct, isCorrect: !!isCorrect, feedbackHTML: feedbackHTML||"", currentAnswer: document.getElementById("answerInput")?.value||"" });
   const btn=document.getElementById('reportBtn');
   if(btn) btn.classList.add('visible');
   // Growth Points go up by +1 for every well-answered question (50%+) — show
@@ -2463,7 +2464,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   // auto-dismissing on purpose: this happens often, so it should never feel
   // like an interruption, just a quiet "yes, that counted."
   if(pct >= MIN_SCORE_FOR_GOAL_CREDIT){
-    const qKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+currentQIndex;
+    const qKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origIdx;
     const isFirstAttempt = !_answeredQuestionKeys.has(qKey);
     const baseMarks = getMarks(currentQType);
     const marks = isFirstAttempt ? baseMarks * 2 : baseMarks;
@@ -2473,9 +2474,41 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     } else {
       showPointsToast(marks);
     }
+    // Update mastery keys live so lesson cards update without reload
+    _answeredQuestionKeys.add(qKey);
+    if(pct >= 80) _masteredQuestionKeys.add(qKey);
+
     // Speed bonus — only for written types where fast = good recall
     const sb = getSpeedBonus(currentQType, elapsed);
     if(sb) setTimeout(()=>showSpeedBonusToast(sb.points, sb.label), 600);
+
+    // Show points breakdown after a short delay
+    var totalEarned = marks + (sb ? sb.points : 0);
+    setTimeout(function(){
+      var panel = document.getElementById("resultPanel");
+      if(panel){
+        var breakdown = '<div style="background:var(--parchment);border-radius:8px;padding:8px 12px;margin-top:10px;font-size:11px">'
+          +'<div style="display:flex;justify-content:space-between;font-weight:700;color:var(--navy)">'
+            +'<span>Points earned this question</span>'
+            +'<span style="color:var(--green)">+'+totalEarned+'</span>'
+          +'</div>';
+        if(isFirstAttempt) breakdown += '<div style="color:var(--muted);margin-top:2px">🆕 New question bonus: ×2</div>';
+        if(sb) breakdown += '<div style="color:var(--muted);margin-top:2px">⚡ Speed bonus: +'+sb.points+'</div>';
+        breakdown += '</div>';
+        panel.insertAdjacentHTML("beforeend", breakdown);
+      }
+    }, 300);
+  } else {
+    // Even below 50%, track that the question was attempted
+    const qKey2 = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origIdx;
+    _answeredQuestionKeys.add(qKey2);
+    // Show "no points" message
+    setTimeout(function(){
+      var panel = document.getElementById("resultPanel");
+      if(panel){
+        panel.insertAdjacentHTML("beforeend", '<div style="background:var(--parchment);border-radius:8px;padding:8px 12px;margin-top:10px;font-size:11px;color:var(--muted)">Score below 50% — no points this time. Try again!</div>');
+      }
+    }, 300);
   }
 }
 
@@ -2651,7 +2684,9 @@ function startQTypeSession(){
     studyAnswerCache=existing.studyAnswerCache.map(c=>c?{...c}:null);
   } else {
     // Weighted order: unanswered questions first, then already-answered ones.
-    // Within each group, keep original order so the lesson flow makes sense.
+    // We build an index map instead of mutating the DATA array (which caused
+    // qIndex mismatches between sessions and score/mastery bugs).
+    _questionIndexMap = null; // reset
     if(_answeredKeysLoaded && currentLesson.id !== "__mock__"){
       const lid = currentLesson.id||"";
       const qt  = currentQType||"";
@@ -2662,11 +2697,9 @@ function startQTypeSession(){
         if(_answeredQuestionKeys.has(key)) answeredOrder.push(i);
         else newOrder.push(i);
       }
-      // Reorder the actual questions array: new first, then answered
-      const reordered = newOrder.concat(answeredOrder);
-      const origQs = qs.slice(); // copy before reorder
-      for(var j=0; j<reordered.length; j++){
-        qs[j] = origQs[reordered[j]];
+      // Only use map if there are actually unanswered questions to prioritize
+      if(newOrder.length > 0 && answeredOrder.length > 0){
+        _questionIndexMap = newOrder.concat(answeredOrder);
       }
     }
     currentQIndex=0;
@@ -2712,7 +2745,8 @@ function renderNavBar(){
   qs.forEach((_,i)=>{
     const dot=document.createElement("div");
     dot.className="q-nav-dot";
-    const qMasteryKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+i;
+    const origI = getOriginalQIndex(i);
+    const qMasteryKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origI;
     const isMastered = _masteredQuestionKeys.has(qMasteryKey);
     dot.textContent = isMastered ? "✓" : (i+1);
     if(isMastered) dot.title = "Mastered — try a new one!";
@@ -2779,9 +2813,20 @@ async function loadMasteryKeys(){
   }catch(e){ console.error("loadMasteryKeys error:", e); }
 }
 
+// Maps display index to original DATA index (accounts for weighted reordering)
+function getOriginalQIndex(displayIdx){
+  return _questionIndexMap ? (_questionIndexMap[displayIdx]||displayIdx) : displayIdx;
+}
+// Gets the actual question object at the current display index
+function getCurrentQuestion(){
+  var qs = currentLesson.questions[currentQType]||[];
+  return qs[getOriginalQIndex(currentQIndex)];
+}
+
 // Returns a small badge showing whether this question is mastered, tried, or new
 function getQuestionStatusBadge(lessonId, qtype, qIndex){
-  var key = (lessonId||"")+"_"+(qtype||"")+"_"+(qIndex||0);
+  var realIdx = getOriginalQIndex(qIndex||0);
+  var key = (lessonId||"")+"_"+(qtype||"")+"_"+realIdx;
   if(_masteredQuestionKeys.has(key)) return '<span style="display:inline-block;font-size:9px;font-weight:700;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">✅ Mastered</span>';
   if(_answeredQuestionKeys.has(key)) return '<span style="display:inline-block;font-size:9px;font-weight:700;background:var(--gold-light);color:#8a6500;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">📝 Attempted</span>';
   return '<span style="display:inline-block;font-size:9px;font-weight:700;background:rgba(100,149,237,.15);color:#4169e1;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle">🆕 New</span>';
@@ -2816,8 +2861,8 @@ function renderCurrentQuestion(){
     qtype: currentQType,
     qIndex: currentQIndex,
     qTotal: total,
-    questionText: (qs[currentQIndex]?.q || qs[currentQIndex]?.sentence || qs[currentQIndex]?.statement || ""),
-    correctAnswer: (qs[currentQIndex]?.answer || (qs[currentQIndex]?.answers||[]).join(" / ") || ""),
+    questionText: (qs[getOriginalQIndex(currentQIndex)]?.q || qs[getOriginalQIndex(currentQIndex)]?.sentence || qs[getOriginalQIndex(currentQIndex)]?.statement || ""),
+    correctAnswer: (qs[getOriginalQIndex(currentQIndex)]?.answer || (qs[getOriginalQIndex(currentQIndex)]?.answers||[]).join(" / ") || ""),
     currentAnswer: "",
     answered: false,
     isCorrect: false,
@@ -2832,7 +2877,7 @@ function renderCurrentQuestion(){
     return;
   }
 
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const isLast=currentQIndex>=total-1;
   const qnum=`Question ${currentQIndex+1} of ${total}`;
 
@@ -2986,7 +3031,7 @@ function selectMCQ(idx, correctIdx, isLast){
 }
 function examNextMCQ(correctIdx, isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const pct=mcqSelected===correctIdx?100:0;
   sessionResults.push({pct, qtype:currentQType});
   markMockAnswered(pct);
@@ -3065,7 +3110,7 @@ function toggleFillPeek(){
 
 function checkFillFromDOM(isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   // isLast is passed in from render time (correct for both study mode and practice test).
   // Recalculating it here from qs.length is wrong in practice test, since the mock
   // wrapper array always has length 1 regardless of position in the overall exam.
@@ -3076,7 +3121,7 @@ function checkFillFromDOM(isLast){
 
 function checkFill(answers){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const isLast=currentQIndex>=qs.length-1;
   let correct=0;
   answers.forEach((ans,i)=>{
@@ -3117,7 +3162,7 @@ function checkFill(answers){
 
 function examNextFill(answers, isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const userVals=answers.map((_,i)=>{ const el=document.getElementById("blank"+i); return el?el.value.trim():""; });
   let correct=0;
   answers.forEach((ans,i)=>{
@@ -3185,7 +3230,7 @@ function toggleMatchPeek(){
 }
 function checkMatchFromDOM(){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const isLast=currentQIndex>=qs.length-1;
   let correct=0;
   q.left.forEach((_,i)=>{
@@ -3216,7 +3261,7 @@ function checkMatchFromDOM(){
 }
 function examNextMatchFromDOM(isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const correctMap={};
   q.left.forEach((_,i)=>{ correctMap[i]=q.right[q.correct[i]]; });
   examNextMatch(correctMap, q.left, isLast);
@@ -3347,7 +3392,7 @@ let partsModeState = null; // {parts, currentPart, written[], scores[], original
 
 function startPartsMode(){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const parts = splitAnswerIntoParts(q.answer);
   if(!parts) return;
   // Carry over anything already typed in the main textarea as a starting point for part 1.
@@ -3654,13 +3699,13 @@ function selectTF(selected, correct, isLast, reason){
     </div>
     ${reason?`<div class="result-section"><div class="result-section-title correct">Reason</div><div class="diff-answer-block model">${reason.replace(/</g,"&lt;")}</div></div>`:""}`;
   panel.innerHTML = tfFeedbackHTML;
-  fbLiveState({ answered:true, lastScore:pct, isCorrect, feedbackHTML: tfFeedbackHTML });
+  fbLiveState({ answered:true, lastScore:pct, isCorrect, feedbackHTML: tfFeedbackHTML, currentAnswer: selectedAns!==undefined?String(selectedAns):"" });
   renderNavBar();
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
 }
 function examNextTF(correct, isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const eb=document.getElementById("examNextBtn");
   const sel = eb?.dataset?.sel || (document.querySelector(".mcq-option.selected span:last-child")?.textContent?.toLowerCase());
   const pct = sel===correct?100:0;
@@ -3710,7 +3755,7 @@ function togglePeek(){
 }
 function examNextText(isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const userText=document.getElementById("answerInput").value.trim();
   const {pct, diff}=scoreAnswer(userText||"", q.answer);
   // Log spelling errors to session report
@@ -3752,7 +3797,7 @@ function buildAnnotatedDiff(userText, modelText){
 
 function checkTextAnswer(){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const isLast=currentQIndex>=qs.length-1;
   const userText=document.getElementById("answerInput").value.trim();
   if(!userText) return;
@@ -3966,7 +4011,7 @@ function buildDistAnnotated(userText, modelText){
 
 function examNextDistinguish(isLast){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const userA=(document.getElementById("distInputA")?.value||"").trim();
   const userB=(document.getElementById("distInputB")?.value||"").trim();
   const combined=userA+" "+userB;
@@ -3985,7 +4030,7 @@ function examNextDistinguish(isLast){
 
 function checkDistinguish(){
   const qs=currentLesson.questions[currentQType];
-  const q=qs[currentQIndex];
+  const q=qs[getOriginalQIndex(currentQIndex)];
   const userA=(document.getElementById("distInputA")?.value||"").trim();
   const userB=(document.getElementById("distInputB")?.value||"").trim();
   if(!userA && !userB) return;
@@ -4077,7 +4122,7 @@ function showSimpleResult(pct, detail){
   panel.innerHTML = feedbackHTML;
   // Mirror the exact same feedback to the admin's live view, in addition to
   // whatever fbLiveState call already ran when the answer was selected.
-  fbLiveState({ answered:true, lastScore:pct, isCorrect: pct>=80, feedbackHTML });
+  fbLiveState({ answered:true, lastScore:pct, isCorrect: pct>=80, feedbackHTML, currentAnswer: (document.getElementById("distInputA")?.value||"")+"\n\n"+(document.getElementById("distInputB")?.value||"") });
   setTimeout(()=>saveStudyAnswer(pct), 50);
 }
 
@@ -4155,6 +4200,7 @@ function tryAgainQuestion(){
   // Clear hint/peek state too — a fresh attempt gets fresh peeks, same as the
   // fresh score and fresh answer text it already gets.
   delete hintsUsedByQuestion[key];
+  console.log("tryAgain: cleared peeks for", key, "hintsUsedByQuestion now:", JSON.stringify(hintsUsedByQuestion));
   mcqSelected=null;
   matchAnswers={};
   renderCurrentQuestion();
@@ -6565,7 +6611,7 @@ function renderReport(){
 function closeQuiz(){
   stopTimer();
   document.getElementById("quizOverlay").classList.remove("visible");
-  renderSidebar(); renderLessons();
+  renderSidebar(); renderLessons(); // lesson cards now reflect live mastery updates
 }
 function setNav(el){
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -6892,6 +6938,10 @@ function openAdminMirror(){
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${modeLabel} · ${s.lessonTitle||""} · ${s.qtype||""} · Q${(s.qIndex??0)+1}/${s.qTotal||"?"}</div>
       <div class="q-text" style="margin-bottom:10px;white-space:pre-wrap">${s.questionText||""}</div>
       ${s.answered && s.feedbackHTML ? `
+        ${s.currentAnswer ? `
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">✍️ ${STUDENT_NAME}'s answer:</div>
+          <div style="background:var(--parchment);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;word-break:break-word;margin-bottom:10px;border-left:3px solid var(--navy)">${s.currentAnswer}</div>
+        ` : ""}
         <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">📋 ${STUDENT_NAME}'s result (same view they see):</div>
         ${s.feedbackHTML}
       ` : `
@@ -7312,7 +7362,8 @@ let _spellingRoundSize = 0;
 let _spellingSubject = "";
 let _answeredQuestionKeys = new Set(); // tracks lessonId|qtype|qIndex keys already answered (loaded from Firebase on scoreboard open)
 let _answeredKeysLoaded = false;
-let _masteredQuestionKeys = new Set(); // questions scored 80%+ at least twice
+let _masteredQuestionKeys = new Set();
+let _questionIndexMap = null; // maps display index -> original DATA index for weighted ordering // questions scored 80%+ at least twice
 let _completeLessons = {}; // lessonId -> true/false, loaded from Firebase
 
 let _spellingAllBySubject = {}; // subject -> [{word, lessonTitle, missCount}]
