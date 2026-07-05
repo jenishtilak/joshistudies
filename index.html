@@ -5829,7 +5829,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
     const e = d.data();
     const tsMs = resolveTs(e);
     if(typeof e.pct === "number" && tsMs!==null){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject:e.subject||"", lessonId:e.lessonId||"", qIndex:e.qIndex });
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject:e.subject||"", lessonId:e.lessonId||"", qIndex:e.qIndex, timeMs:e.timeMs||0 });
     }
   });
   examSnap.forEach(d=>{
@@ -5840,7 +5840,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
       // to looking up the lesson, since practice tests can span multiple lessons
       // that may belong to different subjects.
       const lesson = findLessonById(e.lessonId);
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx });
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx, timeMs:e.timeMs||0 });
     }
   });
   allScoredEntries.sort((a,b)=>a.ts-b.ts);
@@ -6299,7 +6299,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
   const sessionCount = Object.keys(bySession).length;
   const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
-  const subjectBreakdown = calcSubjectBreakdown(allScoredEntries||[]);
+
   const trendArrow = trend>60?"↗":trend<40?"↘":"→";
   const trendColor = trend>60?"#7ee787":trend<40?"#ffa07a":"rgba(255,255,255,.5)";
   const W = "rgba(255,255,255,";
@@ -6417,26 +6417,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
   }).join('');
   var gFooter=dailyGoal.completedToday?'<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:4px">🎉 Goal complete!'+(dailyGoal.streak>1?' · 🔥 '+dailyGoal.streak+' day streak':'')+'</div>':dailyGoal.streak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:4px">🔥 '+dailyGoal.streak+' day streak</div>':'';
 
-  // ── BY SUBJECT (collapsed) ──
-  var bySubj='<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>'
-    +'<details><summary style="list-style:none;cursor:pointer;display:flex;justify-content:space-between;user-select:none;padding:2px 0">'
-      +'<span style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:'+W+'.5)">📘 By Subject</span>'
-      +'<span style="font-size:10px;color:'+W+'.35)">tap to expand</span>'
-    +'</summary>'
-    +'<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">'
-      +subjectBreakdown.map(function(s){
-        return '<div>'
-          +'<div style="display:flex;align-items:center;gap:10px">'
-            +'<div style="font-size:11px;font-weight:600;color:'+W+'.85);width:76px;flex-shrink:0">'+s.icon+' '+s.name.split(' ')[0]+'</div>'
-            +'<div style="flex:1;height:6px;background:'+W+'.1);border-radius:3px;overflow:hidden">'
-              +'<div style="height:100%;width:'+s.coverage+'%;background:#7ee787;border-radius:3px"></div>'
-            +'</div>'
-            +'<div style="font-size:10px;color:'+W+'.45);min-width:50px;text-align:right">'+s.coverage+'% · '+s.mastery+'%M</div>'
-          +'</div>'
-          +'<div style="font-size:9px;color:'+W+'.35);margin-left:86px;margin-top:2px">⏱ '+fmtMs(s.timeMs||0)+' spent</div>'
-        +'</div>';
-      }).join('')
-    +'</div></details>';
+  var bySubj=""; // removed
 
   // ── HOW TO EARN (collapsed) ──
   function earnRow(ic,t,d){ return '<div style="border-bottom:1px solid '+W+'.08);padding:9px 0"><div style="font-size:11px;font-weight:700;color:#fff">'+ic+' '+t+'</div><div style="font-size:10px;color:'+W+'.55);margin-top:2px;line-height:1.5">'+d+'</div></div>'; }
@@ -6458,7 +6439,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
 
-  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + bySubj + howToEarn;
+  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + howToEarn;
 }
 
 
