@@ -1580,14 +1580,6 @@ const DATA = {
                   q:"Mention the forms of democracy.",
                   answer:"Forms of Democratic government\n\n1. Parliamentary form of government\n2. Presidential form of government",
                 },
-                {
-                  q:"What is Direct Democracy?",
-                  answer:"When the people themselves directly express their will on public affairs, the type of government is called pure or direct democracy. It existed in the city-states of ancient Greece and is still practised in Switzerland."
-                },
-                {
-                  q:"What is Indirect Democracy?",
-                  answer:"When the people express their will on public affairs through their elected representatives, the type of government is called indirect or representative democracy. India follows this form of democracy."
-                }
               ],
               truefalse:[], reasons:[],
               distinguish:[
@@ -1606,7 +1598,7 @@ const DATA = {
                 },
                 {
                   q:"Explain the conditions necessary for the success of democracy in India.",
-                  answer:"The following conditions are necessary for the success of democracy in India:\n\n1. Empowerment of the poor and illiterates to enjoy the goodness of democracy.\n2. An impartial and efficient press to form public opinion.\n3. Presence of strong public opinion.\n4. Feeling of tolerance and communal harmony among the people.\n5. Powerful and responsible opposition.\n\nWhen these conditions are fulfilled, democracy can truly function as a government of the people, by the people and for the people."
+                  answer:"The following conditions are necessary for the success of democracy in India:\n\n1. Empowerment of the poor and illiterates to enjoy the goodness of democracy.\n2. An impartial and efficient press to form public opinion.\n3. Presence of strong public opinion.\n4. Feeling of tolerance and communal harmony among the people.\n5. Powerful and responsible opposition."
                 }
               ]
             }
@@ -4499,6 +4491,7 @@ function showLessonTestIntroPopup(lesson, onStart){
       +'<button id="lessonTestStartBtn" style="flex:2;padding:11px;background:var(--gold,#e8b84b);color:var(--navy);border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer">Start Test →</button>'
     +'</div>'
   +'</div>';
+  ov.id = "lessonTestPopup";
   document.body.appendChild(ov);
   ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
   document.getElementById("lessonTestStartBtn").onclick = function(){
@@ -5027,6 +5020,10 @@ function showTestPointsPopup(pct, points, isLessonTestRun, difficultyMultiplier)
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Bonus Points Earned</div>
         <div style="font-size:32px;font-weight:900;color:var(--navy)">+${points}</div>
         ${showDifficultyNote ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Include harder question types like Brief, Distinguish or Paragraph next time for a bigger bonus!</div>` : ""}
+      </div>` : isLessonTestRun && !_completeLessons[lessonTestLesson?.id] ? `
+      <div style="background:var(--parchment);border-radius:12px;padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted)">📝 Practice run — no points yet</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Points will be awarded once this lesson is marked complete</div>
       </div>` : `
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Score 60% or higher to earn bonus points. Try again!</div>`}
     <button onclick="document.getElementById('testPointsPopup').remove()" style="width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Continue →</button>
