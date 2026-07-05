@@ -2333,19 +2333,23 @@ function openLesson(lesson){
   showPracticeBonusPopup(lesson, function(){ startLesson(lesson); });
 }
 
+function closePracticeBonusPopup(){
+  var el = document.getElementById("practiceBonusPopup");
+  if(el) el.remove();
+}
+
 function showPracticeBonusPopup(lesson, onStart){
-  var briefCount = (lesson.questions.brief||[]).length;
-  var paraCount  = (lesson.questions.paragraph||[]).length + (lesson.questions.distinguish||[]).length;
-  // Only show popup if lesson has brief or paragraph/detail questions
+  var briefCount   = (lesson.questions.brief||[]).length + (lesson.questions.reasons||[]).length;
+  var paraCount    = (lesson.questions.paragraph||[]).length + (lesson.questions.distinguish||[]).length;
   if(briefCount===0 && paraCount===0){ onStart(); return; }
   var rows = "";
   if(briefCount>0) rows += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
-    +'<div><div style="font-size:13px;color:#fff">📝 Answer in Brief</div>'
+    +'<div><div style="font-size:13px;color:#fff">📝 Brief + Reasons</div>'
     +'<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">All '+briefCount+' question'+(briefCount!==1?'s':'')+' · 80%+ score each</div></div>'
     +'<div style="font-size:14px;font-weight:800;color:var(--gold)">+100 pts</div>'
   +'</div>';
   if(paraCount>0) rows += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">'
-    +'<div><div style="font-size:13px;color:#fff">📄 Answer in Detail</div>'
+    +'<div><div style="font-size:13px;color:#fff">📄 Detail + Distinguish</div>'
     +'<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">All '+paraCount+' question'+(paraCount!==1?'s':'')+' · 80%+ score each</div></div>'
     +'<div style="font-size:14px;font-weight:800;color:var(--gold)">+200 pts</div>'
   +'</div>';
@@ -2359,7 +2363,7 @@ function showPracticeBonusPopup(lesson, onStart){
     +rows
     +'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:10px;margin-bottom:16px">Score 80%+ on ALL questions of that type in one session to earn the bonus</div>'
     +'<div style="display:flex;gap:8px">'
-      +'<button onclick="document.getElementById(\"practiceBonusPopup\").remove()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>'
+      +'<button onclick="closePracticeBonusPopup()" style="flex:1;padding:10px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>'
       +'<button id="practiceBonusStartBtn" style="flex:2;padding:10px;background:var(--gold,#e8b84b);color:var(--navy);border:none;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer">Start! →</button>'
     +'</div>'
   +'</div>';
@@ -2558,43 +2562,34 @@ var _sessionTypeBonusAwarded = {}; // qtype -> true once awarded per session
 
 function checkSessionTypeBonus(qtype){
   // Only applies to brief and paragraph/distinguish types
-  var bonusTypes = { brief: 100, paragraph: 200, distinguish: 200 };
-  var bonus = bonusTypes[qtype];
-  if(!bonus) return;
-  if(_sessionTypeBonusAwarded[qtype]) return; // already awarded this session
+  // Group: brief+reasons = +100, paragraph+distinguish = +200
+  var group = (qtype==="brief"||qtype==="reasons") ? "brief_reasons"
+            : (qtype==="paragraph"||qtype==="distinguish") ? "para_dist" : null;
+  if(!group) return;
+  if(_sessionTypeBonusAwarded[group]) return;
 
-  var qs = currentLesson && currentLesson.questions[qtype] ? currentLesson.questions[qtype] : [];
-  if(!qs.length) return;
+  var bonus = group==="brief_reasons" ? 100 : 200;
+  var groupTypes = group==="brief_reasons" ? ["brief","reasons"] : ["paragraph","distinguish"];
 
-  // Check all questions of this type scored 80%+ in this session
-  var allDone = true;
-  for(var i=0; i<qs.length; i++){
-    var state = questionStates[i];
-    // We need to check the score for each question in this qtype session
-    // sessionResults has {pct, qtype} for every answered question
-    var results = sessionResults.filter(function(r){ return r.qtype === qtype; });
-    if(results.length < qs.length){ allDone = false; break; }
-    var anyBelow80 = results.some(function(r){ return r.pct < 80; });
-    if(anyBelow80){ allDone = false; break; }
-    break; // only need to check once
-  }
+  // All questions of all types in this group must be answered at 80%+
+  var totalNeeded = 0, allDone = true;
+  groupTypes.forEach(function(t){
+    var qs = currentLesson && currentLesson.questions[t] ? currentLesson.questions[t] : [];
+    totalNeeded += qs.length;
+    if(!qs.length) return;
+    var results = sessionResults.filter(function(r){ return r.qtype===t; });
+    if(results.length < qs.length) allDone = false;
+    else if(results.some(function(r){ return r.pct<80; })) allDone = false;
+  });
+  if(totalNeeded===0) return;
 
-  if(allDone && qs.length > 0){
-    _sessionTypeBonusAwarded[qtype] = true;
-    var label = qtype==="brief" ? "📝 All Brief done!" : "📄 All Detail done!";
+  if(allDone){
+    _sessionTypeBonusAwarded[group] = true;
+    var label = group==="brief_reasons" ? "📝 All Brief & Reasons done!" : "📄 All Detail & Distinguish done!";
     setTimeout(function(){
       showSpeedBonusToast(bonus, label+" Session Bonus!");
-      // Log it as a scored entry so it counts in growth points
-      fbLogEntry("logs", {
-        subject: currentSubject||"",
-        part: currentPart||"",
-        lessonId: currentLesson?.id||"",
-        lessonTitle: currentLesson?.title||"",
-        qtype: "sessionBonus_"+qtype,
-        qIndex: 0,
-        pct: 100,
-        timeMs: 0
-      });
+      // Session bonus is a one-time toast only — not persisted to Firebase
+      // (These bonuses are motivational rewards, not part of the permanent score)
     }, 1200);
   }
 }
@@ -6255,7 +6250,7 @@ async function fetchTotalTestPoints(){
     snap.forEach(d=>{ total += d.data().points || 0; });
     return total;
   } catch(err){
-    return 0; // never let a missing/failed fetch break the rest of the scoreboard
+    return 0;
   }
 }
 
@@ -6395,13 +6390,11 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const dailyTimeBonus = calcDailyTimeBonus(allScoredEntries);
   growthPoints += dailyTimeBonus.pointsEarned;
 
-  // Lesson mastery bonus: +200 for each complete lesson fully mastered
-  const lessonMastery = calcLessonMasteryBonus();
-  growthPoints += lessonMastery.totalBonus;
+  const lessonMastery = calcLessonMasteryBonus(); // for display only, points come from bonusPoints
 
   growthPoints = Math.round(growthPoints);
 
-  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus, lessonMastery };
+  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus };
 }
 
 function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
