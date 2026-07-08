@@ -416,6 +416,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .revise-match-table th{background:var(--navy);color:#fff;padding:7px 10px;font-size:11px;font-weight:700;text-align:left}
 .revise-match-table td{padding:7px 10px;border:1px solid var(--border)}
 .revise-match-table tr:nth-child(odd) td{background:var(--parchment)}
+.revise-spelling-cta{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:14px 16px;margin-bottom:20px;background:rgba(76,204,138,.12);border:1.5px solid rgba(76,204,138,.35);border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;transition:transform .15s}
+.revise-spelling-cta:hover{transform:translateY(-1px)}
+.revise-spelling-cta:active{transform:scale(.98)}
+.revise-spelling-cta .rsc-title{font-size:14px;font-weight:800;color:var(--green)}
+.revise-spelling-cta .rsc-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.revise-spelling-cta .rsc-arrow{font-size:18px;color:var(--green);flex-shrink:0}
 .mock-exam-bar{display:flex;align-items:center;gap:10px;padding:8px 0 14px}
 .btn-mock-exam{padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;white-space:nowrap}
 .btn-mock-exam:hover{background:var(--navy-mid)}
@@ -2255,6 +2261,7 @@ function renderRevise(lesson){
   document.getElementById("quizOverlay").scrollTo(0,0);
 
   let html = `<div class="revise-body">`;
+  _reviseSpellPool = []; // reset per-question spelling word pool for this render
 
   QTYPES.forEach(qt=>{
     const qs = lesson.questions[qt.id]||[];
@@ -2293,7 +2300,8 @@ function renderRevise(lesson){
       } else if(qt.id==="distinguish"){
         const qText = q.q || `Distinguish between ${q.termA} and ${q.termB}`;
         html += `<div class="revise-q">${qText}</div>
-          ${buildDistTable(q)}`;
+          ${buildDistTable(q)}
+          ${buildReviseSpellButton(getAnswerSpellingWords((q.answerA||"")+" "+(q.answerB||"")), lesson, qt, i)}`;
 
       } else if(qt.id==="truefalse"){
         html += `<div class="revise-q">${q.statement||q.q}</div>
@@ -2306,7 +2314,8 @@ function renderRevise(lesson){
       } else {
         // brief, reasons, paragraph
         html += `<div class="revise-q">${q.q}</div>
-          <div class="revise-answer">${(q.answer||"").replace(/</g,"&lt;")}</div>`;
+          <div class="revise-answer">${(q.answer||"").replace(/</g,"&lt;")}</div>
+          ${buildReviseSpellButton(getAnswerSpellingWords(q.answer||""), lesson, qt, i)}`;
       }
 
       html += `</div>`;
@@ -3935,6 +3944,8 @@ function checkTextAnswer(){
 
   const sb = pct>=MIN_SCORE_FOR_GOAL_CREDIT ? getSpeedBonus(currentQType, txtElapsed) : null;
   const speedChip = sb ? `<span style="background:#c45000;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px">⚡ +${sb.points} Speed Bonus!</span>` : "";
+  const qtObj = QTYPES.find(t=>t.id===currentQType);
+  const spellBtnHTML = qtObj ? buildReviseSpellButton(getAnswerSpellingWords(q.answer||""), currentLesson, qtObj, getOriginalQIndex(currentQIndex)) : "";
   const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
@@ -3942,7 +3953,8 @@ function checkTextAnswer(){
       <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#9a6c00">[bracketed] = missing</span></div>
       ${hintNote}</div>
     </div>
-    ${buildAnnotatedDiff(userText, q.answer)}`;
+    ${buildAnnotatedDiff(userText, q.answer)}
+    ${spellBtnHTML}`;
 
   logQuestion(pct, txtElapsed, feedbackHTML, pct>=80);
   renderNavBar();
@@ -4170,6 +4182,8 @@ function checkDistinguish(){
   const hintNote = peeksUsed>0
     ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${peeksUsed} time${peeksUsed!==1?"s":""} — score capped above</div>`
     : "";
+  const distQtObj = QTYPES.find(t=>t.id==="distinguish");
+  const distSpellBtnHTML = distQtObj ? buildReviseSpellButton(getAnswerSpellingWords((q.answerA||"")+" "+(q.answerB||"")), currentLesson, distQtObj, getOriginalQIndex(currentQIndex)) : "";
   const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
@@ -4191,7 +4205,8 @@ function checkDistinguish(){
       </div>
     </div>
     <div class="result-section-title correct" style="margin:10px 0 4px">✅ Model Answer</div>
-    ${buildDistTable(q)}`;
+    ${buildDistTable(q)}
+    ${distSpellBtnHTML}`;
 
   logQuestion(pct, distElapsed, feedbackHTML, pct>=80);
   renderNavBar();
@@ -7527,9 +7542,86 @@ let _completeLessons = {}; // lessonId -> true/false, loaded from Firebase
 
 let _spellingAllBySubject = {}; // subject -> [{word, lessonTitle, missCount}]
 
+// ═══════════════════════════════════════════════════════
+//  REVISE MODE — PRACTICE SPELLINGS FOR THIS QUESTION
+// ═══════════════════════════════════════════════════════
+// For long-answer types (Answer in Brief, Give Reasons, Distinguish Between,
+// Answer in Paragraph/Detail), pull the harder/key vocabulary words straight
+// out of THIS question's model answer so a student can drill spelling for
+// exactly the answer they're revising, right where they're revising it.
+const SPELL_STOPWORDS = new Set(["about","after","again","against","all","also",
+  "although","among","and","another","any","are","around","because","been",
+  "before","being","between","both","but","cannot","could","did","does","doing",
+  "down","during","each","either","enough","even","every","for","from","further",
+  "had","has","have","having","here","however","into","itself","just","like",
+  "made","make","many","might","more","most","much","must","never","not",
+  "nowhere","off","once","only","onto","other","others","otherwise","ought",
+  "our","ours","out","over","own","people","public","rather","same","shall",
+  "should","since","some","still","such","than","that","their","theirs","them",
+  "themselves","then","there","therefore","these","they","this","those","though",
+  "through","throughout","thus","under","unless","until","upon","very","was",
+  "well","were","what","whatever","when","whenever","where","whereas","wherever",
+  "whether","which","while","who","whom","whose","why","will","with","within",
+  "without","would","yet","your","yours","yourself"]);
+
+function getAnswerSpellingWords(answerText, maxWords){
+  if(!answerText) return [];
+  const seen = new Set();
+  const words = [];
+  const tokens = String(answerText).split(/[^A-Za-z]+/).filter(Boolean);
+  tokens.forEach(tok=>{
+    const isAcronym = tok.length>=2 && tok===tok.toUpperCase();
+    if(!isAcronym && tok.length<6) return;             // short common words — skip
+    const lower = tok.toLowerCase();
+    if(!isAcronym && SPELL_STOPWORDS.has(lower)) return;
+    if(seen.has(lower)) return;
+    seen.add(lower);
+    words.push(tok);
+  });
+  return maxWords ? words.slice(0, maxWords) : words;
+}
+
+// Pool of {words, label} built fresh each time renderRevise runs — buttons
+// reference it by index instead of inlining data into onclick attributes.
+let _reviseSpellPool = [];
+
+function buildReviseSpellButton(words, lesson, qt, qIndex){
+  if(!words || !words.length) return "";
+  const label = `${qt.label} · Q${qIndex+1}`;
+  _reviseSpellPool.push({ words, label, lessonTitle: lesson.title });
+  const idx = _reviseSpellPool.length-1;
+  return `<button class="revise-spelling-cta" style="margin-top:12px" onclick="openQuestionSpellingGame(${idx})">
+    <div>
+      <div class="rsc-title">🔤 Practice Spellings for this Answer</div>
+      <div class="rsc-sub">${words.length} key word${words.length!==1?"s":""} from this answer</div>
+    </div>
+    <span class="rsc-arrow">→</span>
+  </button>`;
+}
+
+function openQuestionSpellingGame(poolIndex){
+  const entry = _reviseSpellPool[poolIndex];
+  if(!entry || !entry.words.length) return;
+  _spellingWords = entry.words.map(w=>({ word:w, lessonTitle: `${entry.lessonTitle} — ${entry.label}` }));
+  _spellingSubject = entry.label;
+  _spellingAllBySubject = { [entry.label]: _spellingWords };
+  _spellingIdx = 0;
+  _spellingScore = 0;
+  _spellingRoundSize = Math.min(10, _spellingWords.length);
+
+  const panel = document.getElementById("spellingPanel");
+  const titleEl = panel?.querySelector(".report-title");
+  if(titleEl) titleEl.textContent = `🔤 Spelling — ${entry.label}`;
+  panel?.classList.add("visible");
+  renderSpellingRoundIntro(document.getElementById("spellingGameRoot"));
+}
+
 async function openSpellingGame(){
   const root = document.getElementById("spellingGameRoot");
   if(!root) return;
+  // Reset the panel title in case it was last used for a lesson-scoped round
+  const titleEl = document.querySelector("#spellingPanel .report-title");
+  if(titleEl) titleEl.textContent = "🔤 Spelling Game";
   if(!window._fb || !currentUserPhone){
     root.innerHTML = "<p style='color:var(--muted)'>The spelling game needs an internet connection.</p>";
     return;
