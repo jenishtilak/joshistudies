@@ -7905,17 +7905,17 @@ function buildReviseReciteButton(idx, q){
       <div class="dist-input-grid">
         <div>
           <div class="dist-input-label">${entry.termA}</div>
-          <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button></div>
+          <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicA-${idx}" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button></div>
           <textarea class="answer-textarea" id="reciteInputA-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termA}…"></textarea>
         </div>
         <div>
           <div class="dist-input-label">${entry.termB}</div>
-          <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button></div>
+          <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicB-${idx}" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button></div>
           <textarea class="answer-textarea" id="reciteInputB-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termB}…"></textarea>
         </div>
       </div>`
     : `
-      <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button></div>
+      <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMic-${idx}" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button></div>
       <textarea class="answer-textarea" id="reciteInput-${idx}" style="min-height:90px" placeholder="Say or type your answer from memory…"></textarea>`;
   return `<button class="revise-spelling-cta" style="margin-top:12px" onclick="toggleRecitePanel(${idx})">
       <div>
@@ -7925,22 +7925,62 @@ function buildReviseReciteButton(idx, q){
       <span class="rsc-arrow">→</span>
     </button>
     <div class="recite-panel" id="recitePanel-${idx}" style="display:none">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <button type="button" id="reciteEyeBtn-${idx}" onclick="toggleReciteAnswerPeek(${idx})" style="background:none;border:1px solid var(--border);color:var(--navy);font-size:11.5px;font-weight:700;cursor:pointer;padding:5px 10px;border-radius:14px">👁 Show Answer</button>
         <button type="button" onclick="closeRecitePanel(${idx})" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:4px 8px">✕ Close &amp; back to revising</button>
       </div>
       ${panelInner}
-      <button class="btn-check" style="margin-top:10px;padding:9px 18px;font-size:13px" onclick="checkRecite(${idx})">Check</button>
+      <button class="btn-check" id="reciteCheckBtn-${idx}" style="margin-top:10px;padding:9px 18px;font-size:13px" onclick="checkRecite(${idx})">Check</button>
       <div id="reciteResult-${idx}" style="margin-top:10px"></div>
     </div>`;
 }
 
+// Free, un-penalised peek — Revise mode has no score to protect, so unlike
+// Practice mode's capped "View Model Answer," this just toggles visibility
+// back and forth as many times as the student wants.
+function toggleReciteAnswerPeek(idx){
+  const el = getReciteAnswerEl(idx);
+  if(!el) return;
+  const headerBtn = document.getElementById(`reciteEyeBtn-${idx}`);
+  if(el.dataset.reciteHidden){
+    revealFromRecite(el);
+    if(headerBtn) headerBtn.textContent = "🙈 Hide Answer";
+  } else {
+    hideForRecite(el, idx);
+    if(headerBtn) headerBtn.textContent = "👁 Show Answer";
+  }
+}
+
+// Enables/disables the Check button, mic buttons, and textarea(s) together —
+// used to lock everything once a result is showing, and unlock on Try Again.
+function setReciteInputsEnabled(idx, entry, enabled){
+  const checkBtn = document.getElementById(`reciteCheckBtn-${idx}`);
+  if(checkBtn) checkBtn.disabled = !enabled;
+  if(entry.qtype==="distinguish"){
+    const taA=document.getElementById(`reciteInputA-${idx}`); if(taA) taA.disabled=!enabled;
+    const taB=document.getElementById(`reciteInputB-${idx}`); if(taB) taB.disabled=!enabled;
+    const mA=document.getElementById(`reciteMicA-${idx}`); if(mA) mA.disabled=!enabled;
+    const mB=document.getElementById(`reciteMicB-${idx}`); if(mB) mB.disabled=!enabled;
+  } else {
+    const ta=document.getElementById(`reciteInput-${idx}`); if(ta) ta.disabled=!enabled;
+    const m=document.getElementById(`reciteMic-${idx}`); if(m) m.disabled=!enabled;
+  }
+}
+
 // Swaps an element's real content out for a "hidden" placeholder, stashing
 // the original HTML so it can be restored exactly once Check is pressed.
-function hideForRecite(el){
+// The eye button lives IN the placeholder itself (not just the panel header)
+// since every hidden card otherwise shows the exact same generic text —
+// with several questions hidden at once while scrolling through Revise mode,
+// there was nothing distinguishing one from another.
+function hideForRecite(el, idx){
   if(!el || el.dataset.reciteHidden) return;
   el.dataset.originalHtml = el.innerHTML;
   el.dataset.reciteHidden = "1";
-  el.innerHTML = `<div style="padding:10px 12px;background:var(--parchment);border:1.5px dashed var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);text-align:center">🙈 Hidden while you recite — tap Check to reveal</div>`;
+  const eyeButton = idx!=null
+    ? `<button type="button" onclick="toggleReciteAnswerPeek(${idx})" style="background:none;border:none;color:var(--navy);font-size:17px;cursor:pointer;padding:0 2px;vertical-align:middle" aria-label="Show answer">👁</button> `
+    : "";
+  el.innerHTML = `<div style="padding:10px 12px;background:var(--parchment);border:1.5px dashed var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);text-align:center">${eyeButton}🙈 Hidden while you recite — tap ${eyeButton?"👁 or ":""}Check to reveal</div>`;
 }
 function revealFromRecite(el){
   if(!el || !el.dataset.reciteHidden) return;
@@ -7963,9 +8003,13 @@ function toggleRecitePanel(idx){
 
 function openRecitePanel(idx){
   const panel = document.getElementById(`recitePanel-${idx}`);
-  if(!panel) return;
+  const entry = _reviseRecitePool[idx];
+  if(!panel || !entry) return;
   panel.style.display = "block";
-  hideForRecite(getReciteAnswerEl(idx));
+  hideForRecite(getReciteAnswerEl(idx), idx);
+  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
+  if(eyeBtn) eyeBtn.textContent = "👁 Show Answer";
+  setReciteInputsEnabled(idx, entry, true); // fresh open — always start unlocked, in case it was left locked from a check last time
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
 }
@@ -7993,7 +8037,10 @@ function tryAgainRecite(idx){
   }
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
-  hideForRecite(getReciteAnswerEl(idx));
+  hideForRecite(getReciteAnswerEl(idx), idx);
+  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
+  if(eyeBtn) eyeBtn.textContent = "👁 Show Answer";
+  setReciteInputsEnabled(idx, entry, true); // unlock for the next attempt
 }
 
 function checkRecite(idx){
@@ -8031,6 +8078,13 @@ function checkRecite(idx){
   // Reveal the model answer now — the diff above already shows it anyway,
   // so there's nothing left to hide once they've made their attempt.
   revealFromRecite(getReciteAnswerEl(idx));
+  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
+  if(eyeBtn) eyeBtn.textContent = "🙈 Hide Answer";
+
+  // Lock everything until Try Again — otherwise Check stays clickable and
+  // the mic stays usable while a result is already showing, which invites
+  // silently re-scoring stale text instead of doing a genuine new attempt.
+  setReciteInputsEnabled(idx, entry, false);
 
   const cls = pct>=80 ? "great" : pct>=50 ? "ok" : "low";
   const chipLabel = pct>=80 ? "🎯 Nailed it!" : pct>=50 ? "Getting there" : "Keep at it";
