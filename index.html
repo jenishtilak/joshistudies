@@ -199,6 +199,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .btn-check:disabled{opacity:.5;cursor:default}
 .btn-check:hover:not(:disabled){background:var(--navy-light)}
 .btn-skip{padding:13px 18px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;font-family:inherit}
+.btn-mic{width:100%;padding:11px;background:transparent;color:var(--red);font-size:13px;font-weight:600;border:1.5px dashed var(--red);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-mic.listening{background:var(--red-light);animation:micPulse 1.2s ease-in-out infinite}
+@keyframes micPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ai-grading-loader{display:flex;align-items:center;gap:8px;padding:14px;font-size:13px;color:var(--muted);font-weight:600}
+.ai-grading-loader .spin{width:16px;height:16px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:aiSpin .7s linear infinite}
+@keyframes aiSpin{to{transform:rotate(360deg)}}
+.ai-feedback-box{font-size:13.5px;line-height:1.8;color:var(--text);border-left:3px solid var(--navy);padding-left:12px;white-space:pre-line;margin-top:10px}
+.ai-graded-badge{display:inline-block;font-size:10px;font-weight:700;background:rgba(26,39,68,.08);color:var(--navy);padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
 
 /* result panel */
 .result-panel{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px;display:none}
@@ -482,6 +490,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .peek-panel.visible{display:block}
 .peek-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:6px}
 .peek-text{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-line}
+
+/* ── VOICE INPUT (SPEAK ANSWER) ── */
+.voice-input-row{display:flex;align-items:center;gap:8px;margin:0 12px 8px}
+.btn-mic{padding:8px 14px;background:var(--parchment);color:var(--navy);border:1.5px solid var(--border);border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn-mic:hover:not(:disabled){border-color:var(--navy)}
+.btn-mic:disabled{opacity:.45;cursor:not-allowed}
+.btn-mic.recording{background:var(--red-light);color:var(--red);border-color:var(--red);animation:micPulse 1.2s infinite}
+.btn-mic.processing{background:var(--gold-light);color:#8a6500;border-color:var(--gold)}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,92,92,.35)}50%{box-shadow:0 0 0 6px rgba(224,92,92,0)}}
+.mic-hint{font-size:11px;color:var(--muted)}
+.recite-panel{margin-top:10px;padding:12px;background:var(--parchment);border-radius:10px;border:1.5px dashed var(--border)}
+.recite-panel .dist-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.recite-result-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;padding:5px 12px;border-radius:20px;margin-bottom:8px}
+.recite-result-chip.great{background:var(--green-light);color:var(--green)}
+.recite-result-chip.ok{background:var(--gold-light);color:#8a6500}
+.recite-result-chip.low{background:var(--red-light);color:var(--red)}
+.recite-tries{font-size:11px;color:var(--muted);margin-top:6px}
 
 /* ── ANSWER DIFF BLOCKS — stacked, same formatting ── */
 .diff-answer-block{font-size:14px;line-height:1.9;padding:12px 14px;border-radius:8px;background:var(--parchment);word-break:break-word}
@@ -877,6 +902,14 @@ const QTYPES = [
   { id:"memorise",    label:"Quote from Memory",           icon:"🎤",  marks:3 },
 ];
 
+// Small, flat bonus for Revise mode's Recite & Check — deliberately worth
+// less than a real Practice-mode answer. Defined here (not down near the
+// Recite code) so getMarks can use the exact same number the toast shows —
+// otherwise the toast risks promising an amount the Scoreboard doesn't
+// actually count, the same disconnect that turned up in the Growth Points
+// audit below.
+const RECITE_BONUS_MARKS = 2;
+
 // Returns only question types that actually have questions somewhere in the data.
 // Used by the daily goal so students aren't penalised for a missing type (e.g. no
 // True/False in English Grammar). Recomputed each call since data could expand.
@@ -890,8 +923,14 @@ function getActiveQTypes(){
   return QTYPES.filter(qt => present.has(qt.id));
 }
 
-// Get marks for a question type
-function getMarks(qtypeId){ return QTYPES.find(q=>q.id===qtypeId)?.marks||1; }
+// Get marks for a question type. "recite_<qtype>" tags (from Revise mode's
+// Recite & Check) are a distinct, deliberately-flat bonus — not one of the
+// real QTYPES — so they're matched explicitly rather than falling through
+// to the generic ||1 default, which would have silently under-counted them.
+function getMarks(qtypeId){
+  if(qtypeId && qtypeId.indexOf("recite_")===0) return RECITE_BONUS_MARKS;
+  return QTYPES.find(q=>q.id===qtypeId)?.marks||1;
+}
 
 // Weighted score: earned marks / total possible marks * 100
 function calcWeightedScore(results){
@@ -2262,6 +2301,7 @@ function renderRevise(lesson){
 
   let html = `<div class="revise-body">`;
   _reviseSpellPool = []; // reset per-question spelling word pool for this render
+  _reviseRecitePool = []; // reset per-question recite pool for this render
 
   QTYPES.forEach(qt=>{
     const qs = lesson.questions[qt.id]||[];
@@ -2299,9 +2339,11 @@ function renderRevise(lesson){
 
       } else if(qt.id==="distinguish"){
         const qText = q.q || `Distinguish between ${q.termA} and ${q.termB}`;
+        const reciteIdx = registerRecite(q, qt, i);
         html += `<div class="revise-q">${qText}</div>
-          ${buildDistTable(q)}
-          ${buildReviseSpellButton(getAnswerSpellingWords((q.answerA||"")+" "+(q.answerB||"")), lesson, qt, i)}`;
+          <div id="${reciteIdx>=0?`revise-dist-table-${reciteIdx}`:""}">${buildDistTable(q)}</div>
+          ${buildReviseSpellButton(getAnswerSpellingWords((q.answerA||"")+" "+(q.answerB||"")), lesson, qt, i)}
+          ${buildReviseReciteButton(reciteIdx, q)}`;
 
       } else if(qt.id==="truefalse"){
         html += `<div class="revise-q">${q.statement||q.q}</div>
@@ -2313,9 +2355,11 @@ function renderRevise(lesson){
           <div class="revise-answer" style="font-family:Georgia,serif;font-size:14px;line-height:1.9;white-space:pre-line">${(q.lines||"").replace(/</g,"&lt;")}</div>`;
       } else {
         // brief, reasons, paragraph
+        const reciteIdx = registerRecite(q, qt, i);
         html += `<div class="revise-q">${q.q}</div>
-          <div class="revise-answer">${(q.answer||"").replace(/</g,"&lt;")}</div>
-          ${buildReviseSpellButton(getAnswerSpellingWords(q.answer||""), lesson, qt, i)}`;
+          <div class="revise-answer" id="${reciteIdx>=0?`revise-answer-${reciteIdx}`:""}">${(q.answer||"").replace(/</g,"&lt;")}</div>
+          ${buildReviseSpellButton(getAnswerSpellingWords(q.answer||""), lesson, qt, i)}
+          ${buildReviseReciteButton(reciteIdx, q)}`;
       }
 
       html += `</div>`;
@@ -4091,7 +4135,167 @@ function togglePeekDist(){
   }
 }
 
-// Build the distinguish table — rows are created by splitting each answer on \n
+// ═══════════════════════════════════════════════════════
+//  VOICE INPUT — "Speak Answer"
+//  Free, no backend, no API key. Two paths depending on
+//  browser support:
+//   1. Native Web Speech API (Chrome/Android) — instant,
+//      the browser itself does the recognition for free.
+//   2. In-browser Whisper (Safari/iPhone and anywhere else
+//      the native API isn't available) — runs a small
+//      speech-recognition model entirely on the student's
+//      own device via transformers.js. Audio never leaves
+//      the device either way; nothing is uploaded anywhere.
+//  Whatever text comes out gets dropped straight into the
+//  textarea exactly as if the student had typed it — the
+//  existing exact-match scorer grades it the same way.
+// ═══════════════════════════════════════════════════════
+let _voiceActive = false;
+let _voiceRecognitionInstance = null;
+let _voiceMediaRecorder = null;
+let _voiceMediaStream = null;
+let _voiceChunks = [];
+let _whisperPipelinePromise = null;
+
+function setMicUI(btn, state){
+  if(!btn) return;
+  btn.classList.remove("recording","processing");
+  if(state==="listening"){ btn.textContent="⏹ Stop"; btn.classList.add("recording"); }
+  else if(state==="processing"){ btn.textContent="⏳ Transcribing…"; btn.classList.add("processing"); }
+  else { btn.textContent = btn.dataset.micLabel || "🎤 Speak Answer"; }
+}
+
+function toggleVoiceInput(targetId, btn){
+  if(!btn.dataset.micLabel) btn.dataset.micLabel = btn.textContent; // remember idle label (e.g. "🎤 Speak" vs "🎤 Speak Answer")
+  if(_voiceActive){ stopVoiceInput(); return; }
+  const ta = document.getElementById(targetId);
+  if(!ta || ta.disabled) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR) startNativeVoiceInput(targetId, btn, SR);
+  else startWhisperVoiceInput(targetId, btn);
+}
+
+function stopVoiceInput(){
+  if(_voiceRecognitionInstance){
+    try{ _voiceRecognitionInstance.stop(); }catch(e){}
+    _voiceRecognitionInstance = null;
+  }
+  if(_voiceMediaRecorder && _voiceMediaRecorder.state!=="inactive"){
+    try{ _voiceMediaRecorder.stop(); }catch(e){} // onstop handler does the transcribing
+  } else {
+    _voiceActive = false;
+  }
+}
+
+// ── Path 1: native browser speech recognition (free, instant, Chrome/Android) ──
+function startNativeVoiceInput(targetId, btn, SR){
+  const ta = document.getElementById(targetId);
+  _voiceActive = true;
+  setMicUI(btn, "listening");
+  const rec = new SR();
+  rec.lang = "en-IN";
+  rec.interimResults = true;
+  rec.continuous = true;
+  const startingText = ta.value ? ta.value.trim()+" " : "";
+  let finalText = startingText;
+  rec.onresult = (e)=>{
+    let interim = "";
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalText += t + " ";
+      else interim += t;
+    }
+    ta.value = (finalText + interim).trim();
+    ta.dispatchEvent(new Event("input"));
+  };
+  rec.onerror = ()=>{ _voiceActive=false; setMicUI(btn,"idle"); };
+  rec.onend   = ()=>{ _voiceActive=false; setMicUI(btn,"idle"); _voiceRecognitionInstance=null; };
+  _voiceRecognitionInstance = rec;
+  try{ rec.start(); }catch(e){ _voiceActive=false; setMicUI(btn,"idle"); }
+}
+
+// ── Path 2: in-browser Whisper (free, runs on-device, works on Safari/iPhone) ──
+async function startWhisperVoiceInput(targetId, btn){
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    alert("Microphone access is needed to speak your answer. Please allow microphone access in your browser settings and try again.");
+    return;
+  }
+  _voiceMediaStream = stream;
+  _voiceActive = true;
+  setMicUI(btn, "listening");
+  _voiceChunks = [];
+  let recorder;
+  try{
+    recorder = MediaRecorder.isTypeSupported("audio/webm")
+      ? new MediaRecorder(stream, {mimeType:"audio/webm"})
+      : new MediaRecorder(stream);
+  }catch(e){
+    recorder = new MediaRecorder(stream);
+  }
+  recorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) _voiceChunks.push(e.data); };
+  recorder.onstop = async ()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    setMicUI(btn, "processing");
+    const ta = document.getElementById(targetId);
+    try{
+      const blob = new Blob(_voiceChunks, {type:recorder.mimeType||"audio/webm"});
+      const text = await transcribeWithWhisper(blob);
+      if(ta && text){
+        ta.value = (ta.value ? ta.value.trim()+" " : "") + text;
+        ta.dispatchEvent(new Event("input"));
+      }
+    }catch(err){
+      console.error("On-device transcription failed:", err);
+      alert("Sorry, couldn't transcribe that — please try again or type your answer instead.");
+    }
+    _voiceActive = false;
+    setMicUI(btn, "idle");
+    _voiceMediaRecorder = null;
+  };
+  _voiceMediaRecorder = recorder;
+  recorder.start();
+}
+
+// Lazily loads transformers.js + a small quantized Whisper model, once per
+// page load, then reuses the same pipeline for every question afterward.
+async function getWhisperPipeline(){
+  if(!_whisperPipelinePromise){
+    _whisperPipelinePromise = (async ()=>{
+      const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm");
+      return await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny.en");
+    })();
+  }
+  return _whisperPipelinePromise;
+}
+
+// Decodes recorded audio and resamples it to 16kHz mono Float32 — the
+// format Whisper expects — entirely client-side via the Web Audio API.
+async function decodeAudioTo16kMono(blob){
+  const arrayBuffer = await blob.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = new AC();
+  const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+  const targetRate = 16000;
+  const offline = new OfflineAudioContext(1, Math.ceil(decoded.duration*targetRate), targetRate);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start(0);
+  const rendered = await offline.startRendering();
+  audioCtx.close();
+  return rendered.getChannelData(0);
+}
+
+async function transcribeWithWhisper(blob){
+  const [transcriber, audioData] = await Promise.all([getWhisperPipeline(), decodeAudioTo16kMono(blob)]);
+  const result = await transcriber(audioData);
+  return (result?.text||"").trim();
+}
+
+
 function buildDistTable(q, isPeek=false){
   const rowsA = q.answerA.split("\n").filter(r=>r.trim());
   const rowsB = q.answerB.split("\n").filter(r=>r.trim());
@@ -5762,6 +5966,40 @@ function renderHowToEarnPoints(targetId){
     </details>`;
 }
 
+// ═══════════════════════════════════════════════════════
+//  SHARED LOGS BUNDLE — fixes slow scoreboard loads
+// ═══════════════════════════════════════════════════════
+// Every scoreboard-style view (student scoreboard, admin scoreboard, the
+// welcome-back popup) independently re-fetched the ENTIRE logs +
+// examAnswers + testPoints history from Firestore, one request at a time,
+// every single time it opened — three sequential network round trips,
+// getting slower as more history piles up. This fixes both problems:
+//  1. The three fetches now run in PARALLEL (Promise.all) instead of one
+//     after another — roughly a 3x cut in load time on its own.
+//  2. The result is cached in memory for a few seconds, so opening the
+//     scoreboard right after it was already loaded (or right after the
+//     welcome-back popup fetched the same data) is instant, not a second
+//     round trip. The cache is invalidated immediately the moment a new
+//     answer is actually logged, so it never shows stale numbers.
+let _logsBundleCache = null; // { logsSnap, examSnap, totalTestPoints, ts }
+const LOGS_BUNDLE_TTL_MS = 20000;
+
+function invalidateLogsBundleCache(){ _logsBundleCache = null; }
+
+async function getLogsBundle(){
+  if(_logsBundleCache && (Date.now()-_logsBundleCache.ts) < LOGS_BUNDLE_TTL_MS){
+    return _logsBundleCache;
+  }
+  const { db, collection, query, orderBy, getDocs } = window._fb;
+  const [logsSnap, examSnap, totalTestPoints] = await Promise.all([
+    getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc"))),
+    getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc"))),
+    fetchTotalTestPoints()
+  ]);
+  _logsBundleCache = { logsSnap, examSnap, totalTestPoints, ts: Date.now() };
+  return _logsBundleCache;
+}
+
 // Same logic as the admin's scoreboard, but scoped to the logged-in student
 // viewing their own all-time stats (no live-mirroring UI needed here).
 async function buildStudentScoreboard(){
@@ -5775,11 +6013,9 @@ async function buildStudentScoreboard(){
 
   totalBox.innerHTML = "Loading…";
 
-  const { db, collection, query, orderBy, getDocs } = window._fb;
-  let logsSnap, examSnap;
+  let logsSnap, examSnap, totalTestPoints;
   try{
-    logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
-    examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
+    ({ logsSnap, examSnap, totalTestPoints } = await getLogsBundle());
   } catch(err){
     totalBox.innerHTML = "<p style='margin:0'>Couldn't load scoreboard right now.</p>";
     return;
@@ -5816,7 +6052,6 @@ async function buildStudentScoreboard(){
     }
   });
 
-  const totalTestPoints = await fetchTotalTestPoints();
   totalBox.innerHTML = renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints);
   celebrateDailyGoalIfJustCompleted(agg.allUnique, allScoredEntries, totalTestPoints);
 }
@@ -6385,14 +6620,34 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const sessionGoals = calcSessionGoals(allScoredEntries); // still used for "today's" session card display
 
   let growthPoints = 0;
+  // BUG FIX: this used to add getMarks(e.qtype) for every single qualifying
+  // attempt, first time or the 50th, with no distinction. That quietly broke
+  // two things: (1) the "🆕 New question! 2× points" toast shown right after
+  // a first-ever correct answer promised double points that never actually
+  // landed in this total, and (2) because repeats were never discounted,
+  // simply re-answering an already-mastered question over and over kept
+  // adding full marks forever — an unintended way to inflate Growth Points
+  // that had nothing to do with the "harder types are worth more" protection
+  // the comment below describes. This now mirrors logQuestion's real
+  // behavior: first qualifying attempt at a given question = double marks,
+  // every attempt after that = base marks — so the number shown in the toast
+  // is always the same number that ends up permanently counted.
+  const _seenGrowthKeys = new Set();
   allScoredEntries.forEach(e=>{
+    if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
+    const base = getMarks(e.qtype);
     // Points per question scale with how much that question type is actually
     // worth — the same marks weighting already used for scoring (MCQ/Fill/
     // TrueFalse=1, Brief/Reasons=2, Distinguish=3, Match/Paragraph=5). A
     // one-word MCQ guess and a full Paragraph answer shouldn't earn the same
     // points; this also closes off picking only easy question types as a way
     // to rack up points faster than genuinely harder work would.
-    if((e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) growthPoints += getMarks(e.qtype);
+    const isRealQType = QTYPES.some(q=>q.id===e.qtype);
+    if(!isRealQType){ growthPoints += base; return; } // recite_* etc. — already one-time-only by construction, never doubled
+    const key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
+    const isFirst = !_seenGrowthKeys.has(key);
+    _seenGrowthKeys.add(key);
+    growthPoints += isFirst ? base*2 : base;
   });
   growthPoints += cumulative.daysGoalCompleted * 10;   // full 8-type goal, any day — big, permanent
   // Per-subject morning/evening sessions — each subject earns its own bonus
@@ -6835,7 +7090,6 @@ function checkPasscode(){
 // rather than something they have to go dig for.
 async function showWelcomeBackPopup(){
   if(!window._fb || !currentUserPhone) return;
-  const { db, collection, query, orderBy, getDocs } = window._fb;
 
   let overlay = document.getElementById("welcomeBackPopup");
   if(!overlay){
@@ -6849,10 +7103,9 @@ async function showWelcomeBackPopup(){
     <div style="font-size:13px;color:var(--muted)">Loading your progress…</div>
   </div>`;
 
-  let logsSnap, examSnap;
+  let logsSnap, examSnap, totalTestPoints;
   try{
-    logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
-    examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
+    ({ logsSnap, examSnap, totalTestPoints } = await getLogsBundle());
   } catch(err){
     overlay.remove();
     return;
@@ -6870,7 +7123,6 @@ async function showWelcomeBackPopup(){
   }
 
   const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  const totalTestPoints = await fetchTotalTestPoints();
   const { growthPoints, masteryScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
   celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
 
@@ -6961,6 +7213,7 @@ async function showWelcomeBackPopup(){
 function fbLogEntry(kind, data){
   if(!window._fb || !currentUserPhone) return;
   const { db, addDoc, collection, serverTimestamp } = window._fb;
+  if(kind==="logs" || kind==="testPoints") invalidateLogsBundleCache();
   addDoc(collection(db, "sessions", currentUserPhone, kind), {
     ...data,
     sessionId: currentSessionId,
@@ -7192,14 +7445,12 @@ function showAdminTab(tab){
 
 async function buildScoreboard(){
   if(!window._fb || !currentUserPhone) return;
-  const { db, collection, query, orderBy, getDocs } = window._fb;
   const totalBox = document.getElementById("scoreboardTotal");
   const sessBox = document.getElementById("scoreboardSessions");
   totalBox.innerHTML = "Loading…";
   sessBox.innerHTML = "";
 
-  const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
-  const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
+  const { logsSnap, examSnap, totalTestPoints } = await getLogsBundle();
 
   if(logsSnap.empty && examSnap.empty){
     totalBox.innerHTML = "<p style='margin:0'>No sessions recorded yet.</p>";
@@ -7207,7 +7458,6 @@ async function buildScoreboard(){
   }
 
   const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  const totalTestPoints = await fetchTotalTestPoints();
   totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
   sessBox.innerHTML = renderScoreboardSessionsHTML(bySession);
 }
@@ -7229,9 +7479,10 @@ async function buildPastSessionsList(targetId){
   if(!list) return;
   list.innerHTML = "Loading…";
 
-  const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","asc")));
-  const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","asc")));
-  const spellSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","asc")));
+  const [{ logsSnap, examSnap }, spellSnap] = await Promise.all([
+    getLogsBundle(),
+    getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","asc")))
+  ]);
 
   if(logsSnap.empty && examSnap.empty){
     list.innerHTML = "<p style='color:var(--muted)'>No sessions recorded yet.</p>";
@@ -7616,6 +7867,232 @@ function openQuestionSpellingGame(poolIndex){
   renderSpellingRoundIntro(document.getElementById("spellingGameRoot"));
 }
 
+// ═══════════════════════════════════════════════════════
+//  REVISE MODE — RECITE & CHECK
+// ═══════════════════════════════════════════════════════
+// A low-stakes recall check, deliberately kept separate from Practice mode:
+// the student speaks (or types) the answer from memory — WITHOUT the model
+// answer visible, so it's a genuine recall test, not reading-along — then
+// sees the same green/red/bracketed diff Practice mode uses. Repeated
+// attempts are always free (no penalty, no limit), but a small Growth
+// Points bonus is awarded ONCE per question, the first time it's recalled
+// at 80%+ — enough to motivate genuine study without turning "recite the
+// same line five times" into a points farm. Logged under a "recite_"
+// qtype prefix so it can never be confused with, or contaminate, Practice
+// mode's own mastery tracking for that question.
+let _reviseRecitePool = [];
+const _reciteAttemptCounts = {}; // poolIndex -> count, in-memory only, resets on reload — purely a friendly nudge, never persisted
+
+// Pre-registers a question for reciting and returns its pool index (or -1 if
+// there's nothing to recite), BEFORE the answer text is rendered — so the
+// answer element can be tagged with this same index and hidden/revealed.
+function registerRecite(q, qt, qIndexInType){
+  const isDist = qt.id==="distinguish";
+  if(isDist && !((q.answerA||"").trim() || (q.answerB||"").trim())) return -1;
+  if(!isDist && !(q.answer||"").trim()) return -1;
+  _reviseRecitePool.push({
+    qtype:qt.id, qIndexInType, answer:q.answer||"", answerA:q.answerA||"", answerB:q.answerB||"",
+    termA:q.termA||"Term A", termB:q.termB||"Term B"
+  });
+  return _reviseRecitePool.length-1;
+}
+
+function buildReviseReciteButton(idx, q){
+  if(idx<0) return "";
+  const entry = _reviseRecitePool[idx];
+  const isDist = entry.qtype==="distinguish";
+  const panelInner = isDist ? `
+      <div class="dist-input-grid">
+        <div>
+          <div class="dist-input-label">${entry.termA}</div>
+          <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button></div>
+          <textarea class="answer-textarea" id="reciteInputA-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termA}…"></textarea>
+        </div>
+        <div>
+          <div class="dist-input-label">${entry.termB}</div>
+          <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button></div>
+          <textarea class="answer-textarea" id="reciteInputB-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termB}…"></textarea>
+        </div>
+      </div>`
+    : `
+      <div class="voice-input-row"><button type="button" class="btn-mic" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button></div>
+      <textarea class="answer-textarea" id="reciteInput-${idx}" style="min-height:90px" placeholder="Say or type your answer from memory…"></textarea>`;
+  return `<button class="revise-spelling-cta" style="margin-top:12px" onclick="toggleRecitePanel(${idx})">
+      <div>
+        <div class="rsc-title">🎤 Recite &amp; Check</div>
+        <div class="rsc-sub">Say it from memory — the answer hides itself while you try</div>
+      </div>
+      <span class="rsc-arrow">→</span>
+    </button>
+    <div class="recite-panel" id="recitePanel-${idx}" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+        <button type="button" onclick="closeRecitePanel(${idx})" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:4px 8px">✕ Close &amp; back to revising</button>
+      </div>
+      ${panelInner}
+      <button class="btn-check" style="margin-top:10px;padding:9px 18px;font-size:13px" onclick="checkRecite(${idx})">Check</button>
+      <div id="reciteResult-${idx}" style="margin-top:10px"></div>
+    </div>`;
+}
+
+// Swaps an element's real content out for a "hidden" placeholder, stashing
+// the original HTML so it can be restored exactly once Check is pressed.
+function hideForRecite(el){
+  if(!el || el.dataset.reciteHidden) return;
+  el.dataset.originalHtml = el.innerHTML;
+  el.dataset.reciteHidden = "1";
+  el.innerHTML = `<div style="padding:10px 12px;background:var(--parchment);border:1.5px dashed var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);text-align:center">🙈 Hidden while you recite — tap Check to reveal</div>`;
+}
+function revealFromRecite(el){
+  if(!el || !el.dataset.reciteHidden) return;
+  el.innerHTML = el.dataset.originalHtml;
+  delete el.dataset.reciteHidden;
+  delete el.dataset.originalHtml;
+}
+
+function getReciteAnswerEl(idx){
+  const entry = _reviseRecitePool[idx];
+  return document.getElementById(entry && entry.qtype==="distinguish" ? `revise-dist-table-${idx}` : `revise-answer-${idx}`);
+}
+
+function toggleRecitePanel(idx){
+  const panel = document.getElementById(`recitePanel-${idx}`);
+  if(!panel) return;
+  const opening = panel.style.display==="none" || !panel.style.display;
+  if(opening) openRecitePanel(idx); else closeRecitePanel(idx);
+}
+
+function openRecitePanel(idx){
+  const panel = document.getElementById(`recitePanel-${idx}`);
+  if(!panel) return;
+  panel.style.display = "block";
+  hideForRecite(getReciteAnswerEl(idx));
+  const resultEl = document.getElementById(`reciteResult-${idx}`);
+  if(resultEl) resultEl.innerHTML = "";
+}
+
+// The one, unambiguous way back to normal Revise view — always stops any
+// mic still listening, always restores the answer, always collapses the panel.
+function closeRecitePanel(idx){
+  const panel = document.getElementById(`recitePanel-${idx}`);
+  if(typeof stopVoiceInput==="function") stopVoiceInput();
+  if(panel) panel.style.display = "none";
+  revealFromRecite(getReciteAnswerEl(idx));
+}
+
+// Clears the attempt and re-hides the answer so a retry is a genuine second
+// blind recall, not "try again while looking at the answer that's now showing."
+function tryAgainRecite(idx){
+  const entry = _reviseRecitePool[idx];
+  if(!entry) return;
+  if(typeof stopVoiceInput==="function") stopVoiceInput();
+  if(entry.qtype==="distinguish"){
+    const taA=document.getElementById(`reciteInputA-${idx}`); if(taA) taA.value="";
+    const taB=document.getElementById(`reciteInputB-${idx}`); if(taB) taB.value="";
+  } else {
+    const ta=document.getElementById(`reciteInput-${idx}`); if(ta) ta.value="";
+  }
+  const resultEl = document.getElementById(`reciteResult-${idx}`);
+  if(resultEl) resultEl.innerHTML = "";
+  hideForRecite(getReciteAnswerEl(idx));
+}
+
+function checkRecite(idx){
+  const entry = _reviseRecitePool[idx];
+  if(!entry) return;
+  const resultEl = document.getElementById(`reciteResult-${idx}`);
+  if(!resultEl) return;
+
+  // Stop any mic still listening/transcribing before reading the textareas —
+  // otherwise recognition keeps running in the background after Check.
+  if(typeof stopVoiceInput==="function") stopVoiceInput();
+
+  _reciteAttemptCounts[idx] = (_reciteAttemptCounts[idx]||0) + 1;
+  const tries = _reciteAttemptCounts[idx];
+
+  let pct, diffHTML;
+  if(entry.qtype==="distinguish"){
+    const textA = document.getElementById(`reciteInputA-${idx}`)?.value.trim() || "";
+    const textB = document.getElementById(`reciteInputB-${idx}`)?.value.trim() || "";
+    const { pct:pctA } = scoreAnswer(textA, entry.answerA);
+    const { pct:pctB } = scoreAnswer(textB, entry.answerB);
+    pct = Math.round((pctA+pctB)/2);
+    diffHTML = `
+      <div class="result-section-title" style="margin-bottom:4px">${entry.termA}</div>
+      ${buildAnnotatedDiff(textA, entry.answerA)}
+      <div class="result-section-title" style="margin:10px 0 4px">${entry.termB}</div>
+      ${buildAnnotatedDiff(textB, entry.answerB)}`;
+  } else {
+    const text = document.getElementById(`reciteInput-${idx}`)?.value.trim() || "";
+    const { pct:p } = scoreAnswer(text, entry.answer);
+    pct = p;
+    diffHTML = buildAnnotatedDiff(text, entry.answer);
+  }
+
+  // Reveal the model answer now — the diff above already shows it anyway,
+  // so there's nothing left to hide once they've made their attempt.
+  revealFromRecite(getReciteAnswerEl(idx));
+
+  const cls = pct>=80 ? "great" : pct>=50 ? "ok" : "low";
+  const chipLabel = pct>=80 ? "🎯 Nailed it!" : pct>=50 ? "Getting there" : "Keep at it";
+  resultEl.innerHTML = `
+    <div class="recite-result-chip ${cls}">${chipLabel} — ${pct}%</div>
+    ${diffHTML}
+    <div class="recite-tries">Recited ${tries} time${tries!==1?"s":""} this session — go again anytime, no penalty.</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-try-again" onclick="tryAgainRecite(${idx})">🔁 Try Again</button>
+      <button class="btn-next" onclick="closeRecitePanel(${idx})">✓ Done, back to revising</button>
+    </div>`;
+
+  if(pct>=80){
+    showReciteCelebration();
+    maybeAwardReciteBonus(entry, pct);
+  }
+}
+
+// Awards a small, one-time Growth Points bonus the first time this specific
+// question is recalled at 80%+. Guarded by the SAME _masteredQuestionKeys
+// set Practice mode already loads from Firestore on login, just under a
+// "recite_" qtype prefix — so it persists across reloads/devices and can
+// never be earned twice, without needing any new storage of its own.
+function maybeAwardReciteBonus(entry, pct){
+  if(!currentLesson) return;
+  const reciteQtype = `recite_${entry.qtype}`;
+  const key = `${currentLesson.id}_${reciteQtype}_${entry.qIndexInType}`;
+  if(_masteredQuestionKeys.has(key)) return; // already earned once — reciting again is free, but not paid twice
+  _masteredQuestionKeys.add(key); // mark immediately so rapid double-clicks can't double-award before Firestore round-trips
+  fbLogEntry("logs", {
+    subject: currentSubject||"", part: currentPart||"", lessonId: currentLesson.id,
+    lessonTitle: currentLesson.title||"", qtype: reciteQtype, qIndex: entry.qIndexInType,
+    pct, timeMs: 0
+  });
+  showPointsToast(RECITE_BONUS_MARKS, "Growth Points");
+}
+
+// Purely visual, no points involved — a quick, warm confirmation moment
+// distinct from showPointsToast so it's never mistaken for Growth Points.
+function showReciteCelebration(){
+  let stack = document.getElementById("pointsToastStack");
+  if(!stack){
+    stack = document.createElement("div");
+    stack.id = "pointsToastStack";
+    stack.style.cssText = "position:fixed;top:14px;right:14px;z-index:99997;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none";
+    document.body.appendChild(stack);
+  }
+  const toast = document.createElement("div");
+  toast.style.cssText = "background:var(--green);color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(-8px) scale(.9);transition:opacity .25s,transform .25s;white-space:nowrap";
+  toast.textContent = "🎯 Nailed that recall!";
+  stack.appendChild(toast);
+  requestAnimationFrame(()=>{
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0) scale(1)";
+  });
+  setTimeout(()=>{
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-8px) scale(.9)";
+    setTimeout(()=>toast.remove(), 250);
+  }, 1800);
+}
+
 async function openSpellingGame(){
   const root = document.getElementById("spellingGameRoot");
   if(!root) return;
@@ -7826,10 +8303,12 @@ async function downloadAdminMirror(){
   if(!window._fb || !currentUserPhone) return;
   const { db, collection, query, orderBy, getDocs } = window._fb;
 
-  const logsSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","desc")));
-  const examSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","desc")));
-  const spellSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","desc")));
-  const hintSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"hintConcepts"), orderBy("ts","desc")));
+  const [logsSnap, examSnap, spellSnap, hintSnap] = await Promise.all([
+    getDocs(query(collection(db,"sessions",currentUserPhone,"logs"), orderBy("ts","desc"))),
+    getDocs(query(collection(db,"sessions",currentUserPhone,"examAnswers"), orderBy("ts","desc"))),
+    getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","desc"))),
+    getDocs(query(collection(db,"sessions",currentUserPhone,"hintConcepts"), orderBy("ts","desc")))
+  ]);
 
   // Build scoreboard summary for the download too
   const bySession = {}; const allUnique = new Set();
