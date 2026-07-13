@@ -923,11 +923,15 @@ function getActiveQTypes(){
   return QTYPES.filter(qt => present.has(qt.id));
 }
 
-// Get marks for a question type. "recite_<qtype>" tags (from Revise mode's
-// Recite & Check) are a distinct, deliberately-flat bonus — not one of the
-// real QTYPES — so they're matched explicitly rather than falling through
-// to the generic ||1 default, which would have silently under-counted them.
+// Get marks for a question type. "recite_fast_<qtype>" / "recite_good_<qtype>"
+// tags (from Revise mode's Read & Memorise) are a distinct, deliberately-small
+// speed bonus — not one of the real QTYPES — so they're matched explicitly.
+// Bare "recite_<qtype>" (no fast/good) is the older one-time recall-bonus
+// format from before Read & Memorise existed; kept working for any entries
+// already earned under it, at its original flat value.
 function getMarks(qtypeId){
+  if(qtypeId && qtypeId.indexOf("recite_fast_")===0) return READ_SPEED_MARKS.fast;
+  if(qtypeId && qtypeId.indexOf("recite_good_")===0) return READ_SPEED_MARKS.good;
   if(qtypeId && qtypeId.indexOf("recite_")===0) return RECITE_BONUS_MARKS;
   return QTYPES.find(q=>q.id===qtypeId)?.marks||1;
 }
@@ -1718,11 +1722,11 @@ const DATA = {
               ],
               fill:[
                 { sentence:"Economic progress of any country is known as ___.", answers:["Economic development"] },
-                { sentence:"The head quarters of HRD Ministry is in ___.", answers:["Shastri Bhavan, New Delhi","New Delhi"] },
-                { sentence:"The state having the highest literacy rate in India is ___.", answers:["Tamil Nadu"] },
-                { sentence:"Human Development Report of the world is prepared and released by ___.", answers:["UNDP","United Nations Development Programme"] },
-                { sentence:"Groundwater is an example of ___ resource.", answers:["renewable"] },
-                { sentence:"The book An Uncertain Glory was written by ___.", answers:["Jean Dreze and Amartya Sen","Jean Dreze and Prof. Amartya Sen"] },
+                { sentence:"The head quarters of HRD Ministry is in ___.", answers:["New Delhi"] },
+                { sentence:"The state having the highest literacy rate in India is ___.", answers:["Kerala"] },
+                { sentence:"Human Development Report of the world is prepared and released by ___.", answers:["UNDP"] },
+                { sentence:"Groundwater is an example of ___ resource.", answers:["Renewable"] },
+                { sentence:"The book An Uncertain Glory was written by ___.", answers:["Amartya Sen","Prof. Amartya Sen"] },
               ],
               match:[
                 {
@@ -1733,10 +1737,10 @@ const DATA = {
                 }
               ],
               brief:[
-                { q:"What do you mean by development?", answer:"Development refers to the progress of a particular field or a particular person. In economic terms, it implies the overall growth of all sectors of the economy by adopting new technologies, which leads to a higher standard of living, better health and education." },
-                { q:"What are the indicators of development?", answer:"The major indicators used to measure economic development are Net National Product (NNP), Per Capita Income (PCI), Purchasing Power Parity (PPP), and the Human Development Index (HDI)." },
-                { q:"Why is NNP not considered a useful measure to compare a country's development with other countries?", answer:"Because countries have different populations, comparing total income (NNP) will not show what an average citizen is likely to earn, making it difficult to judge if people in one country are truly better off than those in another." },
-                { q:"Why is human resource considered the foremost resource of any country?", answer:"It represents the collective physical and mental capabilities of the population. Building human capital through education, healthcare and skills development ensures high economic returns and productivity growth over time." },
+                { q:"What do you mean by development?", answer:"The word 'development' is used widely. It refers to the progress of a particular field or a particular person. Similarly, the economic progress of a country is known as 'economic development'." },
+                { q:"What are the indicators of development?", answer:"The major indicators to measure the level of economic development are Net National Product (NNP), Per Capita Income (PCI), Purchasing Power Parity (PPP) and Human Development Index (HDI)." },
+                { q:"Why is NNP not considered a useful measure to compare a country's development with other countries?", answer:"The Net National Product (NNP) is considered as a true measure of national output.\n\nFor measuring a country's development, its income is considered to be one of the most important factors." },
+                { q:"Why is human resource considered the foremost resource of any country?", answer:"Human resource development means the development of a person's physical and mental abilities through education, health care and training." },
                 { q:"Expand the following: PPP, HDI", answer:"PPP: Purchasing Power Parity\nHDI: Human Development Index" },
                 { q:"Expand the following: NNP, PCI", answer:"NNP: Net National Product\nPCI: Per Capita Income" },
                 { q:"What is 'Solar Power'?", answer:"Solar power is the conversion of energy from sunlight into electricity, accomplished either directly using photovoltaic (PV) cells or indirectly through concentrated solar power systems." },
@@ -2838,32 +2842,16 @@ function startQTypeSession(){
   const total = qs.length;
   const existing=loadQTypeSession(currentQType);
 
-  // Weighted order: unanswered questions first, then already-answered ones.
-  // We build an index map instead of mutating the DATA array (which caused
-  // qIndex mismatches between sessions and score/mastery bugs).
-  // IMPORTANT: this must be (re)computed for the CURRENT lesson/qtype every
-  // single time, even when resuming a previous session for this tab —
-  // otherwise a stale map built for a different tab (e.g. a longer MCQ list)
-  // stays active and can point two different display slots at the same
-  // underlying question (e.g. Paragraph "Question 1" showing question 2's
-  // text). Only the map itself is recomputed here; existing progress
-  // (currentQIndex, answers, etc.) is still restored below.
-  _questionIndexMap = null; // reset first so a stale map can never leak through
-  if(_answeredKeysLoaded && currentLesson.id !== "__mock__"){
-    const lid = currentLesson.id||"";
-    const qt  = currentQType||"";
-    const newOrder = [];
-    const answeredOrder = [];
-    for(var i=0; i<total; i++){
-      var key = lid+"_"+qt+"_"+i;
-      if(_answeredQuestionKeys.has(key)) answeredOrder.push(i);
-      else newOrder.push(i);
-    }
-    // Only use map if there are actually unanswered questions to prioritize
-    if(newOrder.length > 0 && answeredOrder.length > 0){
-      _questionIndexMap = newOrder.concat(answeredOrder);
-    }
-  }
+  // REMOVED: this used to reorder unanswered questions to the front of the
+  // list ("show what you haven't answered yet first"). It kept causing the
+  // same recurring bug — Practice mode's "Question 1" silently showing a
+  // DIFFERENT question's text than Revise mode's "Question 1," because the
+  // display position no longer matched the question's real position in the
+  // lesson data. A narrower patch tried to stop a stale map leaking between
+  // tabs, but the reordering itself was still the underlying cause. Questions
+  // now always display in the lesson's fixed, natural order — identical to
+  // Revise mode — so "Question 1" always means the same thing everywhere.
+  _questionIndexMap = null;
 
   if(existing){
     // Restore previous progress for this qtype
@@ -2871,10 +2859,6 @@ function startQTypeSession(){
     sessionResults=[...existing.sessionResults];
     questionStates=existing.questionStates.map(s=>({...s}));
     studyAnswerCache=existing.studyAnswerCache.map(c=>c?{...c}:null);
-    // Keep the ordering stable across tab switches within the same visit,
-    // rather than recomputing it fresh (which could reshuffle answered/
-    // unanswered split mid-session and desync from the cached answers above).
-    if(existing.questionIndexMap) _questionIndexMap = [...existing.questionIndexMap];
   } else {
     currentQIndex=0;
     sessionResults=[];
@@ -7889,24 +7873,26 @@ function openQuestionSpellingGame(poolIndex){
 }
 
 // ═══════════════════════════════════════════════════════
-//  REVISE MODE — RECITE & CHECK
+//  REVISE MODE — READ & MEMORISE
 // ═══════════════════════════════════════════════════════
-// A low-stakes recall check, deliberately kept separate from Practice mode:
-// the student speaks (or types) the answer from memory — WITHOUT the model
-// answer visible, so it's a genuine recall test, not reading-along — then
-// sees the same green/red/bracketed diff Practice mode uses. Repeated
-// attempts are always free (no penalty, no limit), but a small Growth
-// Points bonus is awarded ONCE per question, the first time it's recalled
-// at 80%+ — enough to motivate genuine study without turning "recite the
-// same line five times" into a points farm. Logged under a "recite_"
-// qtype prefix so it can never be confused with, or contaminate, Practice
-// mode's own mastery tracking for that question.
+// Unlike a blind recall test, the model answer stays fully visible the
+// whole time — the student reads it aloud (or types it out) to help it
+// stick through repetition, the same way reading something aloud a few
+// times helps memorise it. No peek/hide mechanic needed since nothing is
+// ever hidden. Scoring rewards PACE, mirroring Practice mode's own speed
+// bonus: read it accurately (70%+ match to the model answer) and quickly
+// relative to its length, and it earns a small Growth Points bonus —
+// faster = more points, exactly like Practice mode's timer. Logged under
+// "recite_fast_"/"recite_good_" qtype prefixes (legacy "recite_" is still
+// recognised for entries earned under the old one-time bonus system) so
+// it never touches Practice mode's own mastery tracking for the question.
 let _reviseRecitePool = [];
 const _reciteAttemptCounts = {}; // poolIndex -> count, in-memory only, resets on reload — purely a friendly nudge, never persisted
+const READ_WPM = 100; // slower, more forgiving pace for reading aloud (not silent reading) — technical vocabulary takes longer to say than to skim
+const READ_START_BUFFER_MS = 6000; // extra flat time for opening the mic, taking a breath, and actually starting to speak, before the clock effectively starts costing points
 
-// Pre-registers a question for reciting and returns its pool index (or -1 if
-// there's nothing to recite), BEFORE the answer text is rendered — so the
-// answer element can be tagged with this same index and hidden/revealed.
+// Pre-registers a question for reading aloud and returns its pool index
+// (or -1 if there's nothing to read).
 function registerRecite(q, qt, qIndexInType){
   const isDist = qt.id==="distinguish";
   if(isDist && !((q.answerA||"").trim() || (q.answerB||"").trim())) return -1;
@@ -7927,49 +7913,42 @@ function buildReviseReciteButton(idx, q){
         <div>
           <div class="dist-input-label">${entry.termA}</div>
           <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicA-${idx}" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button></div>
-          <textarea class="answer-textarea" id="reciteInputA-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termA}…"></textarea>
+          <textarea class="answer-textarea" id="reciteInputA-${idx}" style="min-height:70px" placeholder="Read ${entry.termA} aloud, or type it…"></textarea>
         </div>
         <div>
           <div class="dist-input-label">${entry.termB}</div>
           <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicB-${idx}" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button></div>
-          <textarea class="answer-textarea" id="reciteInputB-${idx}" style="min-height:70px" placeholder="Say or type ${entry.termB}…"></textarea>
+          <textarea class="answer-textarea" id="reciteInputB-${idx}" style="min-height:70px" placeholder="Read ${entry.termB} aloud, or type it…"></textarea>
         </div>
       </div>`
     : `
       <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMic-${idx}" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button></div>
-      <textarea class="answer-textarea" id="reciteInput-${idx}" style="min-height:90px" placeholder="Say or type your answer from memory…"></textarea>`;
+      <textarea class="answer-textarea" id="reciteInput-${idx}" style="min-height:90px" placeholder="Read the answer above aloud, or type it…"></textarea>`;
   return `<button class="revise-spelling-cta" style="margin-top:12px" onclick="toggleRecitePanel(${idx})">
       <div>
-        <div class="rsc-title">🎤 Recite &amp; Check</div>
-        <div class="rsc-sub">Say it from memory — the answer hides itself while you try</div>
+        <div class="rsc-title">📖 Read &amp; Memorise</div>
+        <div class="rsc-sub">Read it aloud — the faster and more accurate, the more points</div>
       </div>
       <span class="rsc-arrow">→</span>
     </button>
     <div class="recite-panel" id="recitePanel-${idx}" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <button type="button" id="reciteEyeBtn-${idx}" onclick="toggleReciteAnswerPeek(${idx})" style="background:none;border:1px solid var(--border);color:var(--navy);font-size:11.5px;font-weight:700;cursor:pointer;padding:5px 10px;border-radius:14px">👁 Show Answer</button>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
         <button type="button" onclick="closeRecitePanel(${idx})" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;padding:4px 8px">✕ Close &amp; back to revising</button>
+      </div>
+      <div id="reciteTimerWrap-${idx}" style="margin:0 0 10px;padding:8px 10px;background:var(--parchment);border-radius:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px;text-align:center" id="reciteChallenge-${idx}">📖 Read it — the faster and clearer, the more points</div>
+        <div style="background:#e0e0e0;border-radius:3px;overflow:hidden;height:5px;margin-bottom:5px">
+          <div id="reciteTimerBar-${idx}" style="height:100%;width:100%;background:#4caf82;border-radius:3px;transition:width .5s linear,background .5s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--muted)">Reading Speed Bonus</span>
+          <span id="reciteTimerPts-${idx}" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:#4caf82;color:#fff;transition:background .5s">⚡ calculating…</span>
+        </div>
       </div>
       ${panelInner}
       <button class="btn-check" id="reciteCheckBtn-${idx}" style="margin-top:10px;padding:9px 18px;font-size:13px" onclick="checkRecite(${idx})">Check</button>
       <div id="reciteResult-${idx}" style="margin-top:10px"></div>
     </div>`;
-}
-
-// Free, un-penalised peek — Revise mode has no score to protect, so unlike
-// Practice mode's capped "View Model Answer," this just toggles visibility
-// back and forth as many times as the student wants.
-function toggleReciteAnswerPeek(idx){
-  const el = getReciteAnswerEl(idx);
-  if(!el) return;
-  const headerBtn = document.getElementById(`reciteEyeBtn-${idx}`);
-  if(el.dataset.reciteHidden){
-    revealFromRecite(el);
-    if(headerBtn) headerBtn.textContent = "🙈 Hide Answer";
-  } else {
-    hideForRecite(el, idx);
-    if(headerBtn) headerBtn.textContent = "👁 Show Answer";
-  }
 }
 
 // Enables/disables the Check button, mic buttons, and textarea(s) together —
@@ -7988,31 +7967,70 @@ function setReciteInputsEnabled(idx, entry, enabled){
   }
 }
 
-// Swaps an element's real content out for a "hidden" placeholder, stashing
-// the original HTML so it can be restored exactly once Check is pressed.
-// The eye button lives IN the placeholder itself (not just the panel header)
-// since every hidden card otherwise shows the exact same generic text —
-// with several questions hidden at once while scrolling through Revise mode,
-// there was nothing distinguishing one from another.
-function hideForRecite(el, idx){
-  if(!el || el.dataset.reciteHidden) return;
-  el.dataset.originalHtml = el.innerHTML;
-  el.dataset.reciteHidden = "1";
-  const eyeButton = idx!=null
-    ? `<button type="button" onclick="toggleReciteAnswerPeek(${idx})" style="background:none;border:none;color:var(--navy);font-size:17px;cursor:pointer;padding:0 2px;vertical-align:middle" aria-label="Show answer">👁</button> `
-    : "";
-  el.innerHTML = `<div style="padding:10px 12px;background:var(--parchment);border:1.5px dashed var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);text-align:center">${eyeButton}🙈 Hidden while you recite — tap ${eyeButton?"👁 or ":""}Check to reveal</div>`;
-}
-function revealFromRecite(el){
-  if(!el || !el.dataset.reciteHidden) return;
-  el.innerHTML = el.dataset.originalHtml;
-  delete el.dataset.reciteHidden;
-  delete el.dataset.originalHtml;
+// Timestamp per pool index of when the current reading attempt started —
+// reset every time the panel opens or Try Again is pressed, so the timer
+// always measures THIS attempt, not time spent sitting on the page.
+const _reciteStartTs = {};
+let _reciteTimerInterval = null; // one shared interval — only one panel is realistically open at a time
+
+function getReciteReferenceText(entry){
+  return entry.qtype==="distinguish" ? (entry.answerA+" "+entry.answerB) : entry.answer;
 }
 
-function getReciteAnswerEl(idx){
+function resetReciteTimerBar(idx){
+  const bar = document.getElementById(`reciteTimerBar-${idx}`);
+  const pts = document.getElementById(`reciteTimerPts-${idx}`);
+  if(bar){ bar.style.width="100%"; bar.style.background="#4caf82"; }
+  if(pts){ pts.style.background="#4caf82"; pts.textContent="⚡ calculating…"; }
+}
+
+// Same live countdown-bonus bar Practice mode's writing questions already
+// use — a shrinking bar and a running "+N pts if done in Xs" message — just
+// scoped to this recite panel's own fast/good thresholds (scaled to how
+// long THIS answer should take to read aloud).
+function startReciteTimer(idx){
+  stopReciteTimer();
   const entry = _reviseRecitePool[idx];
-  return document.getElementById(entry && entry.qtype==="distinguish" ? `revise-dist-table-${idx}` : `revise-answer-${idx}`);
+  if(!entry) return;
+  const expected = expectedReadMs(getReciteReferenceText(entry));
+  const fastMs = expected, goodMs = expected*1.6;
+  const fastPts = READ_SPEED_MARKS.fast, goodPts = READ_SPEED_MARKS.good;
+  const startMs = _reciteStartTs[idx] || Date.now();
+
+  function fmtCountdown(ms){
+    if(ms<=0) return "0s";
+    const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000);
+    return m>0?`${m}:${String(s).padStart(2,'0')}`:`${s}s`;
+  }
+
+  function tick(){
+    const elapsed = Date.now() - startMs;
+    const bar = document.getElementById(`reciteTimerBar-${idx}`);
+    const pts = document.getElementById(`reciteTimerPts-${idx}`);
+    if(!bar){ stopReciteTimer(); return; }
+
+    if(elapsed <= fastMs){
+      const rem = fastMs - elapsed;
+      bar.style.width = Math.max(0,(rem/fastMs)*100)+"%";
+      bar.style.background = "#4caf82";
+      if(pts){ pts.style.background="#4caf82"; pts.textContent="⚡ +"+fastPts+" pts if done in "+fmtCountdown(rem); }
+    } else if(elapsed <= goodMs){
+      const rem = goodMs - elapsed;
+      bar.style.width = Math.max(0,(rem/(goodMs-fastMs))*100)+"%";
+      bar.style.background = "#e8a020";
+      if(pts){ pts.style.background="#e8a020"; pts.textContent="🕐 +"+goodPts+" pts if done in "+fmtCountdown(rem); }
+    } else {
+      bar.style.width = "0%";
+      bar.style.background = "#ccc";
+      if(pts){ pts.style.background="#aaa"; pts.textContent="No speed bonus now — still worth finishing!"; }
+    }
+  }
+
+  tick();
+  _reciteTimerInterval = setInterval(tick, 500);
+}
+function stopReciteTimer(){
+  if(_reciteTimerInterval){ clearInterval(_reciteTimerInterval); _reciteTimerInterval=null; }
 }
 
 function toggleRecitePanel(idx){
@@ -8027,25 +8045,24 @@ function openRecitePanel(idx){
   const entry = _reviseRecitePool[idx];
   if(!panel || !entry) return;
   panel.style.display = "block";
-  hideForRecite(getReciteAnswerEl(idx), idx);
-  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
-  if(eyeBtn) eyeBtn.textContent = "👁 Show Answer";
   setReciteInputsEnabled(idx, entry, true); // fresh open — always start unlocked, in case it was left locked from a check last time
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
+  _reciteStartTs[idx] = Date.now();
+  resetReciteTimerBar(idx);
+  startReciteTimer(idx);
 }
 
 // The one, unambiguous way back to normal Revise view — always stops any
-// mic still listening, always restores the answer, always collapses the panel.
+// mic still listening, always collapses the panel.
 function closeRecitePanel(idx){
   const panel = document.getElementById(`recitePanel-${idx}`);
   if(typeof stopVoiceInput==="function") stopVoiceInput();
+  stopReciteTimer();
   if(panel) panel.style.display = "none";
-  revealFromRecite(getReciteAnswerEl(idx));
 }
 
-// Clears the attempt and re-hides the answer so a retry is a genuine second
-// blind recall, not "try again while looking at the answer that's now showing."
+// Clears the attempt and restarts the timer for a fresh, fairly-timed re-read.
 function tryAgainRecite(idx){
   const entry = _reviseRecitePool[idx];
   if(!entry) return;
@@ -8058,10 +8075,18 @@ function tryAgainRecite(idx){
   }
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
-  hideForRecite(getReciteAnswerEl(idx), idx);
-  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
-  if(eyeBtn) eyeBtn.textContent = "👁 Show Answer";
   setReciteInputsEnabled(idx, entry, true); // unlock for the next attempt
+  _reciteStartTs[idx] = Date.now(); // restart the clock — a fresh attempt deserves a fresh timer
+  resetReciteTimerBar(idx);
+  startReciteTimer(idx);
+}
+
+// Expected reading time for a given answer, scaled to its word count at a
+// comfortable reading-aloud pace — a one-sentence answer and a five-point
+// list shouldn't be held to the same fixed time limit.
+function expectedReadMs(text){
+  const words = (text||"").trim().split(/\s+/).filter(Boolean).length || 1;
+  return (words / READ_WPM) * 60000 + READ_START_BUFFER_MS;
 }
 
 function checkRecite(idx){
@@ -8073,17 +8098,20 @@ function checkRecite(idx){
   // Stop any mic still listening/transcribing before reading the textareas —
   // otherwise recognition keeps running in the background after Check.
   if(typeof stopVoiceInput==="function") stopVoiceInput();
+  stopReciteTimer(); // freeze the display at the final time instead of leaving it ticking behind a locked panel
 
+  const elapsed = Date.now() - (_reciteStartTs[idx] || Date.now());
   _reciteAttemptCounts[idx] = (_reciteAttemptCounts[idx]||0) + 1;
   const tries = _reciteAttemptCounts[idx];
 
-  let pct, diffHTML;
+  let pct, diffHTML, referenceText;
   if(entry.qtype==="distinguish"){
     const textA = document.getElementById(`reciteInputA-${idx}`)?.value.trim() || "";
     const textB = document.getElementById(`reciteInputB-${idx}`)?.value.trim() || "";
     const { pct:pctA } = scoreAnswer(textA, entry.answerA);
     const { pct:pctB } = scoreAnswer(textB, entry.answerB);
     pct = Math.round((pctA+pctB)/2);
+    referenceText = entry.answerA + " " + entry.answerB;
     diffHTML = `
       <div class="result-section-title" style="margin-bottom:4px">${entry.termA}</div>
       ${buildAnnotatedDiff(textA, entry.answerA)}
@@ -8093,54 +8121,53 @@ function checkRecite(idx){
     const text = document.getElementById(`reciteInput-${idx}`)?.value.trim() || "";
     const { pct:p } = scoreAnswer(text, entry.answer);
     pct = p;
+    referenceText = entry.answer;
     diffHTML = buildAnnotatedDiff(text, entry.answer);
   }
 
-  // Reveal the model answer now — the diff above already shows it anyway,
-  // so there's nothing left to hide once they've made their attempt.
-  revealFromRecite(getReciteAnswerEl(idx));
-  const eyeBtn = document.getElementById(`reciteEyeBtn-${idx}`);
-  if(eyeBtn) eyeBtn.textContent = "🙈 Hide Answer";
+  setReciteInputsEnabled(idx, entry, false); // lock until Try Again — same reasoning as Practice mode's post-check lock
 
-  // Lock everything until Try Again — otherwise Check stays clickable and
-  // the mic stays usable while a result is already showing, which invites
-  // silently re-scoring stale text instead of doing a genuine new attempt.
-  setReciteInputsEnabled(idx, entry, false);
+  const READ_ACCURACY_MIN = 70; // needs to genuinely match the answer, not just finish fast, to earn any speed points
+  let speedNote = "";
+  if(pct >= READ_ACCURACY_MIN){
+    const expected = expectedReadMs(referenceText);
+    const tier = elapsed <= expected ? "fast" : elapsed <= expected*1.6 ? "good" : null;
+    if(tier) speedNote = awardReadSpeedBonus(entry, tier);
+  }
 
   const cls = pct>=80 ? "great" : pct>=50 ? "ok" : "low";
-  const chipLabel = pct>=80 ? "🎯 Nailed it!" : pct>=50 ? "Getting there" : "Keep at it";
+  const chipLabel = pct>=READ_ACCURACY_MIN ? "📖 Well read!" : "Read it again more clearly";
   resultEl.innerHTML = `
-    <div class="recite-result-chip ${cls}">${chipLabel} — ${pct}%</div>
+    <div class="recite-result-chip ${cls}">${chipLabel} — ${pct}% match</div>
     ${diffHTML}
-    <div class="recite-tries">Recited ${tries} time${tries!==1?"s":""} this session — go again anytime, no penalty.</div>
+    ${speedNote}
+    <div class="recite-tries">Read ${tries} time${tries!==1?"s":""} this session — go again anytime.</div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn-try-again" onclick="tryAgainRecite(${idx})">🔁 Try Again</button>
       <button class="btn-next" onclick="closeRecitePanel(${idx})">✓ Done, back to revising</button>
     </div>`;
 
-  if(pct>=80){
-    showReciteCelebration();
-    maybeAwardReciteBonus(entry, pct);
-  }
+  if(pct>=80) showReciteCelebration();
 }
 
-// Awards a small, one-time Growth Points bonus the first time this specific
-// question is recalled at 80%+. Guarded by the SAME _masteredQuestionKeys
-// set Practice mode already loads from Firestore on login, just under a
-// "recite_" qtype prefix — so it persists across reloads/devices and can
-// never be earned twice, without needing any new storage of its own.
-function maybeAwardReciteBonus(entry, pct){
-  if(!currentLesson) return;
-  const reciteQtype = `recite_${entry.qtype}`;
-  const key = `${currentLesson.id}_${reciteQtype}_${entry.qIndexInType}`;
-  if(_masteredQuestionKeys.has(key)) return; // already earned once — reciting again is free, but not paid twice
-  _masteredQuestionKeys.add(key); // mark immediately so rapid double-clicks can't double-award before Firestore round-trips
+// Awards a small Growth Points bonus scaled to reading pace — "fast" pays
+// more than "good," mirroring Practice mode's own speed-bonus tiers. Unlike
+// the old one-time recall bonus, this can be earned again each time it's
+// read quickly and accurately — genuinely re-reading something fast and
+// correctly is real practice, not a loophole.
+const READ_SPEED_MARKS = { fast: 3, good: 1 };
+function awardReadSpeedBonus(entry, tier){
+  if(!currentLesson) return "";
+  const reciteQtype = `recite_${tier}_${entry.qtype}`;
   fbLogEntry("logs", {
     subject: currentSubject||"", part: currentPart||"", lessonId: currentLesson.id,
     lessonTitle: currentLesson.title||"", qtype: reciteQtype, qIndex: entry.qIndexInType,
-    pct, timeMs: 0
+    pct: 100, timeMs: 0
   });
-  showPointsToast(RECITE_BONUS_MARKS, "Growth Points");
+  const points = READ_SPEED_MARKS[tier];
+  const label = tier==="fast" ? "⚡ Fast, accurate read!" : "🕐 Good pace!";
+  showPointsToast(points, label);
+  return `<div class="recite-result-chip ${tier==="fast"?"great":"ok"}" style="margin-top:6px">${label} +${points}</div>`;
 }
 
 // Purely visual, no points involved — a quick, warm confirmation moment
@@ -8155,7 +8182,7 @@ function showReciteCelebration(){
   }
   const toast = document.createElement("div");
   toast.style.cssText = "background:var(--green);color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transform:translateY(-8px) scale(.9);transition:opacity .25s,transform .25s;white-space:nowrap";
-  toast.textContent = "🎯 Nailed that recall!";
+  toast.textContent = "🎯 Nailed that read!";
   stack.appendChild(toast);
   requestAnimationFrame(()=>{
     toast.style.opacity = "1";
