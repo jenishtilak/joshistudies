@@ -3994,7 +3994,7 @@ function checkTextAnswer(){
   const sb = pct>=MIN_SCORE_FOR_GOAL_CREDIT ? getSpeedBonus(currentQType, txtElapsed) : null;
   const speedChip = sb ? `<span style="background:#c45000;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px">⚡ +${sb.points} Speed Bonus!</span>` : "";
   const qtObj = QTYPES.find(t=>t.id===currentQType);
-  const spellBtnHTML = qtObj ? buildReviseSpellButton(getAnswerSpellingWords(q.answer||""), currentLesson, qtObj, getOriginalQIndex(currentQIndex)) : "";
+  const spellBtnHTML = qtObj ? buildReviseSpellButton(getWrongSpellingWords(diff), currentLesson, qtObj, getOriginalQIndex(currentQIndex)) : "";
   const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
@@ -4376,8 +4376,8 @@ function checkDistinguish(){
   // Score each side separately, average them. Peeking once shows BOTH terms'
   // model answers together (single panel), so the same peek count and cap
   // applies equally to both sides rather than tracking them separately.
-  const {pct:rawPctA}=scoreAnswer(userA, q.answerA);
-  const {pct:rawPctB}=scoreAnswer(userB, q.answerB);
+  const {pct:rawPctA, diff:diffA}=scoreAnswer(userA, q.answerA);
+  const {pct:rawPctB, diff:diffB}=scoreAnswer(userB, q.answerB);
   const peekKey = getPrevAttemptKey(currentQIndex);
   const peeksUsed = hintsUsedByQuestion[peekKey] || 0;
   const pctA = applyHintPenalty(rawPctA, peeksUsed);
@@ -4392,7 +4392,7 @@ function checkDistinguish(){
     ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${peeksUsed} time${peeksUsed!==1?"s":""} — score capped above</div>`
     : "";
   const distQtObj = QTYPES.find(t=>t.id==="distinguish");
-  const distSpellBtnHTML = distQtObj ? buildReviseSpellButton(getAnswerSpellingWords((q.answerA||"")+" "+(q.answerB||"")), currentLesson, distQtObj, getOriginalQIndex(currentQIndex)) : "";
+  const distSpellBtnHTML = distQtObj ? buildReviseSpellButton(getWrongSpellingWords([...diffA, ...diffB]), currentLesson, distQtObj, getOriginalQIndex(currentQIndex)) : "";
   const feedbackHTML = `
     <div class="score-stamp">
       <div class="score-circle ${cls}">${pct}%</div>
@@ -7835,6 +7835,35 @@ function getAnswerSpellingWords(answerText, maxWords){
     words.push(tok);
   });
   return maxWords ? words.slice(0, maxWords) : words;
+}
+
+// Practice mode's post-check spelling button uses THIS instead of the generic
+// lesson-vocabulary extractor above — it only pulls words from what the
+// student actually got wrong in THIS attempt: words the diff marked
+// "missing" (never written) or "misspelled" (attempted but wrong), using the
+// correct spelling in both cases. "wrong"-type words are deliberately
+// excluded — those are extra content the student wrote that doesn't match
+// anything in the model answer, so they're not a real vocabulary target.
+function getWrongSpellingWords(diff){
+  if(!diff || !diff.length) return [];
+  const seen = new Set();
+  const words = [];
+  diff.forEach(d=>{
+    let candidate = null, forceInclude = false;
+    if(d.type==="missing"){ candidate = d.word; }
+    else if(d.type==="misspelled"){ candidate = d.correct; forceInclude = true; } // they clearly tried this word — always worth drilling regardless of length
+    if(!candidate) return;
+    const tok = String(candidate).trim();
+    if(!tok) return;
+    const isAcronym = tok.length>=2 && tok===tok.toUpperCase();
+    if(!forceInclude && !isAcronym && tok.length<6) return;
+    const lower = tok.toLowerCase();
+    if(!forceInclude && !isAcronym && SPELL_STOPWORDS.has(lower)) return;
+    if(seen.has(lower)) return;
+    seen.add(lower);
+    words.push(tok);
+  });
+  return words;
 }
 
 // Pool of {words, label} built fresh each time renderRevise runs — buttons
