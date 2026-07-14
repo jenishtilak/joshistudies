@@ -3598,7 +3598,8 @@ function checkCurrentPart(){
   const feedbackHTML = `<div class="score-stamp" style="margin-top:8px">
       <div class="score-circle ${pct>=80?"perfect":pct>=50?"good":"poor"}" style="width:46px;height:46px;font-size:14px">${pct}%</div>
       <div><div class="score-label" style="font-size:13px">${pct>=80?"Great — this part is solid":pct>=50?"Good, room to add a bit more":"Worth revising this part"}</div></div>
-    </div>`;
+    </div>
+    ${buildAnnotatedDiff(userText, s.parts[i])}`;
   if(fb) fb.innerHTML = feedbackHTML;
   // Let the admin see this part's result the moment it's checked, same as
   // every other "submit" moment elsewhere in the app.
@@ -3616,7 +3617,8 @@ function renderPartsStep(){
   const existingFeedback = existingScore===null ? "" : `<div class="score-stamp" style="margin-top:8px">
       <div class="score-circle ${scoreCls}" style="width:46px;height:46px;font-size:14px">${existingScore}%</div>
       <div><div class="score-label" style="font-size:13px">${existingScore>=80?"Great — this part is solid":existingScore>=50?"Good, room to add a bit more":"Worth revising this part"}</div></div>
-    </div>`;
+    </div>
+    ${buildAnnotatedDiff(s.written[i]||"", s.parts[i])}`;
 
   // Tell the admin mirror what the student is doing — previously missing
   // entirely for "Write it in parts" mode, so the admin saw nothing at all
@@ -5400,7 +5402,7 @@ function buildMockAnswerSheet(avg, totalMs){
     if(ea.modelText && ea.qtype!=="mcq"&&ea.qtype!=="fill"&&ea.qtype!=="match"&&ea.qtype!=="truefalse"){
       const {diff} = scoreAnswer(ea.userText||"", ea.modelText);
       diff.forEach(d=>{
-        if(d.type==="misspelled") spellErrors.push({wrong:d.word, correct:d.correct, qNum:i+1, lesson:ea.lessonTitle||""});
+        if(d.type==="misspelled") spellErrors.push({wrong:d.word, correct:d.correct, qNum:(ea.mockIdx??0)+1, lesson:ea.lessonTitle||""});
       });
     }
   });
@@ -7404,18 +7406,20 @@ async function awardCompensationBonus(){
 }
 
 // ═══════════════════════════════════════════════════════
-//  "TRY SOMETHING NEW" — first brand-new question of the day
+//  "TRY SOMETHING NEW" — every brand-new question, first attempt
 // ═══════════════════════════════════════════════════════
 // Targets a specific moment: the dread that shows up BEFORE even attempting
 // a question he's never seen, on the harder multi-mark types (1-mark
 // MCQ/Fill/True-False are quick guesses, not the "can I even learn this"
-// problem this is meant to address). Once per day, the first genuinely new
-// question of a qualifying type gets a calm reassurance banner beforehand,
-// and — regardless of score — a small celebratory bonus afterward for
-// having tried, not for having gotten it right. Kept to once/day so it
-// stays a genuine moment rather than a stale ritual he starts ignoring.
+// problem this is meant to address). Every genuinely new question of a
+// qualifying type gets a calm reassurance banner beforehand, and —
+// regardless of score — a celebratory bonus afterward for having tried,
+// not for having gotten it right. No daily cap: the "never attempted
+// before" check is itself the safeguard — a given question can only ever
+// be "new" once, so the total is naturally bounded by the size of the
+// syllabus, not farmable by repeating anything.
 const NEW_TRY_EXCLUDED_QTYPES = new Set(["mcq","fill","truefalse"]);
-const NEW_TRY_BONUS_MARKS = 5;
+const NEW_TRY_BONUS_MARKS = 10;
 const NEW_TRY_MESSAGES_BEFORE = [
   "New territory! First tries are just about getting something down — not getting it right.",
   "You haven't seen this one before — most people need 2–3 tries before it clicks.",
@@ -7427,37 +7431,19 @@ const NEW_TRY_MESSAGES_AFTER = [
   "You tried something brand new today — that's the hard part, and you did it.",
 ];
 
-let _newTryBonusState = null; // {date, claimed} — cached after first load this session
 let _pendingNewTryBonus = null; // {lessonId, qtype, qIndex} — the exact question the banner was shown for
 
 function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-async function loadNewTryBonusState(){
-  const today = new Date().toISOString().slice(0,10);
-  if(!window._fb || !currentUserPhone) return { date: today, claimed:false };
-  try{
-    const { db, doc, getDoc } = window._fb;
-    const snap = await getDoc(doc(db, "sessions", currentUserPhone, "settings", "newTryBonusDaily"));
-    const data = snap.exists() ? snap.data() : null;
-    if(!data || data.date !== today) return { date: today, claimed:false }; // new day — resets automatically
-    return data;
-  }catch(e){ return { date: today, claimed:false }; }
-}
-
-// Called after every question renders — shows the banner at most once/day,
-// only for a genuinely new (never-attempted) qualifying question.
-async function maybeShowNewTryBanner(qtype, qIndex){
+// Called after every question renders — shows the banner for any genuinely
+// new (never-attempted) qualifying question, every time, not just once/day.
+function maybeShowNewTryBanner(qtype, qIndex){
   _pendingNewTryBonus = null;
   if(isAdminUser) return; // admin browsing the mirror never triggers this
   if(NEW_TRY_EXCLUDED_QTYPES.has(qtype)) return;
   if(!currentLesson || currentLesson.id==="__mock__") return;
   const key = `${currentLesson.id}_${qtype}_${qIndex}`;
   if(_answeredQuestionKeys.has(key)) return; // he's attempted this one before — not actually new
-
-  if(!_newTryBonusState) _newTryBonusState = await loadNewTryBonusState();
-  const today = new Date().toISOString().slice(0,10);
-  if(_newTryBonusState.date !== today) _newTryBonusState = { date: today, claimed:false }; // day rolled over since we cached it
-  if(_newTryBonusState.claimed) return; // already used today's one
 
   const card = document.querySelector("#quizBody .question-card");
   if(!card || !card.parentNode) return;
@@ -7472,17 +7458,11 @@ async function maybeShowNewTryBanner(qtype, qIndex){
 // Called from each check* function after scoring — awards the bonus only if
 // THIS exact question is the one the banner was shown for, regardless of
 // how well it went, since the point is rewarding the attempt itself.
-async function maybeAwardNewTryBonus(qtype, qIndex){
+function maybeAwardNewTryBonus(qtype, qIndex){
   if(!_pendingNewTryBonus) return;
   if(!currentLesson || _pendingNewTryBonus.lessonId!==currentLesson.id || _pendingNewTryBonus.qtype!==qtype || _pendingNewTryBonus.qIndex!==qIndex) return;
   _pendingNewTryBonus = null; // consume immediately — a Try Again on this same question can't re-trigger it
 
-  const today = new Date().toISOString().slice(0,10);
-  _newTryBonusState = { date: today, claimed:true };
-  if(window._fb && currentUserPhone){
-    const { db, doc, setDoc } = window._fb;
-    try{ await setDoc(doc(db, "sessions", currentUserPhone, "settings", "newTryBonusDaily"), _newTryBonusState); }catch(e){}
-  }
   fbLogEntry("logs", {
     subject: currentSubject||"", part: currentPart||"", lessonId: currentLesson?.id||"",
     lessonTitle: currentLesson?.title||"", qtype:"newtry", qIndex: Date.now(), pct:100, timeMs:0, marks: NEW_TRY_BONUS_MARKS
