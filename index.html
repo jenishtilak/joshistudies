@@ -199,12 +199,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 .btn-check:disabled{opacity:.5;cursor:default}
 .btn-check:hover:not(:disabled){background:var(--navy-light)}
 .btn-skip{padding:13px 18px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;font-family:inherit}
-.btn-mic{width:100%;padding:11px;background:transparent;color:var(--red);font-size:13px;font-weight:600;border:1.5px dashed var(--red);border-radius:var(--radius);cursor:pointer;font-family:inherit;margin-bottom:10px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
-.btn-mic.listening{background:var(--red-light);animation:micPulse 1.2s ease-in-out infinite}
-@keyframes micPulse{0%,100%{opacity:1}50%{opacity:.5}}
-.ai-grading-loader{display:flex;align-items:center;gap:8px;padding:14px;font-size:13px;color:var(--muted);font-weight:600}
-.ai-grading-loader .spin{width:16px;height:16px;border:2.5px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:aiSpin .7s linear infinite}
-@keyframes aiSpin{to{transform:rotate(360deg)}}
 .ai-feedback-box{font-size:13.5px;line-height:1.8;color:var(--text);border-left:3px solid var(--navy);padding-left:12px;white-space:pre-line;margin-top:10px}
 .ai-graded-badge{display:inline-block;font-size:10px;font-weight:700;background:rgba(26,39,68,.08);color:var(--navy);padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
 
@@ -501,6 +495,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,92,92,.35)}50%{box-shadow:0 0 0 6px rgba(224,92,92,0)}}
 .mic-hint{font-size:11px;color:var(--muted)}
 .recite-panel{margin-top:10px;padding:12px;background:var(--parchment);border-radius:10px;border:1.5px dashed var(--border)}
+.recite-ref-text{font-size:13.5px;line-height:1.7;color:var(--text);background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;white-space:pre-line}
+.btn-recite-clear{padding:8px 12px;background:none;color:var(--muted);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-recite-clear:hover{border-color:var(--red);color:var(--red)}
 .recite-panel .dist-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .recite-result-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;padding:5px 12px;border-radius:20px;margin-bottom:8px}
 .recite-result-chip.great{background:var(--green-light);color:var(--green)}
@@ -676,8 +673,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)">
     <button onclick="openScoreboardPanel()" style="width:100%;padding:9px;background:rgba(184,134,11,.15);color:#b8860b;border:1px solid rgba(184,134,11,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">🏆 Scoreboard</button>
     <button onclick="openReport()" style="width:100%;padding:9px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📊 Session Report</button>
-    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px;text-align:left">📝 Practice Test</button>
-    <button onclick="openSpellingPanel()" style="width:100%;padding:9px;background:rgba(76,204,138,.15);color:var(--green);border:1px solid rgba(76,204,138,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">🔤 Spelling Game</button>
+    <button onclick="openMockExam()" style="width:100%;padding:9px;background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left">📝 Practice Test</button>
   </div>
 </aside>
 
@@ -792,7 +788,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="nav-item"        onclick="setNav(this);openScoreboardPanel()"><span class="nav-icon">🏆</span>Scoreboard</div>
   <div class="nav-item"        onclick="setNav(this);openReport()"><span class="nav-icon">📊</span>Report</div>
   <div class="nav-item"        onclick="setNav(this);openMockExam()"><span class="nav-icon">🎯</span>Practice Test</div>
-  <div class="nav-item"        onclick="setNav(this);openSpellingPanel()"><span class="nav-icon">🔤</span>Spelling</div>
 </nav>
 
 <!-- QUIZ OVERLAY -->
@@ -2558,6 +2553,34 @@ function showPointsToast(amount, label){
 
 function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   const origIdx = getOriginalQIndex(currentQIndex);
+  // clientId lets us reliably tell "this exact attempt" apart from every
+  // other attempt, and match it up later between the live session and
+  // Firestore — comparing timestamps for this doesn't work, since the
+  // session uses Date.now() (a plain number) while Firestore stores
+  // serverTimestamp() (a Timestamp object); those can never be equal even
+  // for the very same entry, which was silently causing every answer from
+  // the current session to be counted TWICE in the Growth Points total
+  // (once from the session, once from Firestore) until the next reload
+  // dropped the session's copy — which looked exactly like points had been
+  // taken away, when really the inflated number was just correcting itself.
+  const clientId = currentSessionId+"-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+
+  // Work out the REAL point value BEFORE logging anything, and store that
+  // exact number on the entry itself. This used to be computed twice —
+  // once here (to show the toast) and again later when the Scoreboard
+  // recalculated the total from history — and those two calculations kept
+  // drifting apart (this is exactly what happened to the first-attempt
+  // doubling, the Recite bonus, and the Speed Bonus, independently, at
+  // different points in this app's life). Storing the true value once, at
+  // the moment it's earned, means the toast and the permanent total can
+  // never disagree again — there's only one number, not two copies of it.
+  const qKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origIdx;
+  const isFirstAttempt = pct >= MIN_SCORE_FOR_GOAL_CREDIT && !_answeredQuestionKeys.has(qKey);
+  const baseMarks = getMarks(currentQType);
+  const marks = pct >= MIN_SCORE_FOR_GOAL_CREDIT ? (isFirstAttempt ? baseMarks*2 : baseMarks) : 0;
+  const sb = pct >= MIN_SCORE_FOR_GOAL_CREDIT ? getSpeedBonus(currentQType, elapsed) : null;
+  const totalEarned = marks + (sb ? sb.points : 0);
+
   const entry = {
     subject: currentSubject||'',
     part: currentPart||'',
@@ -2565,7 +2588,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     lessonTitle: currentLesson?.title||'',
     qtype: currentQType||'',
     qIndex: origIdx,
-    pct, timeMs: elapsed
+    pct, timeMs: elapsed, clientId, marks: totalEarned
   };
   sessionLog.push({...entry, ts: Date.now()});
   fbLogEntry("logs", entry);
@@ -2580,10 +2603,6 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
   // auto-dismissing on purpose: this happens often, so it should never feel
   // like an interruption, just a quiet "yes, that counted."
   if(pct >= MIN_SCORE_FOR_GOAL_CREDIT){
-    const qKey = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origIdx;
-    const isFirstAttempt = !_answeredQuestionKeys.has(qKey);
-    const baseMarks = getMarks(currentQType);
-    const marks = isFirstAttempt ? baseMarks * 2 : baseMarks;
     if(isFirstAttempt){
       _answeredQuestionKeys.add(qKey); // mark as answered now
       showPointsToast(marks, "🆕 New question! 2× points");
@@ -2596,15 +2615,11 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     if(pct >= 80 && !_answeredInPartsMode) _masteredQuestionKeys.add(qKey);
     if(_answeredInPartsMode && pct >= 80) console.log("Parts mode: score="+pct+"% but mastery not awarded — student must answer all at once");
 
-    // Speed bonus — only for written types where fast = good recall
-    const sb = getSpeedBonus(currentQType, elapsed);
+    // Speed bonus — only for written types where fast = good recall. Now
+    // genuinely counted (see totalEarned/marks above), not just a toast.
     if(sb) setTimeout(()=>showSpeedBonusToast(sb.points, sb.label), 600);
 
-    // Session type bonus — +100 for all Brief, +200 for all Paragraph/Distinguish at 80%+
-    checkSessionTypeBonus(currentQType);
-
     // Show points breakdown after a short delay
-    var totalEarned = marks + (sb ? sb.points : 0);
     var inParts = _answeredInPartsMode;
     setTimeout(function(){
       var panel = document.getElementById("resultPanel");
@@ -2623,8 +2638,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     }, 300);
   } else {
     // Even below 50%, track that the question was attempted
-    const qKey2 = (currentLesson?.id||"")+"_"+(currentQType||"")+"_"+origIdx;
-    _answeredQuestionKeys.add(qKey2);
+    _answeredQuestionKeys.add(qKey);
     // Show "no points" message
     setTimeout(function(){
       var panel = document.getElementById("resultPanel");
@@ -3050,6 +3064,7 @@ function renderCurrentQuestion(){
     case "paragraph":  renderTextAnswer(q, qnum, isLast, true); break;
     case "memorise":   renderMemorise(q, qnum, isLast); break;
   }
+  maybeShowNewTryBanner(currentQType, getOriginalQIndex(currentQIndex));
 }
 
 
@@ -3412,6 +3427,7 @@ function checkMatchFromDOM(){
   if(questionStates[currentQIndex]) questionStates[currentQIndex]={answered:true,skipped:false,pct};
   const matchElapsed=stampQuestion();
   logQuestion(pct,matchElapsed);
+  maybeAwardNewTryBonus(currentQType, getOriginalQIndex(currentQIndex));
   hidePeek();
   document.getElementById("checkBtn").disabled=true;
   showSimpleResult(pct,`${correct} / ${count} matched correctly ${timeChip(matchElapsed)}`);
@@ -4006,6 +4022,7 @@ function checkTextAnswer(){
     ${spellBtnHTML}`;
 
   logQuestion(pct, txtElapsed, feedbackHTML, pct>=80);
+  maybeAwardNewTryBonus(currentQType, getOriginalQIndex(currentQIndex));
   renderNavBar();
 
   const panel=document.getElementById("resultPanel");
@@ -4418,6 +4435,7 @@ function checkDistinguish(){
     ${distSpellBtnHTML}`;
 
   logQuestion(pct, distElapsed, feedbackHTML, pct>=80);
+  maybeAwardNewTryBonus(currentQType, getOriginalQIndex(currentQIndex));
   renderNavBar();
 
   const panel=document.getElementById("resultPanel");
@@ -5018,6 +5036,7 @@ function markMockAnswered(pct){
   // Log to session report
   const item=mockQuestions[mockQIndex];
   if(item){
+    const clientId = currentSessionId+"-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
     const entry = {
       subject: mockSubject,
       part: item.lesson.part||"",
@@ -5025,7 +5044,7 @@ function markMockAnswered(pct){
       lessonTitle: item.lesson.title,
       qtype: item.qtype,
       qIndex: "mock:"+mockQIndex,
-      pct, timeMs: Date.now()-_questionStart
+      pct, timeMs: Date.now()-_questionStart, clientId
     };
     sessionLog.push({...entry, ts: Date.now()});
     fbLogEntry("logs", entry);
@@ -5894,11 +5913,9 @@ function showReportTab(tab){
   if(tab==="mockexams") buildStudentMockExamsList();
 }
 
-// ── STANDALONE SPELLING GAME PANEL (its own floating icon, separate from Session Report) ──
-function openSpellingPanel(){
-  document.getElementById("spellingPanel").classList.add("visible");
-  openSpellingGame();
-}
+// closeSpellingPanel is still used by the contextual "Practice Spellings" feature
+// (Revise mode and Practice mode both open this same modal directly) — only the old
+// standalone entry point above it was retired, not the shared modal itself.
 function closeSpellingPanel(){
   document.getElementById("spellingPanel").classList.remove("visible");
 }
@@ -6046,12 +6063,17 @@ async function buildStudentScoreboard(){
     _answeredKeysLoaded = true;
   }
 
-  // Merge current session entries that may not yet be in Firebase
-  // so the 30-min time bonus and stats update immediately.
-  const existingKeys = new Set(allScoredEntries.map(function(e){ return (e.ts||0)+"_"+(e.qIndex||0)+"_"+(e.qtype||""); }));
+  // Merge current session entries that may not yet be in Firebase, so the
+  // 30-min time bonus and stats update immediately — matched by clientId
+  // (a stable ID stored in both places) rather than timestamp, since a
+  // session's local Date.now() and Firestore's serverTimestamp() can never
+  // be made to match even for the exact same entry. Older entries logged
+  // before clientId existed won't have one on either side, so they simply
+  // never match here and fall back to showing only once they've synced —
+  // no different from how every entry already behaved before this fix.
+  const existingClientIds = new Set(allScoredEntries.map(e=>e.clientId).filter(Boolean));
   sessionLog.forEach(function(e){
-    var key = (e.ts||0)+"_"+(e.qIndex||0)+"_"+(e.qtype||"");
-    if(!existingKeys.has(key)){
+    if(e.clientId && !existingClientIds.has(e.clientId)){
       allScoredEntries.push(e);
       grandTimeMs += e.timeMs || 0;
     }
@@ -6136,9 +6158,15 @@ function aggregateScoreboardData(logsSnap, examSnap){
       if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
     }
 
-    allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
-    grandAttempts++;
-    grandTimeMs += e.timeMs || 0;
+    // Admin-awarded goodwill/compensation bonuses aren't a real answered
+    // question — they still show up in the session's activity list above,
+    // and still count toward Growth Points further down, but shouldn't
+    // inflate "unique questions covered" or the attempt count.
+    if(e.qtype!=="goodwill" && e.qtype!=="compensation"){
+      allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
+      grandAttempts++;
+      grandTimeMs += e.timeMs || 0;
+    }
   });
 
   // Practice test answers — counted separately for the "Practice Test" stat row,
@@ -6180,7 +6208,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
     const e = d.data();
     const tsMs = resolveTs(e);
     if(typeof e.pct === "number" && tsMs!==null){
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject:e.subject||"", lessonId:e.lessonId||"", qIndex:e.qIndex, timeMs:e.timeMs||0 });
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject:e.subject||"", lessonId:e.lessonId||"", qIndex:e.qIndex, timeMs:e.timeMs||0, clientId:e.clientId, marks:e.marks });
     }
   });
   examSnap.forEach(d=>{
@@ -6191,7 +6219,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
       // to looking up the lesson, since practice tests can span multiple lessons
       // that may belong to different subjects.
       const lesson = findLessonById(e.lessonId);
-      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx, timeMs:e.timeMs||0 });
+      allScoredEntries.push({ pct:e.pct, qtype:e.qtype, ts: tsMs, subject: lesson ? findSubjectForLesson(e.lessonId) : "", lessonId:e.lessonId||"", qIndex:e.mockIdx, timeMs:e.timeMs||0, clientId:e.clientId });
     }
   });
   allScoredEntries.sort((a,b)=>a.ts-b.ts);
@@ -6588,6 +6616,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   if(allScoredEntries.length){
     let earned=0, possible=0;
     allScoredEntries.forEach(e=>{
+      if(e.qtype==="goodwill" || e.qtype==="compensation") return; // admin bonuses aren't a measure of academic quality
       const m = getMarks(e.qtype||"mcq");
       possible += m;
       earned += m*(e.pct/100);
@@ -6640,6 +6669,11 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const _seenGrowthKeys = new Set();
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
+    // Admin-awarded goodwill/one-time compensation bonuses use whatever exact
+    // amount the admin chose at the time (stored directly on the entry as
+    // `marks`) — there's no static per-qtype value for these since the
+    // amount is deliberately chosen per-award, not looked up from a table.
+    if(e.qtype==="goodwill" || e.qtype==="compensation"){ growthPoints += (e.marks||0); return; }
     const base = getMarks(e.qtype);
     // Points per question scale with how much that question type is actually
     // worth — the same marks weighting already used for scoring (MCQ/Fill/
@@ -7078,7 +7112,7 @@ function checkPasscode(){
     setTimeout(()=>ws.classList.add("gone"), 420);
     loadCompleteLessons(); loadMasteryKeys(); // load for both admin and student
     if(isAdminUser) showAdminBar();
-    else{ setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
+    else{ startGoodwillListener(); setTimeout(()=>showWelcomeBackPopup(), 550); } // let the welcome screen fade out first
   } else {
     const inp = document.getElementById("passcodeInput");
     const err = document.getElementById("wlError");
@@ -7227,6 +7261,255 @@ function fbLogEntry(kind, data){
   }).catch(err => console.warn("Firestore write failed:", err));
 }
 
+// ═══════════════════════════════════════════════════════
+//  GOODWILL POINTS — admin-awarded encouragement bonuses
+// ═══════════════════════════════════════════════════════
+// Two distinct things live here, deliberately kept separate:
+//  1. A routine "Goodwill Points" award the admin can give any time for
+//     good behavior — kept small (5-50 pts) and rate-limited (max 3/day)
+//     so it stays a genuine, meaningful nudge rather than becoming a
+//     casual, overused button that quietly inflates the whole point system.
+//  2. A ONE-TIME 500pt "Compensation Bonus" — a distinct, larger, single-use
+//     apology for the Growth Points display bug that made his score
+//     appear to shrink for reasons he couldn't see. Deliberately exempt
+//     from the routine cap since it's a one-off correction, not a pattern.
+// Both use the SAME delivery mechanism: written to a small "live" doc the
+// student's own open tab is already listening to, so the celebratory
+// popup appears INSTANTLY — no reload needed — the moment the admin awards it.
+const GOODWILL_MIN = 5;
+const GOODWILL_MAX = 50;
+const GOODWILL_DAILY_CAP = 3;
+const COMPENSATION_BONUS_AMOUNT = 500;
+
+const GOODWILL_MESSAGES = [
+  "You didn't waste any time today!",
+  "You finished so fast — great focus!",
+  "Excellent effort today!",
+  "You've been really consistent lately!",
+  "Great attitude, keep it up!",
+  "You worked really hard on that!",
+  "Proud of how you handled that!",
+  "You showed real patience today!",
+];
+
+function pickGoodwillMessage(){
+  return GOODWILL_MESSAGES[Math.floor(Math.random()*GOODWILL_MESSAGES.length)];
+}
+
+// ── Student side: listens for an admin award and celebrates instantly ──
+function startGoodwillListener(){
+  if(!window._fb || !currentUserPhone || isAdminUser) return; // admin's own tab never celebrates its own award
+  const { db, doc, onSnapshot } = window._fb;
+  onSnapshot(doc(db, "sessions", currentUserPhone, "live", "goodwillEvent"), snap => {
+    if(!snap.exists()) return;
+    const data = snap.data();
+    if(!data.id) return;
+    const lastSeenId = localStorage.getItem("lastGoodwillEventId");
+    if(data.id === lastSeenId) return; // already celebrated this one — don't re-show on reload
+    localStorage.setItem("lastGoodwillEventId", data.id);
+    showGoodwillCelebration(data.amount||0, data.message||pickGoodwillMessage());
+  });
+}
+
+// Big, animated, unmissable congratulation — deliberately more festive than
+// the small in-line point toasts, since this represents the admin noticing
+// and calling out something specific, not just routine progress.
+function showGoodwillCelebration(amount, message){
+  const overlayId = "goodwillCelebration_"+Date.now();
+  const overlay = document.createElement("div");
+  overlay.id = overlayId;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(26,39,68,.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .3s";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:22px;padding:32px 26px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.35);transform:scale(.85);transition:transform .4s cubic-bezier(.34,1.56,.64,1)">
+      <div style="font-size:52px;margin-bottom:6px;animation:goodwillBounce 1s ease-in-out infinite">🎉</div>
+      <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Congrats, ${STUDENT_NAME}!</div>
+      <div style="font-size:15px;color:var(--text);margin-bottom:16px;line-height:1.5">${message.replace(/</g,"&lt;")}</div>
+      <div style="background:var(--green-light);color:var(--green);font-weight:800;font-size:22px;padding:10px 20px;border-radius:14px;display:inline-block;margin-bottom:18px">+${amount} Growth Points 🎁</div>
+      <button onclick="document.getElementById('${overlayId}').remove()" style="width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Awesome, thanks! →</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  if(!document.getElementById("goodwillAnimStyle")){
+    const s = document.createElement("style");
+    s.id = "goodwillAnimStyle";
+    s.textContent = "@keyframes goodwillBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}";
+    document.head.appendChild(s);
+  }
+  requestAnimationFrame(()=>{
+    overlay.style.opacity = "1";
+    overlay.firstElementChild.style.transform = "scale(1)";
+  });
+}
+
+// ── Admin side: reads/updates the daily cap, one-time compensation flag ──
+async function getGoodwillDailyState(){
+  const { db, doc, getDoc } = window._fb;
+  const today = new Date().toISOString().slice(0,10);
+  const snap = await getDoc(doc(db, "sessions", currentUserPhone, "settings", "goodwillDaily"));
+  const data = snap.exists() ? snap.data() : null;
+  if(!data || data.date !== today) return { date: today, count: 0 };
+  return data;
+}
+
+async function checkCompensationAwarded(){
+  const { db, doc, getDoc } = window._fb;
+  const snap = await getDoc(doc(db, "sessions", currentUserPhone, "settings", "compensationAwarded"));
+  return snap.exists() && snap.data().awarded === true;
+}
+
+// The routine, capped, rate-limited award — the one meant for everyday use.
+async function awardGoodwillPoints(amount, reason){
+  amount = Math.round(Number(amount)||0);
+  if(amount < GOODWILL_MIN || amount > GOODWILL_MAX){
+    alert(`Goodwill Points must be between ${GOODWILL_MIN} and ${GOODWILL_MAX} — keeping it small keeps it meaningful.`);
+    return false;
+  }
+  const state = await getGoodwillDailyState();
+  if(state.count >= GOODWILL_DAILY_CAP){
+    alert(`Already given ${GOODWILL_DAILY_CAP} Goodwill Point awards today — that cap is there on purpose, so it stays a genuine "I noticed that" rather than routine currency. Try again tomorrow!`);
+    return false;
+  }
+  const message = (reason && reason.trim()) || pickGoodwillMessage();
+  const { db, doc, setDoc } = window._fb;
+  fbLogEntry("logs", {
+    subject:"", part:"", lessonId:"goodwill", lessonTitle: message,
+    qtype:"goodwill", qIndex: Date.now(), pct:100, timeMs:0, marks: amount
+  });
+  await setDoc(doc(db, "sessions", currentUserPhone, "settings", "goodwillDaily"), { date: state.date, count: state.count+1 });
+  await setDoc(doc(db, "sessions", currentUserPhone, "live", "goodwillEvent"), {
+    id: "gw_"+Date.now(), amount, message, ts: Date.now()
+  });
+  return true;
+}
+
+// The one-time, larger, exempt-from-the-cap apology bonus for the Growth
+// Points display bug — usable exactly once, ever.
+async function awardCompensationBonus(){
+  const already = await checkCompensationAwarded();
+  if(already){
+    alert("The one-time compensation bonus has already been given.");
+    return false;
+  }
+  const { db, doc, setDoc } = window._fb;
+  fbLogEntry("logs", {
+    subject:"", part:"", lessonId:"compensation", lessonTitle:"Thanks for your patience while we fixed a scoring glitch!",
+    qtype:"compensation", qIndex: Date.now(), pct:100, timeMs:0, marks: COMPENSATION_BONUS_AMOUNT
+  });
+  await setDoc(doc(db, "sessions", currentUserPhone, "settings", "compensationAwarded"), { awarded:true, ts:Date.now() });
+  await setDoc(doc(db, "sessions", currentUserPhone, "live", "goodwillEvent"), {
+    id: "comp_"+Date.now(), amount: COMPENSATION_BONUS_AMOUNT,
+    message: "We found and fixed a glitch that was making your points look smaller than they should sometimes. Your progress was always safe — enjoy this bonus for your patience! 🎉",
+    ts: Date.now()
+  });
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════
+//  "TRY SOMETHING NEW" — first brand-new question of the day
+// ═══════════════════════════════════════════════════════
+// Targets a specific moment: the dread that shows up BEFORE even attempting
+// a question he's never seen, on the harder multi-mark types (1-mark
+// MCQ/Fill/True-False are quick guesses, not the "can I even learn this"
+// problem this is meant to address). Once per day, the first genuinely new
+// question of a qualifying type gets a calm reassurance banner beforehand,
+// and — regardless of score — a small celebratory bonus afterward for
+// having tried, not for having gotten it right. Kept to once/day so it
+// stays a genuine moment rather than a stale ritual he starts ignoring.
+const NEW_TRY_EXCLUDED_QTYPES = new Set(["mcq","fill","truefalse"]);
+const NEW_TRY_BONUS_MARKS = 5;
+const NEW_TRY_MESSAGES_BEFORE = [
+  "New territory! First tries are just about getting something down — not getting it right.",
+  "You haven't seen this one before — most people need 2–3 tries before it clicks.",
+  "This is brand new for you. Whatever you write is a fine start.",
+];
+const NEW_TRY_MESSAGES_AFTER = [
+  "That's how learning something new always starts.",
+  "First attempts are for finding out what you don't know yet. That's exactly what just happened.",
+  "You tried something brand new today — that's the hard part, and you did it.",
+];
+
+let _newTryBonusState = null; // {date, claimed} — cached after first load this session
+let _pendingNewTryBonus = null; // {lessonId, qtype, qIndex} — the exact question the banner was shown for
+
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+async function loadNewTryBonusState(){
+  const today = new Date().toISOString().slice(0,10);
+  if(!window._fb || !currentUserPhone) return { date: today, claimed:false };
+  try{
+    const { db, doc, getDoc } = window._fb;
+    const snap = await getDoc(doc(db, "sessions", currentUserPhone, "settings", "newTryBonusDaily"));
+    const data = snap.exists() ? snap.data() : null;
+    if(!data || data.date !== today) return { date: today, claimed:false }; // new day — resets automatically
+    return data;
+  }catch(e){ return { date: today, claimed:false }; }
+}
+
+// Called after every question renders — shows the banner at most once/day,
+// only for a genuinely new (never-attempted) qualifying question.
+async function maybeShowNewTryBanner(qtype, qIndex){
+  _pendingNewTryBonus = null;
+  if(isAdminUser) return; // admin browsing the mirror never triggers this
+  if(NEW_TRY_EXCLUDED_QTYPES.has(qtype)) return;
+  if(!currentLesson || currentLesson.id==="__mock__") return;
+  const key = `${currentLesson.id}_${qtype}_${qIndex}`;
+  if(_answeredQuestionKeys.has(key)) return; // he's attempted this one before — not actually new
+
+  if(!_newTryBonusState) _newTryBonusState = await loadNewTryBonusState();
+  const today = new Date().toISOString().slice(0,10);
+  if(_newTryBonusState.date !== today) _newTryBonusState = { date: today, claimed:false }; // day rolled over since we cached it
+  if(_newTryBonusState.claimed) return; // already used today's one
+
+  const card = document.querySelector("#quizBody .question-card");
+  if(!card || !card.parentNode) return;
+  const banner = document.createElement("div");
+  banner.style.cssText = "margin:0 0 12px;padding:10px 14px;background:#eef4ff;border:1.5px dashed #7fa8e0;border-radius:10px;font-size:12.5px;color:#2a4a7a;line-height:1.5";
+  banner.textContent = "🌱 " + pickRandom(NEW_TRY_MESSAGES_BEFORE);
+  card.parentNode.insertBefore(banner, card.nextSibling);
+
+  _pendingNewTryBonus = { lessonId: currentLesson.id, qtype, qIndex };
+}
+
+// Called from each check* function after scoring — awards the bonus only if
+// THIS exact question is the one the banner was shown for, regardless of
+// how well it went, since the point is rewarding the attempt itself.
+async function maybeAwardNewTryBonus(qtype, qIndex){
+  if(!_pendingNewTryBonus) return;
+  if(!currentLesson || _pendingNewTryBonus.lessonId!==currentLesson.id || _pendingNewTryBonus.qtype!==qtype || _pendingNewTryBonus.qIndex!==qIndex) return;
+  _pendingNewTryBonus = null; // consume immediately — a Try Again on this same question can't re-trigger it
+
+  const today = new Date().toISOString().slice(0,10);
+  _newTryBonusState = { date: today, claimed:true };
+  if(window._fb && currentUserPhone){
+    const { db, doc, setDoc } = window._fb;
+    try{ await setDoc(doc(db, "sessions", currentUserPhone, "settings", "newTryBonusDaily"), _newTryBonusState); }catch(e){}
+  }
+  fbLogEntry("logs", {
+    subject: currentSubject||"", part: currentPart||"", lessonId: currentLesson?.id||"",
+    lessonTitle: currentLesson?.title||"", qtype:"newtry", qIndex: Date.now(), pct:100, timeMs:0, marks: NEW_TRY_BONUS_MARKS
+  });
+  showNewTryCelebration();
+}
+
+function showNewTryCelebration(){
+  const overlayId = "newTryCelebration_"+Date.now();
+  const overlay = document.createElement("div");
+  overlay.id = overlayId;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(26,39,68,.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .3s";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:22px;padding:32px 26px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.35);transform:scale(.85);transition:transform .4s cubic-bezier(.34,1.56,.64,1)">
+      <div style="font-size:48px;margin-bottom:6px">🌱</div>
+      <div style="font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px">You tried something new!</div>
+      <div style="font-size:14.5px;color:var(--text);margin-bottom:16px;line-height:1.5">${pickRandom(NEW_TRY_MESSAGES_AFTER)}</div>
+      <div style="background:var(--green-light);color:var(--green);font-weight:800;font-size:20px;padding:9px 18px;border-radius:14px;display:inline-block;margin-bottom:18px">+${NEW_TRY_BONUS_MARKS} Growth Points 🌱</div>
+      <button onclick="document.getElementById('${overlayId}').remove()" style="width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Keep going →</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{
+    overlay.style.opacity = "1";
+    overlay.firstElementChild.style.transform = "scale(1)";
+  });
+}
+
 // Continuously overwrite a single "live" document with whatever the student is
 // currently doing — current question, what's selected/typed so far, navigation.
 // This is what makes the admin view feel like watching over their shoulder.
@@ -7282,6 +7565,7 @@ function openAdminMirror(){
       <button onclick="showAdminTab('past')" id="tabBtnPast" class="admin-tab-btn">📂 Past Sessions</button>
       <button onclick="showAdminTab('mockexams')" id="tabBtnMockExams" class="admin-tab-btn">📝 Practice Tests</button>
       <button onclick="showAdminTab('lessons')" id="tabBtnLessons" class="admin-tab-btn">📚 Lessons</button>
+      <button onclick="showAdminTab('goodwill')" id="tabBtnGoodwill" class="admin-tab-btn">🎁 Goodwill</button>
     </div>
 
     <div id="adminTabLive">
@@ -7320,6 +7604,30 @@ function openAdminMirror(){
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Every practice test ${STUDENT_NAME} has taken, grouped by exam attempt — view full answers or download.</p>
       <div id="mockExamsList"></div>
       <button id="mockExamsLoadMore" onclick="loadMoreMockExams()" style="display:none;width:100%;margin-top:10px;padding:10px;background:#fff;border:1.5px solid #1a2744;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;color:#1a2744">Load older exams ↓</button>
+    </div>
+
+    <div id="adminTabGoodwill" style="display:none">
+      <div id="compensationBox" style="background:#fff8e6;border:1.5px solid #e8b84b;border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-weight:800;color:#1a2744;margin-bottom:6px">🎁 One-Time Compensation Bonus</div>
+        <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">For the Growth Points display bug that made his score look smaller than it really was. This is a separate, one-off apology bonus — usable exactly once, and not part of the routine cap below.</p>
+        <div id="compensationBtnWrap">Loading…</div>
+      </div>
+
+      <div style="background:var(--parchment,#faf6ee);border:1.5px solid var(--border,#e8e0d0);border-radius:12px;padding:16px">
+        <div style="font-weight:800;color:#1a2744;margin-bottom:6px">🎁 Award Goodwill Points</div>
+        <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">For genuinely noticing good behavior or effort — kept small (${GOODWILL_MIN}–${GOODWILL_MAX} pts) and capped at ${GOODWILL_DAILY_CAP} awards a day, so it stays meaningful instead of routine.</p>
+        <div id="goodwillDailyStatus" style="font-size:12px;font-weight:700;color:#1a2744;margin-bottom:10px">Loading today's usage…</div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">Points (${GOODWILL_MIN}–${GOODWILL_MAX})</label>
+        <input type="number" id="goodwillAmountInput" min="${GOODWILL_MIN}" max="${GOODWILL_MAX}" value="20" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">Reason (shown to ${STUDENT_NAME}, optional — a nice default is picked if left blank)</label>
+        <select id="goodwillReasonSelect" onchange="document.getElementById('goodwillReasonCustom').value=this.value==='custom'?'':this.value" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;font-family:inherit">
+          <option value="">— Pick a message or write your own below —</option>
+          ${GOODWILL_MESSAGES.map(m=>`<option value="${m.replace(/"/g,"&quot;")}">${m}</option>`).join("")}
+          <option value="custom">Write my own…</option>
+        </select>
+        <textarea id="goodwillReasonCustom" placeholder="Or type a custom message…" style="width:100%;min-height:50px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px;font-family:inherit"></textarea>
+        <button onclick="submitGoodwillAward()" style="width:100%;padding:12px;background:#1a2744;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">🎁 Give Goodwill Points</button>
+      </div>
     </div>
   `;
   document.body.appendChild(panel);
@@ -7437,15 +7745,58 @@ function showAdminTab(tab){
   document.getElementById("adminTabPast").style.display = tab==="past" ? "block" : "none";
   document.getElementById("adminTabMockExams").style.display = tab==="mockexams" ? "block" : "none";
   document.getElementById("adminTabLessons").style.display = tab==="lessons" ? "block" : "none";
+  document.getElementById("adminTabGoodwill").style.display = tab==="goodwill" ? "block" : "none";
   if(tab==="lessons") renderAdminLessons();
   document.getElementById("tabBtnLive").classList.toggle("active", tab==="live");
   document.getElementById("tabBtnScoreboard").classList.toggle("active", tab==="scoreboard");
   document.getElementById("tabBtnPast").classList.toggle("active", tab==="past");
   document.getElementById("tabBtnMockExams").classList.toggle("active", tab==="mockexams");
   document.getElementById("tabBtnLessons").classList.toggle("active", tab==="lessons");
+  document.getElementById("tabBtnGoodwill").classList.toggle("active", tab==="goodwill");
   if(tab==="scoreboard"){ buildScoreboard(); renderHowToEarnPoints("adminHowToEarn"); }
   if(tab==="past") buildPastSessionsList();
   if(tab==="mockexams") buildMockExamsList();
+  if(tab==="goodwill") renderGoodwillTab();
+}
+
+async function renderGoodwillTab(){
+  const compBox = document.getElementById("compensationBtnWrap");
+  const dailyBox = document.getElementById("goodwillDailyStatus");
+  if(compBox){
+    const already = await checkCompensationAwarded();
+    compBox.innerHTML = already
+      ? `<div style="padding:10px;background:#eafaf0;color:var(--green);border-radius:8px;font-weight:700;font-size:13px;text-align:center">✓ Already given</div>`
+      : `<button onclick="submitCompensationBonus()" style="width:100%;padding:12px;background:#e8b84b;color:#1a2744;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer">🎁 Give One-Time ${COMPENSATION_BONUS_AMOUNT}pt Bonus</button>`;
+  }
+  if(dailyBox){
+    const state = await getGoodwillDailyState();
+    const left = GOODWILL_DAILY_CAP - state.count;
+    dailyBox.textContent = left>0
+      ? `${left} of ${GOODWILL_DAILY_CAP} awards left today`
+      : `No awards left today — resets tomorrow`;
+  }
+}
+
+async function submitCompensationBonus(){
+  const ok = await awardCompensationBonus();
+  if(ok){
+    alert(`${COMPENSATION_BONUS_AMOUNT} points sent! ${STUDENT_NAME} will see the celebration instantly if the app is open.`);
+    renderGoodwillTab();
+  }
+}
+
+async function submitGoodwillAward(){
+  const amount = document.getElementById("goodwillAmountInput")?.value;
+  const custom = document.getElementById("goodwillReasonCustom")?.value || "";
+  const select = document.getElementById("goodwillReasonSelect")?.value || "";
+  const reason = custom.trim() || (select && select!=="custom" ? select : "");
+  const ok = await awardGoodwillPoints(amount, reason);
+  if(ok){
+    alert(`Sent! ${STUDENT_NAME} will see the celebration instantly if the app is open.`);
+    document.getElementById("goodwillReasonCustom").value = "";
+    document.getElementById("goodwillReasonSelect").value = "";
+    renderGoodwillTab();
+  }
 }
 
 async function buildScoreboard(){
@@ -7941,17 +8292,29 @@ function buildReviseReciteButton(idx, q){
       <div class="dist-input-grid">
         <div>
           <div class="dist-input-label">${entry.termA}</div>
-          <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicA-${idx}" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button></div>
+          <div class="recite-ref-text">${entry.answerA.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
+          <div class="voice-input-row">
+            <button type="button" class="btn-mic" id="reciteMicA-${idx}" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button>
+            <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInputA-${idx}')">🗑 Clear</button>
+          </div>
           <textarea class="answer-textarea" id="reciteInputA-${idx}" style="min-height:70px" placeholder="Read ${entry.termA} aloud, or type it…"></textarea>
         </div>
         <div>
           <div class="dist-input-label">${entry.termB}</div>
-          <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMicB-${idx}" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button></div>
+          <div class="recite-ref-text">${entry.answerB.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
+          <div class="voice-input-row">
+            <button type="button" class="btn-mic" id="reciteMicB-${idx}" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button>
+            <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInputB-${idx}')">🗑 Clear</button>
+          </div>
           <textarea class="answer-textarea" id="reciteInputB-${idx}" style="min-height:70px" placeholder="Read ${entry.termB} aloud, or type it…"></textarea>
         </div>
       </div>`
     : `
-      <div class="voice-input-row"><button type="button" class="btn-mic" id="reciteMic-${idx}" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button></div>
+      <div class="recite-ref-text">${entry.answer.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
+      <div class="voice-input-row">
+        <button type="button" class="btn-mic" id="reciteMic-${idx}" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button>
+        <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInput-${idx}')">🗑 Clear</button>
+      </div>
       <textarea class="answer-textarea" id="reciteInput-${idx}" style="min-height:90px" placeholder="Read the answer above aloud, or type it…"></textarea>`;
   return `<button class="revise-spelling-cta" style="margin-top:12px" onclick="toggleRecitePanel(${idx})">
       <div>
@@ -7978,6 +8341,16 @@ function buildReviseReciteButton(idx, q){
       <button class="btn-check" id="reciteCheckBtn-${idx}" style="margin-top:10px;padding:9px 18px;font-size:13px" onclick="checkRecite(${idx})">Check</button>
       <div id="reciteResult-${idx}" style="margin-top:10px"></div>
     </div>`;
+}
+
+// Instantly wipes one textarea's content mid-attempt — for when the mic
+// mis-transcribed something and the student wants a clean slate without
+// waiting to press Check first (that's what Try Again is for, after the
+// fact; this is for clearing DURING an attempt, before checking at all).
+function clearReciteInput(targetId){
+  if(typeof stopVoiceInput==="function") stopVoiceInput();
+  const ta = document.getElementById(targetId);
+  if(ta){ ta.value = ""; ta.focus(); }
 }
 
 // Enables/disables the Check button, mic buttons, and textarea(s) together —
@@ -8069,11 +8442,22 @@ function toggleRecitePanel(idx){
   if(opening) openRecitePanel(idx); else closeRecitePanel(idx);
 }
 
+// The original answer/dist-table sits above the button in the main card —
+// tagged with this same idx back when it was rendered. Hidden while the
+// panel's open since the panel now shows its own copy right next to the
+// mic; otherwise the same text shows twice on screen at once.
+function getReciteOriginalAnswerEl(idx){
+  const entry = _reviseRecitePool[idx];
+  return document.getElementById(entry && entry.qtype==="distinguish" ? `revise-dist-table-${idx}` : `revise-answer-${idx}`);
+}
+
 function openRecitePanel(idx){
   const panel = document.getElementById(`recitePanel-${idx}`);
   const entry = _reviseRecitePool[idx];
   if(!panel || !entry) return;
   panel.style.display = "block";
+  const origEl = getReciteOriginalAnswerEl(idx);
+  if(origEl) origEl.style.display = "none";
   setReciteInputsEnabled(idx, entry, true); // fresh open — always start unlocked, in case it was left locked from a check last time
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
@@ -8089,6 +8473,8 @@ function closeRecitePanel(idx){
   if(typeof stopVoiceInput==="function") stopVoiceInput();
   stopReciteTimer();
   if(panel) panel.style.display = "none";
+  const origEl = getReciteOriginalAnswerEl(idx);
+  if(origEl) origEl.style.display = "";
 }
 
 // Clears the attempt and restarts the timer for a fresh, fairly-timed re-read.
@@ -8224,101 +8610,6 @@ function showReciteCelebration(){
   }, 1800);
 }
 
-async function openSpellingGame(){
-  const root = document.getElementById("spellingGameRoot");
-  if(!root) return;
-  // Reset the panel title in case it was last used for a lesson-scoped round
-  const titleEl = document.querySelector("#spellingPanel .report-title");
-  if(titleEl) titleEl.textContent = "🔤 Spelling Game";
-  if(!window._fb || !currentUserPhone){
-    root.innerHTML = "<p style='color:var(--muted)'>The spelling game needs an internet connection.</p>";
-    return;
-  }
-  root.innerHTML = "Loading your past mistakes…";
-
-  const { db, collection, query, orderBy, getDocs } = window._fb;
-  const snap = await getDocs(query(collection(db,"sessions",currentUserPhone,"spellErrors"), orderBy("ts","desc")));
-
-  if(snap.empty){
-    root.innerHTML = `
-      <div style="text-align:center;padding:30px 16px">
-        <div style="font-size:40px;margin-bottom:10px">🎉</div>
-        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Practice Test, any misspelled words will show up here for you to practise.</p>
-      </div>`;
-    return;
-  }
-
-  // Dedupe by the correct spelling PER SUBJECT, keep most recent lesson, count repeats
-  const bySubjWord = {};
-  snap.forEach(d=>{
-    const e = d.data();
-    const key = (e.correct||"").toLowerCase().trim();
-    if(!key) return;
-    const subj = e.subject || "Other";
-    if(!bySubjWord[subj]) bySubjWord[subj] = {};
-    if(!bySubjWord[subj][key]) bySubjWord[subj][key] = { word: e.correct, lessonTitle: e.lessonTitle, missCount: 0 };
-    bySubjWord[subj][key].missCount++;
-  });
-
-  _spellingAllBySubject = {};
-  Object.keys(bySubjWord).forEach(subj=>{
-    _spellingAllBySubject[subj] = Object.values(bySubjWord[subj]).sort((a,b)=>b.missCount - a.missCount);
-  });
-
-  if(!Object.keys(_spellingAllBySubject).length){
-    root.innerHTML = `
-      <div style="text-align:center;padding:30px 16px">
-        <div style="font-size:40px;margin-bottom:10px">🎉</div>
-        <p style="color:var(--muted)">No spelling mistakes recorded yet — once you write a few answers in Practice Mode or a Practice Test, any misspelled words will show up here for you to practise.</p>
-      </div>`;
-    return;
-  }
-
-  renderSpellingSubjectPicker(root);
-}
-
-// Shows one tile per subject with its own mistake count — student picks which
-// subject to practise so the words stay relevant to what they're studying now.
-function renderSpellingSubjectPicker(root){
-  const subjects = Object.keys(_spellingAllBySubject);
-  const totalWords = subjects.reduce((a,s)=>a+_spellingAllBySubject[s].length, 0);
-
-  if(subjects.length === 1){
-    // Only one subject has mistakes — skip the picker, go straight in
-    startSpellingSubject(subjects[0]);
-    return;
-  }
-
-  root.innerHTML = `
-    <div style="text-align:center;padding:16px 4px">
-      <div style="font-size:36px;margin-bottom:8px">🔤</div>
-      <h3 style="font-family:Georgia,serif;color:var(--navy);margin-bottom:4px">Spelling Practice</h3>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:18px">${totalWords} word${totalWords!==1?"s":""} from your mistakes — choose a subject to practise</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${subjects.map(subj=>{
-          const icon = DATA[subj]?.icon || "📚";
-          const count = _spellingAllBySubject[subj].length;
-          return `<button onclick="startSpellingSubject('${subj.replace(/'/g,"\\'")}')"
-            style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--parchment);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-family:inherit;text-align:left">
-            <span style="font-size:14px;font-weight:700;color:var(--navy)">${icon} ${subj}</span>
-            <span style="font-size:12px;color:var(--muted);font-weight:700">${count} word${count!==1?"s":""} →</span>
-          </button>`;
-        }).join("")}
-      </div>
-    </div>`;
-}
-
-function startSpellingSubject(subject){
-  _spellingWords = _spellingAllBySubject[subject] || [];
-  _spellingSubject = subject;
-  if(!_spellingWords.length) return;
-  _spellingIdx = 0;
-  _spellingScore = 0;
-  _spellingRoundSize = Math.min(10, _spellingWords.length);
-  const root = document.getElementById("spellingGameRoot");
-  renderSpellingRoundIntro(root);
-}
-
 function renderSpellingRoundIntro(root){
   const icon = DATA[_spellingSubject]?.icon || "🔤";
   root.innerHTML = `
@@ -8330,7 +8621,6 @@ function renderSpellingRoundIntro(root){
         This round: ${_spellingRoundSize} word${_spellingRoundSize!==1?"s":""}, starting with the ones you've missed most. <b>+1 point</b> per correct spelling.
       </p>
       <button onclick="startSpellingRound()" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Start ▶</button>
-      ${Object.keys(_spellingAllBySubject).length>1 ? `<div style="margin-top:12px"><button onclick="renderSpellingSubjectPicker(document.getElementById('spellingGameRoot'))" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">← choose a different subject</button></div>` : ""}
     </div>`;
 }
 
@@ -8424,9 +8714,19 @@ function renderSpellingRoundResult(root){
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
         ${remaining>0 ? `${remaining} more word${remaining!==1?"s":""} in ${_spellingSubject} still to practise.` : `You've covered every word in ${_spellingSubject}!`}
       </p>
-      <button onclick="startSpellingSubject('${(_spellingSubject||"").replace(/'/g,"\\'")}')" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;margin-right:8px">Play Again</button>
-      ${Object.keys(_spellingAllBySubject).length>1 ? `<button onclick="renderSpellingSubjectPicker(document.getElementById('spellingGameRoot'))" style="padding:12px 20px;background:var(--parchment);color:var(--navy);border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Other Subject</button>` : ""}
+      <button onclick="restartCurrentSpellingRound()" style="padding:12px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;margin-right:8px">Play Again</button>
     </div>`;
+}
+
+// Restarts a fresh round using whichever word set is already loaded (the
+// current lesson/question's spelling words) — replaces the old multi-subject
+// "startSpellingSubject" now that the standalone cross-subject game is retired.
+function restartCurrentSpellingRound(){
+  if(!_spellingWords || !_spellingWords.length) return;
+  _spellingIdx = 0;
+  _spellingScore = 0;
+  _spellingRoundSize = Math.min(10, _spellingWords.length);
+  renderSpellingRoundIntro(document.getElementById("spellingGameRoot"));
 }
 
 // Pull both collections once and assemble a downloadable HTML report (admin only)
