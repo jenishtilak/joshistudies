@@ -2074,6 +2074,7 @@ let scores         = {};        // "lessonId:qtype" → avg%
 // Mode
 // ── SESSION LOG ──
 let sessionLog = [];
+let _answeredInPartsMode = false; // Write in Parts no longer auto-combines/auto-submits, so this stays false — a finished parts-practice answer is now a genuine unaided attempt and earns mastery normally.
 const sessionSpellErrors = []; // {wrong, correct, lessonTitle, qtype} — const, never reassign (clear via .length=0 if needed)
 const _sessionSpellErrorsPush = sessionSpellErrors.push.bind(sessionSpellErrors);
 sessionSpellErrors.push = function(entry){
@@ -3486,14 +3487,8 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
   const placeholder = currentMode==="exam" ? (isParagraph ? "Write a detailed answer…" : "Write your answer…") : "Tap 👁 above, then close it to start writing…";
   const minH = isParagraph ? 180 : 120;
   const prevAttempt = previousAttempts[getPrevAttemptKey(currentQIndex)];
-  const peeksUsed = hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0;
-  const peeksLeft = MAX_HINTS - peeksUsed;
-  const peekLabel = peeksLeft<=0
-    ? "No peeks left"
-    : peeksUsed===0
-      ? "👁 View Model Answer (free before you start writing)"
-      : `👁 View Model Answer (${peeksLeft} left, caps score at ${HINT_SCORE_CAP[peeksUsed]}%)`;
-  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" id="mainPeekBtn" onclick="togglePeek()" ${peeksLeft<=0&&!prevAttempt?"disabled":""}>${peekLabel}</button>
+  const peekState = peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" id="mainPeekBtn" onclick="togglePeek()" ${peekState.disabled&&!prevAttempt?"disabled":""}>${peekState.label}</button>
        <div class="peek-panel" id="peekPanel">
          ${prevAttempt && prevAttempt.type==="text" ? `
            <div class="peek-label" style="color:var(--red)">Your Previous Attempt</div>
@@ -3644,7 +3639,7 @@ function renderPartsStep(){
       <div class="q-num">${i+1}</div>
       <div class="q-text">${s.originalQuestion}</div>
     </div>
-    <button class="btn-peek" id="partPeekBtn" onclick="togglePartPeek()">👁 View Model Answer for this part</button>
+    <button class="btn-peek" id="partPeekBtn" onclick="togglePartPeek()" ${peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0).disabled?"disabled":""}>${peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0).disabled ? "No peeks left" : `👁 View Model Answer for this part (${MAX_HINTS - (hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0)} left)`}</button>
     <div class="peek-panel" id="peekPanel">
       <div class="peek-label">Model Answer — Part ${i+1}</div>
       <div class="peek-text">${(s.parts[i]||"").replace(/</g,"&lt;")}</div>
@@ -3657,7 +3652,7 @@ function renderPartsStep(){
       </div>
       <div class="answer-actions" style="display:flex;gap:8px;margin-top:6px">
         ${i>0 ? `<button class="btn-skip" onclick="goToPart(${i-1})">← Back</button>` : ""}
-        <button class="btn-check" onclick="goToPart(${i+1})" style="flex:1">${i<total-1 ? "Next part →" : "Combine & Finish ✓"}</button>
+        <button class="btn-check" onclick="goToPart(${i+1})" style="flex:1">${i<total-1 ? "Next part →" : "Now Write It Whole →"}</button>
       </div>
     </div>
     <div style="display:flex;gap:6px;justify-content:center;margin-top:14px">
@@ -3693,11 +3688,10 @@ function togglePartPeek(){
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
     if(b){
-      const key = getPrevAttemptKey(currentQIndex);
-      const used = hintsUsedByQuestion[key] || 0;
-      const left = MAX_HINTS - used;
-      b.textContent = left<=0 ? "No peeks left" : "👁 View Model Answer for this part";
-      b.disabled = left<=0;
+      const peekState = peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+      const left = MAX_HINTS - (hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+      b.textContent = peekState.disabled ? "No peeks left" : `👁 View Model Answer for this part (${left} left)`;
+      b.disabled = peekState.disabled;
       b.classList.remove("peeking");
     }
   }
@@ -3711,6 +3705,18 @@ function goToPart(targetIdx){
   if(input) s.written[s.currentPart] = input.value;
 
   if(targetIdx >= s.parts.length){
+    // Don't allow finishing until every part actually has something written —
+    // previously this silently dropped any empty parts and combined
+    // whatever existed, which meant "Combine & Finish" could produce an
+    // answer missing entire sections without ever telling him.
+    const emptyIdx = s.written.findIndex(w => !w || !w.trim());
+    if(emptyIdx !== -1){
+      s.currentPart = emptyIdx;
+      renderPartsStep();
+      const fb = document.getElementById("partFeedback");
+      if(fb) fb.innerHTML = `<div style="color:var(--red);font-size:12.5px;margin-top:8px;font-weight:700">✋ Write this part before finishing — every part needs something written first.</div>`;
+      return;
+    }
     finishPartsMode();
     return;
   }
@@ -3720,28 +3726,27 @@ function goToPart(targetIdx){
 
 // Combines everything written across all parts back into the single answer
 // textarea, then returns to the normal question view so it can be checked
-// exactly the same way as a normal answer.
-// Called when the student finishes the LAST part — combines everything written
-// and scores it immediately, exactly as if they'd written it all in one box.
-// No extra "Check Answer" click needed; finishing the parts IS the submission.
-let _answeredInPartsMode = false; // set true when finishPartsMode fires — mastery not awarded
-
+// Called when the student finishes the LAST part — rather than stitching
+// together and auto-submitting what was written piece-by-piece, this hands
+// back a genuinely BLANK textarea: writing each part separately was
+// practice/scaffolding, but the real test is whether he can now write the
+// whole answer himself, unaided, in one go. Nothing is auto-checked — he
+// writes it fresh and hits Check Answer himself, same as any normal
+// question, and this time it's a genuine full attempt, so it earns mastery
+// normally (unlike the old auto-combined version, which deliberately didn't).
 function finishPartsMode(){
   const s = partsModeState;
   if(!s) return;
-  const combined = s.written.map(w=>w.trim()).filter(Boolean).join(" ");
-  _answeredInPartsMode = true; // signal to logQuestion: no mastery for this attempt
   partsModeState = null;
   renderCurrentQuestion();
   setTimeout(()=>{
     const ta = document.getElementById("answerInput");
     if(ta){
-      ta.value = combined;
-      ta.disabled = false; // unlock immediately — they've already written it, no need to peek again
+      ta.value = "";
+      ta.disabled = false; // unlock immediately — he just practiced each part, no need to peek again before writing the whole thing
+      ta.focus();
     }
-    fbLiveState({ currentAnswer: combined, typing:false });
-    checkTextAnswer(); // score it right away
-    _answeredInPartsMode = false; // reset after checkTextAnswer runs
+    fbLiveState({ currentAnswer: "", typing:false });
   }, 0);
 }
 
@@ -3769,7 +3774,7 @@ function exitPartsMode(){
 // Records that the "View Model Answer" peek was used once — the single source
 // of truth for the score cap, replacing what used to be a separate "Stuck? Peek"
 // button system. There's only one peek mechanism now: the existing View Model
-// Answer button doubles as the help button, capped at MAX_HINTS uses per question.
+// Answer button doubles as the help button — free and unlimited now, see applyHintPenalty above.
 function recordPeekUsed(){
   const key = getPrevAttemptKey(currentQIndex);
   const used = hintsUsedByQuestion[key] || 0;
@@ -3911,24 +3916,15 @@ function togglePeek(){
       b.classList.add("peeking"); // visually greyed, but still clickable so it can be closed
     }
   } else {
-    // Looking at the model answer before writing anything is free — viewing it
-    // to understand the question doesn't count against the score. It only
-    // starts costing once they've actually begun writing their own answer,
-    // since at that point a peek is genuinely "checking/copying" rather than
-    // "reading the question's expectations before starting."
+    // Score is never affected by peeking — only the count is capped, and only
+    // so it stays a genuine "I need help" moment rather than clicking through.
     const hadWrittenSomething = !!(ta && ta.value && ta.value.trim());
     if(hadWrittenSomething) recordPeekUsed();
     if(ta){ ta.disabled=false; ta.focus(); }
     if(b){
-      const key = getPrevAttemptKey(currentQIndex);
-      const used = hintsUsedByQuestion[key] || 0;
-      const left = MAX_HINTS - used;
-      b.textContent = left<=0
-        ? "No peeks left"
-        : used===0
-          ? "👁 View Model Answer (free before you start writing)"
-          : `👁 View Model Answer (${left} left, caps score at ${HINT_SCORE_CAP[used]}%)`;
-      b.disabled = left<=0;
+      const peekState = peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+      b.textContent = peekState.label;
+      b.disabled = peekState.disabled;
       b.classList.remove("peeking");
     }
   }
@@ -4004,9 +4000,8 @@ function checkTextAnswer(){
 
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const lbl=pct>=80?"Great answer!":pct>=50?"Good effort — almost there!":"Keep practising!";
-  const hintPenaltyApplied = rawPct - pct;
   const hintNote = hintsUsed>0
-    ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${hintsUsed} time${hintsUsed!==1?"s":""} — score capped at ${HINT_SCORE_CAP[hintsUsed-1]}% = ${pct}%</div>`
+    ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${hintsUsed} time${hintsUsed!==1?"s":""} — no effect on your score</div>`
     : "";
 
   const sb = pct>=MIN_SCORE_FOR_GOAL_CREDIT ? getSpeedBonus(currentQType, txtElapsed) : null;
@@ -4049,15 +4044,8 @@ function reportDistLiveState(){
 // ── DISTINGUISH BETWEEN ──
 function renderDistinguish(q, qnum, isLast){
   const prevAttempt = previousAttempts[getPrevAttemptKey(currentQIndex)];
-  const key = getPrevAttemptKey(currentQIndex);
-  const peeksUsed = hintsUsedByQuestion[key] || 0;
-  const peeksLeft = MAX_HINTS - peeksUsed;
-  const peekLabel = peeksLeft<=0
-    ? "No peeks left"
-    : peeksUsed===0
-      ? "👁 View Model Answer (free before you start writing)"
-      : `👁 View Model Answer (${peeksLeft} left, caps score at ${HINT_SCORE_CAP[peeksUsed]}%)`;
-  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" id="mainPeekBtn" onclick="togglePeekDist()" ${peeksLeft<=0&&!prevAttempt?"disabled":""}>${peekLabel}</button>
+  const peekState = peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+  const peekBtn = currentMode!=="exam" ? `<button class="btn-peek" id="mainPeekBtn" onclick="togglePeekDist()" ${peekState.disabled&&!prevAttempt?"disabled":""}>${peekState.label}</button>
        <div class="peek-panel" id="peekPanel">
          ${prevAttempt && prevAttempt.type==="distinguish" ? `
            <div class="peek-label" style="color:var(--red)">Your Previous Attempt — ${q.termA}</div>
@@ -4145,15 +4133,9 @@ function togglePeekDist(){
     if(taA){ taA.disabled=false; taA.focus(); }
     if(taB) taB.disabled=false;
     if(b){
-      const key = getPrevAttemptKey(currentQIndex);
-      const used = hintsUsedByQuestion[key] || 0;
-      const left = MAX_HINTS - used;
-      b.textContent = left<=0
-        ? "No peeks left"
-        : used===0
-          ? "👁 View Model Answer (free before you start writing)"
-          : `👁 View Model Answer (${left} left, caps score at ${HINT_SCORE_CAP[used]}%)`;
-      b.disabled = left<=0;
+      const peekState = peekButtonState(hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)] || 0);
+      b.textContent = peekState.label;
+      b.disabled = peekState.disabled;
       b.classList.remove("peeking");
     }
   }
@@ -4408,7 +4390,7 @@ function checkDistinguish(){
 
   const cls=pct>=80?"perfect":pct>=50?"good":"poor";
   const hintNote = peeksUsed>0
-    ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${peeksUsed} time${peeksUsed!==1?"s":""} — score capped above</div>`
+    ? `<div class="score-detail" style="color:#8a6500;margin-top:4px">👁 Peeked the answer ${peeksUsed} time${peeksUsed!==1?"s":""} — no effect on your score</div>`
     : "";
   const distQtObj = QTYPES.find(t=>t.id==="distinguish");
   const distSpellBtnHTML = distQtObj ? buildReviseSpellButton(getWrongSpellingWords([...diffA, ...diffB]), currentLesson, distQtObj, getOriginalQIndex(currentQIndex)) : "";
@@ -4507,23 +4489,32 @@ function hidePeek(){
 
 // ── TRY AGAIN (single question) ──
 let previousAttempts = {}; // key: lessonId+":"+qtype+":"+qIndex → {type, userText/userTextA/userTextB}
-let hintsUsedByQuestion = {}; // key: same as previousAttempts → number of times the answer was peeked at (text-answer types only)
-const MAX_HINTS = 2; // two chances to peek the full answer
-// Simple cap-only rule: peeking the full answer once caps the question's score
-// at 70%, peeking twice caps it at 50% — no separate percentage deduction layered
-// on top, since the cap alone already says everything that needs to be said.
-const HINT_SCORE_CAP = [70, 50];
+let hintsUsedByQuestion = {}; // key: same as previousAttempts → number of times the answer was peeked at
+const MAX_HINTS = 2; // two peeks per question — a limit, but a score-free one (see below)
 
-// Applies the peek cap to a raw score — seeing the full answer (especially twice)
-// means the question can't score as if it were answered purely from memory.
+// The score penalty is permanently removed — it was discouraging him from
+// using View Model Answer at all, even when actually looking at it would
+// have helped him learn, which was the opposite of the intent. Peeking
+// NEVER affects the score, no matter how many times. The count is kept
+// capped at MAX_HINTS purely so it stays a genuine "I need help" moment
+// rather than something to click through absentmindedly — but that limit
+// carries no penalty of any kind once it's reached.
 function applyHintPenalty(rawPct, hintsUsed){
-  if(hintsUsed<=0) return rawPct;
-  const cap = HINT_SCORE_CAP[Math.min(hintsUsed,HINT_SCORE_CAP.length)-1];
-  return Math.min(cap, rawPct);
+  return rawPct;
 }
 
 function getPrevAttemptKey(idx){
   return (currentLesson?.id||"")+":"+currentQType+":"+idx;
+}
+
+// Shared by every "View Model Answer" button — same label logic everywhere,
+// so the free-but-limited messaging can't drift out of sync between spots.
+function peekButtonState(used){
+  const left = MAX_HINTS - used;
+  return {
+    disabled: left<=0,
+    label: left<=0 ? "No peeks left" : `👁 View Model Answer (free — ${left} left)`
+  };
 }
 
 function tryAgainQuestion(){
