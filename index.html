@@ -495,7 +495,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(224,92,92,.35)}50%{box-shadow:0 0 0 6px rgba(224,92,92,0)}}
 .mic-hint{font-size:11px;color:var(--muted)}
 .recite-panel{margin-top:10px;padding:12px;background:var(--parchment);border-radius:10px;border:1.5px dashed var(--border)}
-.recite-ref-text{font-size:13.5px;line-height:1.7;color:var(--text);background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;white-space:pre-line}
 .btn-recite-clear{padding:8px 12px;background:none;color:var(--muted);border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
 .btn-recite-clear:hover{border-color:var(--red);color:var(--red)}
 .recite-panel .dist-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -2310,6 +2309,8 @@ function openRevise(lesson){
   document.getElementById("toggleRevise")?.classList.add("active");
   document.getElementById("togglePractice")?.classList.remove("active");
   document.getElementById("modeToggle").style.display="flex";
+  const _msb2=document.getElementById("mockSubmitBar");
+  if(_msb2) _msb2.style.display="none"; // only ever meant for mock exam mode
   const _qt2=document.getElementById("quizTimer"); if(_qt2) _qt2.textContent="";
   renderRevise(lesson);
 }
@@ -2467,6 +2468,8 @@ function startLesson(lesson){
   document.getElementById("togglePractice")?.classList.add("active");
   document.getElementById("toggleRevise")?.classList.remove("active");
   document.getElementById("modeToggle").style.display="flex";
+  const _msb=document.getElementById("mockSubmitBar");
+  if(_msb) _msb.style.display="none"; // only ever meant for mock exam mode — leftover from a previous test otherwise
   startQTypeSession();
 }
 
@@ -8263,7 +8266,6 @@ function buildReviseReciteButton(idx, q){
       <div class="dist-input-grid">
         <div>
           <div class="dist-input-label">${entry.termA}</div>
-          <div class="recite-ref-text">${entry.answerA.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
           <div class="voice-input-row">
             <button type="button" class="btn-mic" id="reciteMicA-${idx}" onclick="toggleVoiceInput('reciteInputA-${idx}', this)">🎤 Speak</button>
             <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInputA-${idx}')">🗑 Clear</button>
@@ -8272,7 +8274,6 @@ function buildReviseReciteButton(idx, q){
         </div>
         <div>
           <div class="dist-input-label">${entry.termB}</div>
-          <div class="recite-ref-text">${entry.answerB.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
           <div class="voice-input-row">
             <button type="button" class="btn-mic" id="reciteMicB-${idx}" onclick="toggleVoiceInput('reciteInputB-${idx}', this)">🎤 Speak</button>
             <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInputB-${idx}')">🗑 Clear</button>
@@ -8281,7 +8282,6 @@ function buildReviseReciteButton(idx, q){
         </div>
       </div>`
     : `
-      <div class="recite-ref-text">${entry.answer.replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>
       <div class="voice-input-row">
         <button type="button" class="btn-mic" id="reciteMic-${idx}" onclick="toggleVoiceInput('reciteInput-${idx}', this)">🎤 Speak</button>
         <button type="button" class="btn-recite-clear" onclick="clearReciteInput('reciteInput-${idx}')">🗑 Clear</button>
@@ -8413,22 +8413,11 @@ function toggleRecitePanel(idx){
   if(opening) openRecitePanel(idx); else closeRecitePanel(idx);
 }
 
-// The original answer/dist-table sits above the button in the main card —
-// tagged with this same idx back when it was rendered. Hidden while the
-// panel's open since the panel now shows its own copy right next to the
-// mic; otherwise the same text shows twice on screen at once.
-function getReciteOriginalAnswerEl(idx){
-  const entry = _reviseRecitePool[idx];
-  return document.getElementById(entry && entry.qtype==="distinguish" ? `revise-dist-table-${idx}` : `revise-answer-${idx}`);
-}
-
 function openRecitePanel(idx){
   const panel = document.getElementById(`recitePanel-${idx}`);
   const entry = _reviseRecitePool[idx];
   if(!panel || !entry) return;
   panel.style.display = "block";
-  const origEl = getReciteOriginalAnswerEl(idx);
-  if(origEl) origEl.style.display = "none";
   setReciteInputsEnabled(idx, entry, true); // fresh open — always start unlocked, in case it was left locked from a check last time
   const resultEl = document.getElementById(`reciteResult-${idx}`);
   if(resultEl) resultEl.innerHTML = "";
@@ -8444,8 +8433,6 @@ function closeRecitePanel(idx){
   if(typeof stopVoiceInput==="function") stopVoiceInput();
   stopReciteTimer();
   if(panel) panel.style.display = "none";
-  const origEl = getReciteOriginalAnswerEl(idx);
-  if(origEl) origEl.style.display = "";
 }
 
 // Clears the attempt and restarts the timer for a fresh, fairly-timed re-read.
