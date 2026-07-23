@@ -2655,7 +2655,10 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     // count as "mastered" either — otherwise peeking would quietly become a
     // way to mark hard questions as done without ever really learning them.
     const wasPeeked = (hintsUsedByQuestion[getPrevAttemptKey(currentQIndex)]||0) > 0;
-    if(pct >= 80 && !_answeredInPartsMode && !wasPeeked) _masteredQuestionKeys.add(qKey);
+    if(pct >= 80 && !_answeredInPartsMode && !wasPeeked){
+      _masteredQuestionKeys.add(qKey);
+      checkMilestonesAfterMastery(); // fire-and-forget — checks if this update just completed a Social Science milestone
+    }
     if(_answeredInPartsMode && pct >= 80) console.log("Parts mode: score="+pct+"% but mastery not awarded — student must answer all at once");
     if(wasPeeked && pct >= 80) console.log("Peeked at the answer: score="+pct+"% but mastery not awarded — needs an unaided attempt");
 
@@ -5975,7 +5978,7 @@ async function renderTodayStudySummary(){
     const dayCutoff = Date.now() - 24*60*60*1000;
     const today = allScoredEntries.filter(e =>
       e.ts >= dayCutoff && e.qtype!=="goodwill" && e.qtype!=="compensation" &&
-      e.qtype!=="newtry" && !(e.qtype||"").startsWith("recite_")
+      e.qtype!=="newtry" && e.qtype!=="milestone" && !(e.qtype||"").startsWith("recite_")
     );
     if(!today.length){
       banner.innerHTML = `<div style="background:var(--parchment);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--muted);text-align:center">No questions studied yet today.</div>`;
@@ -6044,6 +6047,7 @@ function closePointsHistoryPanel(){
 function describePointsEntry(e){
   if(e.qtype==="goodwill") return { icon:"🎁", label: e.lessonTitle || "Goodwill Points" };
   if(e.qtype==="compensation") return { icon:"🎁", label: e.lessonTitle || "Compensation Bonus" };
+  if(e.qtype==="milestone") return { icon:"🏅", label: e.lessonTitle || "Milestone Complete" };
   if(e.qtype==="newtry") return { icon:"🌱", label: "Tried a brand-new question" };
   if(e.qtype && e.qtype.indexOf("recite_fast_")===0) return { icon:"⚡", label: `Read & Memorise — fast, accurate read (${e.lessonTitle||""})` };
   if(e.qtype && e.qtype.indexOf("recite_good_")===0) return { icon:"🕐", label: `Read & Memorise — good pace (${e.lessonTitle||""})` };
@@ -6285,8 +6289,40 @@ async function buildStudentScoreboard(){
     }
   });
 
-  totalBox.innerHTML = renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints);
+  totalBox.innerHTML = renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints) + renderMilestonesHTML();
   celebrateDailyGoalIfJustCompleted(agg.allUnique, allScoredEntries, totalTestPoints);
+}
+
+// A card showing progress toward each Social Science milestone — which
+// lessons are genuinely mastered (not peeked-through) toward each batch,
+// and how many milestones are complete overall.
+function renderMilestonesHTML(){
+  const milestones = buildSocialMilestones();
+  if(!milestones.length) return "";
+  let stillInOrder = true; // flips false at the first milestone whose lessons aren't all mastered yet
+  let completeCount = 0;
+  const rows = milestones.map(m=>{
+    const doneLessons = m.lessons.filter(l=>isLessonFullyMastered(l)).length;
+    const lessonsMastered = doneLessons === m.lessons.length;
+    const isComplete = stillInOrder && lessonsMastered; // only counts as "done" if everything before it is genuinely done too, in order
+    const locked = !stillInOrder;
+    if(!lessonsMastered) stillInOrder = false; // this and everything after is gated behind finishing this one first
+    if(isComplete) completeCount++;
+    const icon = isComplete ? "🏅" : locked ? "🔒" : "⬜";
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);${locked?'opacity:.5':''}">
+      <div style="flex:1;padding-right:10px">
+        <div style="font-weight:700;color:var(--navy);font-size:12.5px">${icon} Milestone ${m.num}${locked?` <span style="font-weight:400;color:var(--muted)">(unlocks after Milestone ${m.num-1})</span>`:""}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px">${m.lessons.map(l=>l.title).join(" · ")}</div>
+      </div>
+      <div style="font-weight:800;font-size:13px;color:${isComplete?"var(--green)":"var(--muted)"};white-space:nowrap">${doneLessons}/${m.lessons.length}</div>
+    </div>`;
+  }).join("");
+  return `<div style="margin-top:16px;background:var(--parchment);border-radius:12px;padding:12px 14px;color:var(--text)">
+    <details>
+      <summary style="list-style:none;cursor:pointer;font-weight:800;color:var(--navy);font-size:13px;user-select:none">🏅 Milestones (${completeCount}/${milestones.length}) — +${MILESTONE_POINTS} pts each</summary>
+      <div style="margin-top:8px">${rows}</div>
+    </details>
+  </div>`;
 }
 
 // Fires a fireworks burst the first time the daily goal is seen as complete
@@ -6364,11 +6400,11 @@ function aggregateScoreboardData(logsSnap, examSnap){
       if(!bySession[sid].lastTs  || tsMs > bySession[sid].lastTs)  bySession[sid].lastTs  = tsMs;
     }
 
-    // Admin-awarded goodwill/compensation bonuses aren't a real answered
-    // question — they still show up in the session's activity list above,
-    // and still count toward Growth Points further down, but shouldn't
-    // inflate "unique questions covered" or the attempt count.
-    if(e.qtype!=="goodwill" && e.qtype!=="compensation"){
+    // Admin-awarded goodwill/compensation bonuses (and milestone bonuses)
+    // aren't a real answered question — they still show up in the session's
+    // activity list above, and still count toward Growth Points further
+    // down, but shouldn't inflate "unique questions covered" or the attempt count.
+    if(e.qtype!=="goodwill" && e.qtype!=="compensation" && e.qtype!=="milestone"){
       allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
       grandAttempts++;
       grandTimeMs += e.timeMs || 0;
@@ -6459,29 +6495,6 @@ function aggregateScoreboardData(logsSnap, examSnap){
 // it should reflect genuine attempts, not just clicking through.
 const MIN_SCORE_FOR_GOAL_CREDIT = 50;
 
-// Renders the "which question types were done in the 6-8am morning window vs
-// the rest of the day" checklist. dailyGoal.eveningChecklist was previously
-// being fully computed and returned but never actually inserted into either
-// Scoreboard's HTML anywhere — this fixes that gap.
-function buildMorningEveningChecklistHTML(dailyGoal, W){
-  function chip(c){
-    var bg=c.done?W+'.18)':W+'.06)';
-    var brd=c.done?'rgba(126,231,135,.4)':W+'.1)';
-    var txt=c.done?'text-decoration:line-through;opacity:.5':'color:'+W+'.85)';
-    return '<div style="display:inline-flex;align-items:center;gap:3px;background:'+bg+';border:1px solid '+brd+';border-radius:5px;padding:2px 6px;margin:2px">'
-      +'<span style="font-size:9px">'+(c.done?'✅':c.icon)+'</span>'
-      +'<span style="font-size:8.5px;'+txt+'">'+c.label+'</span></div>';
-  }
-  var m = dailyGoal.morningChecklist, e = dailyGoal.eveningChecklist;
-  if(!m || !e || !m.total) return '';
-  return '<div style="margin:6px 0 2px">'
-    +'<div style="font-size:10px;font-weight:700;color:'+W+'.5);margin-bottom:4px">🌅 Morning window (6-8am) — '+m.doneCount+'/'+m.total+'</div>'
-    +'<div style="display:flex;flex-wrap:wrap;margin-bottom:8px">'+m.checklist.map(chip).join('')+'</div>'
-    +'<div style="font-size:10px;font-weight:700;color:'+W+'.5);margin-bottom:4px">🌆 Rest of day — '+e.doneCount+'/'+e.total+'</div>'
-    +'<div style="display:flex;flex-wrap:wrap">'+e.checklist.map(chip).join('')+'</div>'
-    +'</div>';
-}
-
 function calcDailyGoal(allScoredEntries){
   const startOfToday = new Date();
   startOfToday.setHours(0,0,0,0);
@@ -6492,21 +6505,6 @@ function calcDailyGoal(allScoredEntries){
   // because e.g. English Grammar has no True/False questions.
   const activeTypes = getActiveQTypes();
   const activeCount = activeTypes.length;
-
-  function buildChecklistForWindow(startHour, endHour){
-    const doneInWindow = new Set();
-    allScoredEntries.forEach(e=>{
-      if(e.ts < todayMs || !e.qtype) return;
-      if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
-      const hour = new Date(e.ts).getHours();
-      const inWindow = startHour===null
-        ? !(hour>=6 && hour<8)
-        : (hour>=startHour && hour<endHour);
-      if(inWindow) doneInWindow.add(e.qtype);
-    });
-    const list = activeTypes.map(qt=>({ id:qt.id, label:qt.label, icon:qt.icon, done:doneInWindow.has(qt.id) }));
-    return { checklist:list, doneCount:list.filter(c=>c.done).length, total:activeCount };
-  }
 
   const doneToday = new Set();
   // Per-subject: which qtypes done today in each subject
@@ -6536,9 +6534,6 @@ function calcDailyGoal(allScoredEntries){
     }));
   });
 
-  const morningChecklist = buildChecklistForWindow(6, 8);
-  const eveningChecklist = buildChecklistForWindow(null, null);
-
   const byDay = {};
   allScoredEntries.forEach(e=>{
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
@@ -6557,7 +6552,7 @@ function calcDailyGoal(allScoredEntries){
     cursor -= 86400000;
   }
 
-  return { checklist, doneCount, total:activeCount, completedToday, streak, morningChecklist, eveningChecklist, subjectChecklists };
+  return { checklist, doneCount, total:activeCount, completedToday, streak, subjectChecklists };
 }
 
 
@@ -6606,10 +6601,14 @@ function calcSessionGoals(allScoredEntries){
     if(e.ts < todayMs || !e.qtype) return;
     if((e.pct??0) < MIN_SCORE_FOR_GOAL_CREDIT) return;
     const hour = new Date(e.ts).getHours();
-    // Morning: 6-7am (early) or 7-8am (late)
-    // Evening: 5pm-10pm (17-21)
-    // Anything else (8am-5pm, after 10pm) does NOT count toward session bonuses
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : hour>=8 ? 'evening' : null;
+    // Morning: 6am (early) or 7am (late)
+    // Evening: 5pm-9pm (17-21)
+    // Anything else (8am-5pm, after 10pm) does NOT count toward session bonuses —
+    // this used to say hour>=8, which incorrectly treated ALL of 8am-11pm as
+    // "evening," so studying right after the morning window (e.g. 9am, 2pm)
+    // was already being credited toward evening completion, well before
+    // evening — which looked exactly like the evening goal wasn't resetting.
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
     if(!bucket) return;
     globalQtypes[bucket].add(e.qtype);
     const subj = e.subject || '';
@@ -6845,7 +6844,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   if(allScoredEntries.length){
     let earned=0, possible=0;
     allScoredEntries.forEach(e=>{
-      if(e.qtype==="goodwill" || e.qtype==="compensation") return; // admin bonuses aren't a measure of academic quality
+      if(e.qtype==="goodwill" || e.qtype==="compensation" || e.qtype==="milestone") return; // bonuses aren't a measure of academic quality
       const m = getMarks(e.qtype||"mcq");
       possible += m;
       earned += m*(e.pct/100);
@@ -6902,7 +6901,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     // amount the admin chose at the time (stored directly on the entry as
     // `marks`) — there's no static per-qtype value for these since the
     // amount is deliberately chosen per-award, not looked up from a table.
-    if(e.qtype==="goodwill" || e.qtype==="compensation"){ growthPoints += (e.marks||0); return; }
+    if(e.qtype==="goodwill" || e.qtype==="compensation" || e.qtype==="milestone"){ growthPoints += (e.marks||0); return; }
     const isRealQType = QTYPES.some(q=>q.id===e.qtype);
     const key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
     // If this entry stored its own exact point value at the moment it was
@@ -6987,23 +6986,6 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       [sessionCount, 'sessions'],
     ].map(function(p){ return '<div style="text-align:center"><div style="font-size:13px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">'+p[0]+'</div><div style="font-size:9px;color:'+W+'.4);margin-top:1px">'+p[1]+'</div></div>'; }).join('')
   +'</div>'
-  // Discovery streak — new unique questions today
-  +(function(){
-    var startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
-    var todayMs = startOfToday.getTime();
-    var seenBefore = {};
-    var newToday = 0;
-    allScoredEntries.forEach(function(e){
-      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
-      if(e.ts < todayMs){ seenBefore[key]=true; }
-    });
-    allScoredEntries.forEach(function(e){
-      if(e.ts < todayMs) return;
-      var key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
-      if(!seenBefore[key]){ seenBefore[key]=true; newToday++; }
-    });
-    return newToday > 0 ? '<div style="text-align:center;margin-top:8px;font-size:11px;font-weight:700;color:#7ee787">🆕 '+newToday+' new question'+(newToday!==1?'s':'')+' explored today!</div>' : '';
-  }())
   +'<div style="height:1px;background:'+W+'.1);margin:14px 0"></div>';
 
   // ── SESSION TILES + TIME BONUS (merged per subject) ──
@@ -7042,7 +7024,6 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
     +'</div>';
   }).join('');
   var streakLine = sessionGoals.morningStreak>0?'<div style="font-size:11px;color:var(--gold);font-weight:700;margin-top:2px;margin-bottom:4px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'';
-  var meHTML = buildMorningEveningChecklistHTML(dailyGoal, W);
   var tLabel = '', tBars = '', tFooter = '';
 
   // ── DAILY GOAL bars (tap to expand types) ──
@@ -7103,7 +7084,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
 
-  return hero + sLabel + sRows + streakLine + meHTML + tLabel + tBars + tFooter + gLabel + gBars + gFooter + howToEarn;
+  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + howToEarn;
 }
 
 
@@ -7458,7 +7439,6 @@ async function showWelcomeBackPopup(){
 
   var streakLine = sessionGoals.morningStreak>0
     ?'<div style="font-size:11px;color:'+gold+';font-weight:700;margin-top:2px;margin-bottom:8px">🔥 '+sessionGoals.morningStreak+' day morning streak</div>':'' ;
-  var meHTML = buildMorningEveningChecklistHTML(dailyGoal, W);
 
   var goalFooter = dailyGoal.completedToday
     ?'<div style="font-size:11px;color:#7ee787;font-weight:700;margin-top:6px">🎉 Goal complete!'+(dailyGoal.streak>1?' · 🔥 '+dailyGoal.streak+' day streak':'')+'</div>'
@@ -7480,7 +7460,6 @@ async function showWelcomeBackPopup(){
     +lbl("⏰ Today's Sessions")
     +sessionRows
     +streakLine
-    +meHTML
     +divider
     +lbl('📋 Daily Goal')
     +goalBars
@@ -7644,6 +7623,123 @@ async function awardCompensationBonus(){
     ts: Date.now()
   });
   return true;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MILESTONES — big, rare, motivating rewards for finishing
+//  a whole batch of lessons across Social Science
+// ═══════════════════════════════════════════════════════
+// Milestones 1-5: matching lesson number across Civics/Economics/Geography/
+// History (Milestone 3 = c3+e3+g3+h3, etc.) — built dynamically from the
+// actual lesson lists, not hardcoded, so it stays correct if lessons are
+// ever added. Economics only has 5 lessons total, so once it runs out,
+// remaining lessons from the other three subjects get grouped into batches
+// of 4 for Milestone 6 onward (the very last batch may have fewer than 4,
+// since it's just whatever's left). Social Science only for now.
+const MILESTONE_POINTS = 1000;
+const MILESTONE_SUBJECT_ORDER = ["Civics","Economics","Geography","History"];
+
+function buildSocialMilestones(){
+  const ss = DATA["Social Science"];
+  if(!ss) return [];
+  const lessonLists = MILESTONE_SUBJECT_ORDER.map(p => (ss.parts[p]?.lessons)||[]);
+  if(lessonLists.some(l=>!l.length)) return [];
+  const minLen = Math.min(...lessonLists.map(l=>l.length));
+  const milestones = [];
+  for(let i=0;i<minLen;i++){
+    milestones.push({ num: milestones.length+1, lessons: lessonLists.map(l=>l[i]) });
+  }
+  const remaining = [];
+  lessonLists.forEach(list=>{
+    for(let i=minLen;i<list.length;i++) remaining.push(list[i]);
+  });
+  for(let i=0;i<remaining.length;i+=4){
+    milestones.push({ num: milestones.length+1, lessons: remaining.slice(i,i+4) });
+  }
+  return milestones;
+}
+
+// A lesson counts as "mastered" for milestone purposes only if it has at
+// least one question AND every question across every type has been
+// genuinely mastered (80%+, unaided — same _masteredQuestionKeys set used
+// everywhere else, so a peeked-to-80% score correctly does NOT count here).
+function isLessonFullyMastered(lesson){
+  if(!lesson) return false;
+  let hasAny = false;
+  for(const qt of QTYPES){
+    const qs = lesson.questions[qt.id]||[];
+    for(let i=0;i<qs.length;i++){
+      hasAny = true;
+      const key = `${lesson.id}_${qt.id}_${i}`;
+      if(!_masteredQuestionKeys.has(key)) return false;
+    }
+  }
+  return hasAny;
+}
+
+let _milestonesAwardedCache = null; // {1:true, 2:true, ...} — which milestones have already been paid out, loaded once
+
+async function loadMilestonesAwarded(){
+  if(_milestonesAwardedCache) return _milestonesAwardedCache;
+  if(!window._fb || !currentUserPhone){ _milestonesAwardedCache = {}; return _milestonesAwardedCache; }
+  try{
+    const { db, doc, getDoc } = window._fb;
+    const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","milestonesAwarded"));
+    _milestonesAwardedCache = snap.exists() ? snap.data() : {};
+  }catch(e){ _milestonesAwardedCache = {}; }
+  return _milestonesAwardedCache;
+}
+
+// Called after every mastery update — checks whether that update just
+// completed a milestone, and if so, awards it exactly once, ever.
+async function checkMilestonesAfterMastery(){
+  if(isAdminUser || !window._fb || !currentUserPhone) return;
+  const milestones = buildSocialMilestones();
+  if(!milestones.length) return;
+  const awarded = await loadMilestonesAwarded();
+  for(const m of milestones){
+    if(awarded[m.num]) continue; // already earned — move on to check the next one in sequence
+    // Milestones unlock strictly in order. If this is the first not-yet-
+    // earned milestone and its lessons aren't ALL mastered yet, nothing
+    // after it can be legitimately checked either — even if he's jumped
+    // ahead and happens to have mastered a later milestone's lessons
+    // already (e.g. studied History out of order), it still can't be
+    // awarded until everything before it is genuinely done.
+    if(!m.lessons.every(l => isLessonFullyMastered(l))) break;
+    awarded[m.num] = true; // mark immediately so a rapid double-trigger can't double-award before Firestore round-trips
+    const { db, doc, setDoc } = window._fb;
+    try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","milestonesAwarded"), awarded); }catch(e){}
+    fbLogEntry("logs", {
+      subject:"Social Science", part:"", lessonId:"milestone", lessonTitle:`Milestone ${m.num}: ${m.lessons.map(l=>l.title).join(", ")}`,
+      qtype:"milestone", qIndex: Date.now(), pct:100, timeMs:0, marks: MILESTONE_POINTS
+    });
+    bumpGrowthPointsBadge(MILESTONE_POINTS);
+    showMilestoneCelebration(m.num, m.lessons);
+    // Deliberately no break here — if completing this milestone means the
+    // NEXT one's lessons also happen to already be fully mastered (e.g.
+    // catching up several at once), the loop naturally checks it next,
+    // still awarding strictly in order rather than all at once regardless.
+  }
+}
+
+function showMilestoneCelebration(num, lessons){
+  const overlayId = "milestoneCelebration_"+Date.now();
+  const overlay = document.createElement("div");
+  overlay.id = overlayId;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(26,39,68,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .3s";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:22px;padding:34px 26px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 60px rgba(0,0,0,.4);transform:scale(.8);transition:transform .45s cubic-bezier(.34,1.56,.64,1)">
+      <div style="font-size:58px;margin-bottom:8px;animation:goodwillBounce 1s ease-in-out infinite">🏅</div>
+      <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Milestone ${num} Complete!</div>
+      <div style="font-size:15px;color:var(--text);margin-bottom:14px;line-height:1.6">${lessons.map(l=>l.title).join(" · ")}</div>
+      <div style="background:var(--green-light);color:var(--green);font-weight:900;font-size:26px;padding:12px 24px;border-radius:14px;display:inline-block;margin-bottom:20px">+${MILESTONE_POINTS} Growth Points 🎉</div>
+      <button onclick="document.getElementById('${overlayId}').remove()" style="width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Amazing! →</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{
+    overlay.style.opacity = "1";
+    overlay.firstElementChild.style.transform = "scale(1)";
+  });
 }
 
 // ═══════════════════════════════════════════════════════
