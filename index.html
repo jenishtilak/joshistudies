@@ -6935,9 +6935,15 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     growthPoints += ss.mornStarted  * 10;  // started morning but didn't finish all types
     growthPoints += ss.eveStarted   * 10;  // started evening but didn't finish all types
   });
-  // Speed bonus: count from all stored log entries
+  // Speed bonus: only recompute for OLDER entries that don't already have it
+  // baked into their stored `marks` value (see the marks-based branch above).
+  // This used to recompute and add speed bonus for EVERY entry regardless,
+  // which double-counted it for any entry that already had it included in
+  // `.marks` — quietly inflating the real total beyond what any single
+  // toast ever promised.
   let speedBonusTotal = 0;
   allScoredEntries.forEach(e=>{
+    if(typeof e.marks === "number") return; // already included, don't add it again
     if((e.pct||0) >= MIN_SCORE_FOR_GOAL_CREDIT && e.timeMs){
       const sb = getSpeedBonus(e.qtype, e.timeMs);
       if(sb) speedBonusTotal += sb.points;
@@ -6950,7 +6956,13 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const dailyTimeBonus = calcDailyTimeBonus(allScoredEntries);
   growthPoints += dailyTimeBonus.pointsEarned;
 
-  const lessonMastery = calcLessonMasteryBonus(); // for display only, points come from bonusPoints
+  // BUG FIX: this was fully computed (which lessons are marked "complete" by
+  // admin AND have every question mastered) but the resulting +200-per-lesson
+  // total was never actually added to growthPoints — every other bonus above
+  // does `growthPoints += X`, this one just silently didn't, despite being
+  // advertised in the "How do I earn points?" explainer the whole time.
+  const lessonMastery = calcLessonMasteryBonus();
+  growthPoints += lessonMastery.totalBonus;
 
   growthPoints = Math.round(growthPoints);
 
