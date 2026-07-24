@@ -656,6 +656,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sa
   <div class="wl-title">Study Buddy</div>
   <div class="wl-sub">Class 9 · Science &amp; Social Science<br>Your personal exam prep companion</div>
   <div class="wl-motivate" id="wlMotivate"></div>
+  <div id="versionTag" style="text-align:center;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px"></div>
   <div class="wl-card">
     <div class="wl-card-title">🔒 Enter Passcode</div>
     <div class="wl-input-wrap">
@@ -2086,6 +2087,15 @@ function scoreAnswer(userText, refText){
 const STUDENT_PHONE = "9865280639";
 const ADMIN_PHONE   = "9962680639";
 const STUDENT_NAME   = "Joshin";
+// Bump this on every delivered version — shown in the admin bar so it's
+// always possible to confirm which build is actually live, rather than
+// guessing from behavior. This exact confusion (comparing a live file
+// against what was actually just fixed) has come up multiple times.
+const APP_VERSION = "2026.07.24-01";
+{
+  const vt = document.getElementById("versionTag");
+  if(vt) vt.textContent = "v" + APP_VERSION;
+}
 
 let currentSubject = "Social Science";
 let currentPart    = "History";
@@ -2658,6 +2668,7 @@ function logQuestion(pct, elapsed, feedbackHTML, isCorrect){
     if(pct >= 80 && !_answeredInPartsMode && !wasPeeked){
       _masteredQuestionKeys.add(qKey);
       checkMilestonesAfterMastery(); // fire-and-forget — checks if this update just completed a Social Science milestone
+      checkLessonMasteryBonus(currentLesson?.id); // fire-and-forget — checks if this update just fully mastered the whole lesson
     }
     if(_answeredInPartsMode && pct >= 80) console.log("Parts mode: score="+pct+"% but mastery not awarded — student must answer all at once");
     if(wasPeeked && pct >= 80) console.log("Peeked at the answer: score="+pct+"% but mastery not awarded — needs an unaided attempt");
@@ -5978,7 +5989,7 @@ async function renderTodayStudySummary(){
     const dayCutoff = Date.now() - 24*60*60*1000;
     const today = allScoredEntries.filter(e =>
       e.ts >= dayCutoff && e.qtype!=="goodwill" && e.qtype!=="compensation" &&
-      e.qtype!=="newtry" && e.qtype!=="milestone" && !(e.qtype||"").startsWith("recite_")
+      e.qtype!=="newtry" && e.qtype!=="milestone" && e.qtype!=="lessonmastery" && !(e.qtype||"").startsWith("recite_")
     );
     if(!today.length){
       banner.innerHTML = `<div style="background:var(--parchment);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--muted);text-align:center">No questions studied yet today.</div>`;
@@ -6048,6 +6059,16 @@ function describePointsEntry(e){
   if(e.qtype==="goodwill") return { icon:"🎁", label: e.lessonTitle || "Goodwill Points" };
   if(e.qtype==="compensation") return { icon:"🎁", label: e.lessonTitle || "Compensation Bonus" };
   if(e.qtype==="milestone") return { icon:"🏅", label: e.lessonTitle || "Milestone Complete" };
+  if(e.qtype==="lessonmastery") return { icon:"🏆", label: `Lesson Mastered — ${e.lessonTitle||""}` };
+  if(e.qtype==="dailygoal") return { icon:"📋", label: "Daily Goal complete" };
+  if(e.qtype==="session_early") return { icon:"🌅", label: `Early Morning session — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="session_late") return { icon:"🌅", label: `Morning session — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="session_mornstart") return { icon:"🟠", label: `Morning session started — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="session_evening") return { icon:"🌙", label: `Evening session — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="session_evestart") return { icon:"🟠", label: `Evening session started — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="session_both") return { icon:"🎉", label: `Both sessions — ${e.lessonTitle||e.subject||""}` };
+  if(e.qtype==="dailytime") return { icon:"⏱", label: e.lessonTitle || "30+ min studied" };
+  if(e.qtype==="testpoints") return { icon:"📝", label: `Practice Test — ${e.lessonTitle||""}` };
   if(e.qtype==="newtry") return { icon:"🌱", label: "Tried a brand-new question" };
   if(e.qtype && e.qtype.indexOf("recite_fast_")===0) return { icon:"⚡", label: `Read & Memorise — fast, accurate read (${e.lessonTitle||""})` };
   if(e.qtype && e.qtype.indexOf("recite_good_")===0) return { icon:"🕐", label: `Read & Memorise — good pace (${e.lessonTitle||""})` };
@@ -6068,11 +6089,51 @@ async function renderPointsHistory(range){
   const { logsSnap, examSnap } = await getLogsBundle();
   const { allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
 
-  const now = Date.now();
-  const cutoff = range==="today" ? now - 24*60*60*1000 : range==="week" ? now - 7*24*60*60*1000 : 0;
+  // Test Points live in their own Firestore collection (written whenever a
+  // Lesson Test or Practice Test is taken) and were always correctly folded
+  // into the Growth Points total — but Points History only ever read from
+  // logs/examAnswers, never this collection, so every test score was
+  // invisible here even though it was genuinely counted in the total.
+  let testPointsEntries = [];
+  try{
+    const { db, collection, query, orderBy, getDocs } = window._fb;
+    const tpSnap = await getDocs(query(collection(db,"sessions",currentUserPhone,"testPoints"), orderBy("ts","asc")));
+    tpSnap.forEach(d=>{
+      const e = d.data();
+      const tsMs = e.ts?.toDate ? e.ts.toDate().getTime() : (typeof e.ts==="number" ? e.ts : null);
+      if(tsMs===null || typeof e.points!=="number") return;
+      testPointsEntries.push({ pct:e.pct??100, qtype:"testpoints", ts:tsMs, lessonTitle:e.lessonTitle||"", marks:e.points });
+    });
+  }catch(e){ /* fine — just won't show test points this time */ }
 
-  const qualifying = allScoredEntries
-    .filter(e => (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT && e.ts >= cutoff)
+  const now = Date.now();
+  const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+  // "Today" now means the actual calendar day (since midnight), not a
+  // rolling 24-hour window — the rolling version drifted throughout the
+  // day and could include part of yesterday's late-night activity instead
+  // of updating cleanly at 12am like a real "today" should.
+  const cutoff = range==="today" ? startOfToday.getTime() : range==="week" ? now - 7*24*60*60*1000 : 0;
+
+  // "Points as of yesterday" — derived from today's LIVE total, not
+  // independently recalculated. Previously this ran its own separate
+  // calcGrowthScore over just the older entries, which could drift from
+  // whatever the actual current total shows (different rounding paths,
+  // the floor mechanism, etc.) — producing a "yesterday" number that
+  // didn't actually add up against "today." This version guarantees
+  // yesterday + today's contribution always equals the current total,
+  // by computing yesterday as a subtraction FROM the current total,
+  // rather than as an independent calculation that could disagree with it.
+  const totalTestPointsSum = testPointsEntries.reduce((sum,e)=>sum+(e.marks||0), 0);
+  const rawCurrentTotal = calcGrowthScore(new Set(), allScoredEntries, totalTestPointsSum).growthPoints;
+  const currentFlooredTotal = await applyGrowthPointsFloor(rawCurrentTotal); // always fresh — reflects anything just earned, including this instant
+  const yesterdayEntries = allScoredEntries.filter(e => e.ts < startOfToday.getTime());
+  const yesterdayTestPoints = testPointsEntries.filter(e => e.ts < startOfToday.getTime()).reduce((sum,e)=>sum+(e.marks||0), 0);
+  const yesterdayRaw = calcGrowthScore(new Set(), yesterdayEntries, yesterdayTestPoints).growthPoints;
+  const todaysContribution = rawCurrentTotal - yesterdayRaw;
+  const yesterdayTotal = currentFlooredTotal - todaysContribution;
+
+  const qualifying = [...allScoredEntries, ...testPointsEntries]
+    .filter(e => (e.qtype==="testpoints" || (e.pct??0) >= MIN_SCORE_FOR_GOAL_CREDIT) && e.ts >= cutoff)
     .map(e => {
       const isRealQType = QTYPES.some(q=>q.id===e.qtype);
       const pts = typeof e.marks==="number" ? e.marks : getMarks(e.qtype); // approximate for older entries without a stored marks value
@@ -6081,13 +6142,15 @@ async function renderPointsHistory(range){
     .filter(e => e.pts > 0)
     .sort((a,b)=>b.ts-a.ts); // newest first
 
+  const yesterdayLine = `<div style="text-align:center;padding:8px 0;font-size:11.5px;color:var(--muted);border-bottom:1px dashed var(--border);margin-bottom:8px">Points as of yesterday: <b style="color:var(--navy)">${yesterdayTotal.toLocaleString()}</b></div>`;
+
   if(!qualifying.length){
-    list.innerHTML = `<p style="color:var(--muted);padding:16px;text-align:center">No points earned ${range==="today"?"today":range==="week"?"this week":"yet"}.</p>`;
+    list.innerHTML = yesterdayLine + `<p style="color:var(--muted);padding:16px;text-align:center">No points earned ${range==="today"?"today":range==="week"?"this week":"yet"}.</p>`;
     return;
   }
 
   const totalPts = qualifying.reduce((sum,e)=>sum+e.pts, 0);
-  list.innerHTML = `
+  list.innerHTML = yesterdayLine + `
     <div style="text-align:center;padding:10px 0 14px;font-size:13px;color:var(--muted)">
       <b style="color:var(--green);font-size:18px">+${totalPts}</b> points ${range==="today"?"earned today":range==="week"?"earned this week":"earned in total"}
     </div>
@@ -6121,12 +6184,11 @@ function renderHowToEarnPoints(targetId){
           <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Every question you answer well adds points permanently. It only ever climbs — this is the number that shows you're building something over time.</div>
         </div>
 
-        
         <div style="font-size:11px;font-weight:700;color:var(--navy);padding:6px 2px 0">How Growth Points add up — every answer 50%+ counts:</div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">✏️ Each question you answer well</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">+1 point for MCQ/Fill/True-False, +2 for Brief/Reasons, +3 for Distinguish, +5 for Match/Paragraph. Harder questions are worth more.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">+1 point for MCQ/Fill/True-False, +2 for Brief/Reasons, +3 for Distinguish/Quote from Memory, +5 for Match/Paragraph. Harder questions are worth more. The very first time you answer a specific question, it's worth double.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -6147,12 +6209,42 @@ function renderHowToEarnPoints(targetId){
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌙 Evening Session — +50 per subject, +50 for both</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject anytime after 8:00am for +50. Both morning AND evening in the same subject on the same day = extra +50. Started but not finished = +10.</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Cover all question types in a subject between 5:00–9:00pm for +50. Both a morning AND an evening session in the same subject on the same day = an extra +50. Started but not finished = +10.</div>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Lesson Test — 30 to 100 points</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 300 points, 80%+ for 500, and a perfect 100% earns 700 points.</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">⏱ Daily Time Bonus — +100 per subject</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Spend at least 30 minutes studying a subject in one day (any score counts, this is about time invested) for +100. Separate from the session bonuses above — this is purely about time spent, not covering every question type.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🧪 Practice/Lesson Test — 300 to 700 points</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Test an entire lesson in one go (no peeking allowed!). Score 60%+ for 300 points, 80%+ for 500, and a perfect 100% earns 700 points — scaled a little by how hard the lesson's questions are.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">📖 Read & Memorise — +3 or +1</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">In Revise mode, read a Brief/Reasons/Distinguish/Paragraph answer aloud accurately (70%+ match) and quickly for +3, or at a normal pace for +1.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🌱 New Question Bonus — +10</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">The first time you ever attempt a specific Brief/Reasons/Distinguish/Paragraph/Memorise/Match question, you get +10 just for trying it — no daily limit, since each question can only be "new" once.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🏆 Lesson Mastery — +200</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Once every question in a lesson is genuinely mastered (80%+, without peeking) AND the admin has marked that lesson "Complete," it's worth a one-time +200.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🏅 Milestones — +1000 each</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Big, rare rewards for mastering a whole batch of Social Science lessons across all subjects at once. Unlocked strictly in order, one at a time.</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--navy)">🎁 Goodwill Points &amp; Compensation</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Occasional bonuses the admin can award for good effort or behavior (kept small and capped so they stay meaningful), plus one-time apology bonuses if something ever needed correcting.</div>
         </div>
 
         <div style="font-size:10.5px;color:var(--muted);text-align:center;margin-top:2px">⚠️ Answers below 50% don't count toward any of this — quality matters, not just clicking through.</div>
@@ -6205,6 +6297,43 @@ async function getLogsBundle(){
 // see it move.
 let _liveGrowthPoints = null;
 
+// ═══════════════════════════════════════════════════════
+//  GROWTH POINTS FLOOR — the number can never go down again
+// ═══════════════════════════════════════════════════════
+// Growth Points was always meant to be a number that only ever climbs —
+// that promise is the entire reason it exists as a separate thing from the
+// 0-100 Mastery Score. Several bug fixes this session (double-counted speed
+// bonus, midday sessions wrongly earning permanent "evening" bonuses)
+// corrected genuine over-counting, but a correction that lowers this
+// specific number breaks the one guarantee it's supposed to keep, even when
+// the new number is more accurate. From here on, the displayed total is
+// permanently floored at the highest value it has ever shown — a future
+// bug fix can change how NEW points are calculated, but it can never claw
+// back a number already shown. Seeded at 9981, the last total actually
+// seen on the live site before this round of fixes, so nothing is lost.
+const GROWTH_POINTS_FLOOR_BASELINE = 9981;
+let _growthPointsFloorCache = null;
+
+async function applyGrowthPointsFloor(freshTotal){
+  if(!window._fb || !currentUserPhone) return freshTotal; // no account context — nothing to floor against
+  if(_growthPointsFloorCache === null){
+    try{
+      const { db, doc, getDoc } = window._fb;
+      const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","growthPointsFloor"));
+      _growthPointsFloorCache = snap.exists() ? (snap.data().value||0) : GROWTH_POINTS_FLOOR_BASELINE;
+    }catch(e){ _growthPointsFloorCache = GROWTH_POINTS_FLOOR_BASELINE; }
+  }
+  const effective = Math.max(freshTotal, _growthPointsFloorCache);
+  if(effective > _growthPointsFloorCache){
+    _growthPointsFloorCache = effective;
+    if(window._fb && currentUserPhone){
+      const { db, doc, setDoc } = window._fb;
+      setDoc(doc(db,"sessions",currentUserPhone,"settings","growthPointsFloor"), { value: effective }).catch(()=>{});
+    }
+  }
+  return effective;
+}
+
 async function initLiveGrowthBadge(){
   const badge = document.getElementById("quizGrowthBadge");
   if(!badge) return;
@@ -6214,7 +6343,7 @@ async function initLiveGrowthBadge(){
     const { logsSnap, examSnap, totalTestPoints } = await getLogsBundle();
     const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
     const { growthPoints } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
-    _liveGrowthPoints = growthPoints;
+    _liveGrowthPoints = await applyGrowthPointsFloor(growthPoints);
     badge.textContent = "🌱 "+_liveGrowthPoints;
   }catch(e){ badge.textContent = ""; }
 }
@@ -6224,6 +6353,13 @@ async function initLiveGrowthBadge(){
 function bumpGrowthPointsBadge(amount){
   if(!amount || _liveGrowthPoints===null) return; // badge hasn't loaded yet — toast still shows regardless, this just skips the live bump this one time
   _liveGrowthPoints += amount;
+  if(_growthPointsFloorCache !== null && _liveGrowthPoints > _growthPointsFloorCache){
+    _growthPointsFloorCache = _liveGrowthPoints; // keep the floor caught up to what's already been shown live
+    if(window._fb && currentUserPhone){
+      const { db, doc, setDoc } = window._fb;
+      setDoc(doc(db,"sessions",currentUserPhone,"settings","growthPointsFloor"), { value: _liveGrowthPoints }).catch(()=>{});
+    }
+  }
   const badge = document.getElementById("quizGrowthBadge");
   if(!badge) return;
   badge.textContent = "🌱 "+_liveGrowthPoints;
@@ -6257,6 +6393,17 @@ async function buildStudentScoreboard(){
     return;
   }
 
+  // Catch up on anything already true but never actually logged as a real
+  // event — a lesson mastered before this feature existed, or a Daily
+  // Goal/session/time bonus that was always correctly counted in the total
+  // but never had a Points History entry to show for it. If any of this
+  // logs something new, re-fetch once so THIS render reflects it, instead
+  // of only the next one.
+  const firstPassEntries = aggregateScoreboardData(logsSnap, examSnap).allScoredEntries;
+  await sweepAllPendingBonuses();
+  await syncPointAchievementsToHistory(firstPassEntries);
+  ({ logsSnap, examSnap, totalTestPoints } = await getLogsBundle());
+
   const agg = aggregateScoreboardData(logsSnap, examSnap);
   const allScoredEntries = agg.allScoredEntries;
   let grandTimeMs = agg.grandTimeMs;
@@ -6289,13 +6436,62 @@ async function buildStudentScoreboard(){
     }
   });
 
-  totalBox.innerHTML = renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints) + renderMilestonesHTML();
+  totalBox.innerHTML = (await renderScoreboardTotalHTML(agg.bySession, agg.allUnique, agg.grandAttempts, grandTimeMs, agg.mockStats, allScoredEntries, totalTestPoints)) + renderMilestonesHTML();
   celebrateDailyGoalIfJustCompleted(agg.allUnique, allScoredEntries, totalTestPoints);
 }
 
 // A card showing progress toward each Social Science milestone — which
 // lessons are genuinely mastered (not peeked-through) toward each batch,
 // and how many milestones are complete overall.
+// A real, category-by-category audit of exactly where the total comes from —
+// dark-theme styled to sit inside the Scoreboard's navy sheet, collapsed by
+// default like the other detail sections. Only shows categories that have
+// actually contributed something, so it stays short for a student who's
+// only earned points a few ways so far.
+function renderScoreBreakdownHTML(breakdown, rawTotal, flooredTotal){
+  const rows = [
+    ["📝", "Practice answers (incl. first-attempt & speed bonus)", breakdown.practice],
+    ["📋", "Daily Goal completions", breakdown.dailyGoal],
+    ["⏰", "Morning/Evening session bonuses", breakdown.sessionBonuses],
+    ["⚡", "Speed Bonus (older entries)", breakdown.speedBonusLegacy],
+    ["📝", "Practice Test scores", breakdown.testPoints],
+    ["⏱", "Daily time bonus (30+ min/subject)", breakdown.dailyTime],
+    ["📖", "Read & Memorise bonus", breakdown.reciteReadMemorise],
+    ["🌱", "New Question bonus", breakdown.newTry],
+    ["🏆", "Lesson Mastery bonus", breakdown.lessonMastery],
+    ["🏅", "Milestones", breakdown.milestones],
+    ["🎁", "Goodwill Points", breakdown.goodwill],
+    ["🎁", "Compensation bonus", breakdown.compensation],
+  ].filter(r => r[2] > 0);
+  if(!rows.length) return "";
+  const rowsHTML = rows.map(r=>
+    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:12.5px">
+      <div style="color:rgba(255,255,255,.8)">${r[0]} ${r[1]}</div>
+      <div style="font-weight:800;color:#7ee787">+${r[2].toLocaleString()}</div>
+    </div>`
+  ).join("");
+  // The header now describes the number these rows actually sum to (the
+  // fresh, just-recalculated total) — previously it showed the FLOOR-
+  // protected number instead, which can legitimately be higher than what
+  // the line items add up to, making it look like points were missing when
+  // really the floor was just correctly holding the display at its highest
+  // point ever reached. If the floor IS currently protecting a higher
+  // number than today's fresh calculation, that's shown as its own
+  // explicit line instead of being silently mixed into the same figure.
+  const floorNote = flooredTotal > rawTotal
+    ? `<div style="margin-top:10px;padding:8px 10px;background:rgba(232,184,75,.12);border:1px solid rgba(232,184,75,.3);border-radius:8px;font-size:11.5px;color:rgba(255,255,255,.75)">
+        🛡️ Your displayed total is protected at <b style="color:#e8b84b">${flooredTotal.toLocaleString()}</b> — the highest it's ever reached — even though today's fresh calculation below currently comes to ${rawTotal.toLocaleString()}. It can only go up from here, never down.
+      </div>`
+    : "";
+  return `<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)">
+    <details>
+      <summary style="list-style:none;cursor:pointer;font-weight:800;color:#fff;font-size:13px;user-select:none">🔍 Score Breakdown — why is it ${rawTotal.toLocaleString()}?</summary>
+      <div style="margin-top:8px">${rowsHTML}</div>
+      ${floorNote}
+    </details>
+  </div>`;
+}
+
 function renderMilestonesHTML(){
   const milestones = buildSocialMilestones();
   if(!milestones.length) return "";
@@ -6404,7 +6600,7 @@ function aggregateScoreboardData(logsSnap, examSnap){
     // aren't a real answered question — they still show up in the session's
     // activity list above, and still count toward Growth Points further
     // down, but shouldn't inflate "unique questions covered" or the attempt count.
-    if(e.qtype!=="goodwill" && e.qtype!=="compensation" && e.qtype!=="milestone"){
+    if(e.qtype!=="goodwill" && e.qtype!=="compensation" && e.qtype!=="milestone" && e.qtype!=="lessonmastery"){
       allUnique.add(`${e.lessonId}|${e.qtype}|${e.qIndex}`);
       grandAttempts++;
       grandTimeMs += e.timeMs || 0;
@@ -6704,7 +6900,15 @@ function calcCumulativeTotals(allScoredEntries){
     const d = new Date(e.ts); d.setHours(0,0,0,0);
     const dayKey = d.getTime();
     const hour = new Date(e.ts).getHours();
-    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : hour>=8 ? 'evening' : null;
+    // Same bug as the one fixed in calcSessionGoals — this used to say
+    // hour>=8, treating ALL of 8am-11pm as "evening" instead of the actual
+    // intended 5pm-9pm window. This copy feeds PERMANENT, never-reset
+    // cumulative totals (+50/+70 points per subject per qualifying day),
+    // so this specific copy of the bug was likely a meaningfully larger
+    // source of inflation than the display-only one — every midday study
+    // session was silently banking a permanent "evening session complete"
+    // bonus it was never supposed to earn.
+    const bucket = hour===6 ? 'early' : hour===7 ? 'late' : (hour>=17 && hour<=21) ? 'evening' : null;
     if(!bucket) {
       // Still counts for the global daily goal (answered anytime counts for goal)
       if(!byDay[dayKey]) byDay[dayKey] = { qtypes:new Set() };
@@ -6728,11 +6932,15 @@ function calcCumulativeTotals(allScoredEntries){
   let daysGoalCompleted = 0;
   const subjectSessions = {};
   subjectNames.forEach(s=>{ subjectSessions[s] = { earlyMorning:0, lateMorning:0, evening:0, both:0, mornStarted:0, eveStarted:0 }; });
+  const achievements = []; // {key, dayMs, qtype, subject, label, points} — one entry per day/subject/type actually earned, used to sync into real logged Points History events
 
   // Global daily goal
-  Object.values(byDay).forEach(day=>{
+  Object.entries(byDay).forEach(([dayKey, day])=>{
     const activeTypes = getActiveQTypes();
-    if(activeTypes.every(qt=>day.qtypes.has(qt.id))) daysGoalCompleted++;
+    if(activeTypes.every(qt=>day.qtypes.has(qt.id))){
+      daysGoalCompleted++;
+      achievements.push({ key:`dailygoal_${dayKey}`, dayMs:Number(dayKey), qtype:"dailygoal", subject:"", label:"Daily Goal complete", points:10 });
+    }
   });
 
   // Per-subject session days: a session counts only when all of that
@@ -6750,16 +6958,17 @@ function calcCumulativeTotals(allScoredEntries){
       const earlyStarted   = !early  && buckets.early.size   > 0;
       const lateStarted    = !late   && buckets.late.size    > 0;
       const eveStarted     = !eve    && buckets.evening.size > 0;
-      if(early) subjectSessions[subj].earlyMorning++;
-      else if(late) subjectSessions[subj].lateMorning++;
-      else if(earlyStarted || lateStarted) subjectSessions[subj].mornStarted++;
-      if(eve) subjectSessions[subj].evening++;
-      else if(eveStarted) subjectSessions[subj].eveStarted++;
-      if((early||late) && eve) subjectSessions[subj].both++;
+      const dayMs = Number(dayKey);
+      if(early){ subjectSessions[subj].earlyMorning++; achievements.push({ key:`session_early_${subj}_${dayKey}`, dayMs, qtype:"session_early", subject:subj, label:`Early Morning session — ${subj}`, points:70 }); }
+      else if(late){ subjectSessions[subj].lateMorning++; achievements.push({ key:`session_late_${subj}_${dayKey}`, dayMs, qtype:"session_late", subject:subj, label:`Morning session — ${subj}`, points:50 }); }
+      else if(earlyStarted || lateStarted){ subjectSessions[subj].mornStarted++; achievements.push({ key:`session_mornstart_${subj}_${dayKey}`, dayMs, qtype:"session_mornstart", subject:subj, label:`Morning session started — ${subj}`, points:10 }); }
+      if(eve){ subjectSessions[subj].evening++; achievements.push({ key:`session_evening_${subj}_${dayKey}`, dayMs, qtype:"session_evening", subject:subj, label:`Evening session — ${subj}`, points:50 }); }
+      else if(eveStarted){ subjectSessions[subj].eveStarted++; achievements.push({ key:`session_evestart_${subj}_${dayKey}`, dayMs, qtype:"session_evestart", subject:subj, label:`Evening session started — ${subj}`, points:10 }); }
+      if((early||late) && eve){ subjectSessions[subj].both++; achievements.push({ key:`session_both_${subj}_${dayKey}`, dayMs, qtype:"session_both", subject:subj, label:`Both sessions — ${subj}`, points:50 }); }
     });
   });
 
-  return { daysGoalCompleted, subjectSessions };
+  return { daysGoalCompleted, subjectSessions, achievements };
 }
 
 // Fetches every Lesson Test attempt ever logged and sums the points earned —
@@ -6808,11 +7017,16 @@ function calcDailyTimeBonus(allScoredEntries){
 
   // Count how many day×subject combos crossed 30 min (excluding today — today shown live)
   let totalHistoricalPoints = 0;
+  const achievements = []; // {key, dayMs, subject, points} — for syncing into real logged Points History events
   Object.entries(timeByDaySubject).forEach(function(pair){
     const parts = pair[0].split(":");
     const dayMs = parseInt(parts[0]);
+    const subj = parts[1];
     const ms    = pair[1];
-    if(dayMs < todayMs && ms >= DAILY_TIME_BONUS_MS) totalHistoricalPoints += DAILY_TIME_BONUS_POINTS;
+    if(dayMs < todayMs && ms >= DAILY_TIME_BONUS_MS){
+      totalHistoricalPoints += DAILY_TIME_BONUS_POINTS;
+      achievements.push({ key:`dailytime_${subj}_${dayMs}`, dayMs, qtype:"dailytime", subject:subj, label:`30+ min studied — ${subj}`, points:DAILY_TIME_BONUS_POINTS });
+    }
   });
 
   // ── TODAY: show live progress per subject ──
@@ -6829,11 +7043,14 @@ function calcDailyTimeBonus(allScoredEntries){
   subjectNames.forEach(s=>{
     const ms = timeToday[s];
     const done = ms >= DAILY_TIME_BONUS_MS;
-    if(done) todayPoints += DAILY_TIME_BONUS_POINTS;
+    if(done){
+      todayPoints += DAILY_TIME_BONUS_POINTS;
+      achievements.push({ key:`dailytime_${s}_${todayMs}`, dayMs:todayMs, qtype:"dailytime", subject:s, label:`30+ min studied — ${s}`, points:DAILY_TIME_BONUS_POINTS });
+    }
     bySubject[s] = { ms, done, pct: Math.min(100, Math.round((ms/DAILY_TIME_BONUS_MS)*100)) };
   });
 
-  return { bySubject, pointsEarned: totalHistoricalPoints + todayPoints };
+  return { bySubject, pointsEarned: totalHistoricalPoints + todayPoints, achievements };
 }
 
 function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
@@ -6844,7 +7061,7 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   if(allScoredEntries.length){
     let earned=0, possible=0;
     allScoredEntries.forEach(e=>{
-      if(e.qtype==="goodwill" || e.qtype==="compensation" || e.qtype==="milestone") return; // bonuses aren't a measure of academic quality
+      if(e.qtype==="goodwill" || e.qtype==="compensation" || e.qtype==="milestone" || e.qtype==="lessonmastery") return; // bonuses aren't a measure of academic quality
       const m = getMarks(e.qtype||"mcq");
       possible += m;
       earned += m*(e.pct/100);
@@ -6882,6 +7099,24 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
   const sessionGoals = calcSessionGoals(allScoredEntries); // still used for "today's" session card display
 
   let growthPoints = 0;
+  // Tracks WHERE the total actually comes from, category by category — so a
+  // question like "why is the score 9767" can be answered directly, by
+  // looking at a real breakdown, instead of re-deriving the whole thing from
+  // scratch or just trusting the single final number.
+  const breakdown = {
+    practice: 0,       // regular question answers (base marks, first-attempt doubling, speed bonus baked into marks)
+    dailyGoal: 0,       // +10 per day every active question type was covered
+    sessionBonuses: 0,  // per-subject morning/evening session completions
+    speedBonusLegacy: 0,// speed bonus for older entries logged before it was baked into marks
+    testPoints: 0,      // Lesson Test / Practice Test scores
+    dailyTime: 0,       // +100 per subject with 30+ min studied today
+    goodwill: 0,
+    compensation: 0,
+    milestones: 0,
+    lessonMastery: 0,
+    newTry: 0,
+    reciteReadMemorise: 0,
+  };
   // BUG FIX: this used to add getMarks(e.qtype) for every single qualifying
   // attempt, first time or the 50th, with no distinction. That quietly broke
   // two things: (1) the "🆕 New question! 2× points" toast shown right after
@@ -6901,7 +7136,23 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     // amount the admin chose at the time (stored directly on the entry as
     // `marks`) — there's no static per-qtype value for these since the
     // amount is deliberately chosen per-award, not looked up from a table.
-    if(e.qtype==="goodwill" || e.qtype==="compensation" || e.qtype==="milestone"){ growthPoints += (e.marks||0); return; }
+    if(e.qtype==="goodwill"){ growthPoints += (e.marks||0); breakdown.goodwill += (e.marks||0); return; }
+    if(e.qtype==="compensation"){ growthPoints += (e.marks||0); breakdown.compensation += (e.marks||0); return; }
+    if(e.qtype==="milestone"){ growthPoints += (e.marks||0); breakdown.milestones += (e.marks||0); return; }
+    if(e.qtype==="lessonmastery"){ growthPoints += (e.marks||0); breakdown.lessonMastery += (e.marks||0); return; }
+    if(e.qtype==="newtry"){ growthPoints += (e.marks||0); breakdown.newTry += (e.marks||0); return; }
+    if((e.qtype||"").startsWith("recite_")){ const m=getMarks(e.qtype); growthPoints += m; breakdown.reciteReadMemorise += m; return; }
+    // Achievement records (Daily Goal, session bonuses, daily time bonus) —
+    // these are backfilled purely so Points History has something to show.
+    // The actual points, AND their breakdown contribution, are already
+    // counted once via cumulative/dailyTimeBonus further down this
+    // function — adding to breakdown here too was double-counting these
+    // three categories specifically (confirmed: a 9,981 total with a
+    // breakdown that summed to 12,028 — the exact gap these three
+    // categories being counted twice would produce).
+    if(e.qtype==="dailygoal") return;
+    if((e.qtype||"").startsWith("session_")) return;
+    if(e.qtype==="dailytime") return;
     const isRealQType = QTYPES.some(q=>q.id===e.qtype);
     const key = (e.lessonId||"")+"_"+(e.qtype||"")+"_"+(e.qIndex||0);
     // If this entry stored its own exact point value at the moment it was
@@ -6914,26 +7165,27 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     // the toast and the permanent total finally guaranteed to agree.
     if(typeof e.marks === "number" && isRealQType){
       growthPoints += e.marks;
+      breakdown.practice += e.marks;
       _seenGrowthKeys.add(key);
       return;
     }
-    if(!isRealQType){ growthPoints += getMarks(e.qtype); return; } // recite_* etc. — already one-time-only by construction, never doubled
+    if(!isRealQType){ growthPoints += getMarks(e.qtype); breakdown.practice += getMarks(e.qtype); return; }
     // Fallback ONLY for entries logged before the `marks` field existed —
     // recomputes the old way (no Speed Bonus available for these older rows).
     const base = getMarks(e.qtype);
     const isFirst = !_seenGrowthKeys.has(key);
     _seenGrowthKeys.add(key);
-    growthPoints += isFirst ? base*2 : base;
+    const amt = isFirst ? base*2 : base;
+    growthPoints += amt;
+    breakdown.practice += amt;
   });
   growthPoints += cumulative.daysGoalCompleted * 10;   // full 8-type goal, any day — big, permanent
+  breakdown.dailyGoal += cumulative.daysGoalCompleted * 10;
   // Per-subject morning/evening sessions — each subject earns its own bonus
   Object.values(cumulative.subjectSessions||{}).forEach(ss=>{
-    growthPoints += ss.earlyMorning * 70;  // 6-7am complete for this subject
-    growthPoints += ss.lateMorning  * 50;  // 7-8am complete for this subject
-    growthPoints += ss.evening      * 50;  // evening complete for this subject
-    growthPoints += ss.both         * 50;  // both sessions complete for this subject
-    growthPoints += ss.mornStarted  * 10;  // started morning but didn't finish all types
-    growthPoints += ss.eveStarted   * 10;  // started evening but didn't finish all types
+    const subtotal = ss.earlyMorning*70 + ss.lateMorning*50 + ss.evening*50 + ss.both*50 + ss.mornStarted*10 + ss.eveStarted*10;
+    growthPoints += subtotal;
+    breakdown.sessionBonuses += subtotal;
   });
   // Speed bonus: only recompute for OLDER entries that don't already have it
   // baked into their stored `marks` value (see the marks-based branch above).
@@ -6950,28 +7202,25 @@ function calcGrowthScore(allUnique, allScoredEntries, totalTestPoints){
     }
   });
   growthPoints += speedBonusTotal;
+  breakdown.speedBonusLegacy += speedBonusTotal;
   growthPoints += totalTestPoints || 0;                // every Lesson Test ever taken — 30/40/50/100 per test based on score tier
+  breakdown.testPoints += totalTestPoints || 0;
 
   // Daily time bonus: +100 per subject with 30+ minutes spent today
   const dailyTimeBonus = calcDailyTimeBonus(allScoredEntries);
   growthPoints += dailyTimeBonus.pointsEarned;
-
-  // BUG FIX: this was fully computed (which lessons are marked "complete" by
-  // admin AND have every question mastered) but the resulting +200-per-lesson
-  // total was never actually added to growthPoints — every other bonus above
-  // does `growthPoints += X`, this one just silently didn't, despite being
-  // advertised in the "How do I earn points?" explainer the whole time.
-  const lessonMastery = calcLessonMasteryBonus();
-  growthPoints += lessonMastery.totalBonus;
+  breakdown.dailyTime += dailyTimeBonus.pointsEarned;
 
   growthPoints = Math.round(growthPoints);
 
-  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus };
+  return { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus, breakdown };
 }
 
-function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
+async function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints){
   const sessionCount = Object.keys(bySession).length;
-  const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, growthPoints, dailyTimeBonus } = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
+  const raw = calcGrowthScore(allUnique, allScoredEntries||[], totalTestPoints||0);
+  const { masteryScore, coverage, mastery, trend, totalAvailable, dailyGoal, sessionGoals, cumulative, dailyTimeBonus, breakdown } = raw;
+  const growthPoints = await applyGrowthPointsFloor(raw.growthPoints); // never shows lower than the highest total ever displayed
 
   const trendArrow = trend>60?"↗":trend<40?"↘":"→";
   const trendColor = trend>60?"#7ee787":trend<40?"#ffa07a":"rgba(255,255,255,.5)";
@@ -7096,7 +7345,7 @@ function renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTim
       +'<div style="font-size:10px;color:'+W+'.35);margin-top:10px;text-align:center">Answers below 50% don\'t count toward any bonus</div>'
     +'</div></details>';
 
-  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + howToEarn;
+  return hero + sLabel + sRows + streakLine + tLabel + tBars + tFooter + gLabel + gBars + gFooter + renderScoreBreakdownHTML(breakdown, raw.growthPoints, growthPoints) + howToEarn;
 }
 
 
@@ -7395,7 +7644,9 @@ async function showWelcomeBackPopup(){
   }
 
   const { allUnique, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  const { growthPoints, masteryScore, dailyGoal, sessionGoals } = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
+  const rawScore = calcGrowthScore(allUnique, allScoredEntries, totalTestPoints);
+  const { masteryScore, dailyGoal, sessionGoals } = rawScore;
+  const growthPoints = await applyGrowthPointsFloor(rawScore.growthPoints);
   celebrateDailyGoalIfJustCompleted(allUnique, allScoredEntries, totalTestPoints);
 
   var W = "rgba(255,255,255,";
@@ -7483,15 +7734,85 @@ async function showWelcomeBackPopup(){
 // Write one log entry to Firestore under the student's phone number,
 // regardless of whether the student or admin is the one currently driving the session.
 function fbLogEntry(kind, data){
-  if(!window._fb || !currentUserPhone) return;
+  if(!window._fb || !currentUserPhone) return Promise.resolve();
   const { db, addDoc, collection, serverTimestamp } = window._fb;
   if(kind==="logs" || kind==="testPoints") invalidateLogsBundleCache();
-  addDoc(collection(db, "sessions", currentUserPhone, kind), {
+  // Returns the write promise now (previously fire-and-forget) — most call
+  // sites still don't await it, which is fine, but anything that logs and
+  // then immediately re-reads (like the retroactive sweeps) NEEDS to be
+  // able to wait for the write to actually land first, or it can re-fetch
+  // before Firestore has committed the new entry — showing up later in
+  // Points History but not in the Growth Points total computed right then.
+  return addDoc(collection(db, "sessions", currentUserPhone, kind), {
     ...data,
     sessionId: currentSessionId,
     ts: serverTimestamp(),
     loggedBy: isAdminUser ? "admin" : "student"
   }).catch(err => console.warn("Firestore write failed:", err));
+}
+
+// Same as fbLogEntry, but with an explicit historical timestamp instead of
+// "now" — used only for backfilling achievement records (Daily Goal,
+// session bonuses, daily time bonus) under the date they were ACTUALLY
+// earned, so Points History shows them on the right day rather than all
+// bunched up as if freshly earned the moment this feature was deployed.
+async function fbLogEntryWithTs(kind, data, tsMillis){
+  if(!window._fb || !currentUserPhone) return;
+  const { db, addDoc, collection } = window._fb;
+  if(kind==="logs" || kind==="testPoints") invalidateLogsBundleCache();
+  try{
+    await addDoc(collection(db, "sessions", currentUserPhone, kind), {
+      ...data,
+      sessionId: currentSessionId,
+      ts: new Date(tsMillis),
+      loggedBy: isAdminUser ? "admin" : "student"
+    });
+  }catch(err){ console.warn("Firestore write failed:", err); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  POINT ACHIEVEMENT SYNC — Daily Goal / Session Bonuses / Daily Time
+//  Bonus were always correctly counted in the Growth Points total, but
+//  ONLY as recalculated aggregates — never as discrete logged events. That
+//  meant Points History had nothing to show for them, the exact same gap
+//  Lesson Mastery had. This logs each one exactly once, under the actual
+//  date it was earned (not "now"), so the full picture finally shows up.
+let _pointAchievementsLoggedCache = null;
+
+async function loadPointAchievementsLogged(){
+  if(_pointAchievementsLoggedCache) return _pointAchievementsLoggedCache;
+  if(!window._fb || !currentUserPhone){ _pointAchievementsLoggedCache = {}; return _pointAchievementsLoggedCache; }
+  try{
+    const { db, doc, getDoc } = window._fb;
+    const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","pointAchievementsLogged"));
+    _pointAchievementsLoggedCache = snap.exists() ? snap.data() : {};
+  }catch(e){ _pointAchievementsLoggedCache = {}; }
+  return _pointAchievementsLoggedCache;
+}
+
+async function syncPointAchievementsToHistory(allScoredEntries){
+  if(!window._fb || !currentUserPhone) return;
+  const logged = await loadPointAchievementsLogged();
+  const cumulative = calcCumulativeTotals(allScoredEntries);
+  const dailyTime = calcDailyTimeBonus(allScoredEntries);
+  const allAchievements = [...(cumulative.achievements||[]), ...(dailyTime.achievements||[])];
+  const newlyLogged = allAchievements.filter(a => !logged[a.key]);
+  if(!newlyLogged.length) return;
+
+  for(const a of newlyLogged){
+    logged[a.key] = true;
+    // Achievement records are marked-only entries for Points History display —
+    // NOT counted a second time in growthPoints, since the aggregate
+    // calculation already accounts for them (see the "achievement record"
+    // branch in calcGrowthScore). Noon of the actual day, so it displays
+    // under the right date rather than bunched up as "just now."
+    await fbLogEntryWithTs("logs", {
+      subject: a.subject||"", part:"", lessonId:"achievement", lessonTitle: a.label,
+      qtype: a.qtype, qIndex: a.dayMs, pct:100, timeMs:0, marks: a.points
+    }, a.dayMs + 12*60*60*1000);
+  }
+  const { db, doc, setDoc } = window._fb;
+  try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","pointAchievementsLogged"), logged); }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -7721,7 +8042,7 @@ async function checkMilestonesAfterMastery(){
     awarded[m.num] = true; // mark immediately so a rapid double-trigger can't double-award before Firestore round-trips
     const { db, doc, setDoc } = window._fb;
     try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","milestonesAwarded"), awarded); }catch(e){}
-    fbLogEntry("logs", {
+    await fbLogEntry("logs", {
       subject:"Social Science", part:"", lessonId:"milestone", lessonTitle:`Milestone ${m.num}: ${m.lessons.map(l=>l.title).join(", ")}`,
       qtype:"milestone", qIndex: Date.now(), pct:100, timeMs:0, marks: MILESTONE_POINTS
     });
@@ -7746,6 +8067,111 @@ function showMilestoneCelebration(num, lessons){
       <div style="font-size:15px;color:var(--text);margin-bottom:14px;line-height:1.6">${lessons.map(l=>l.title).join(" · ")}</div>
       <div style="background:var(--green-light);color:var(--green);font-weight:900;font-size:26px;padding:12px 24px;border-radius:14px;display:inline-block;margin-bottom:20px">+${MILESTONE_POINTS} Growth Points 🎉</div>
       <button onclick="document.getElementById('${overlayId}').remove()" style="width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Amazing! →</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{
+    overlay.style.opacity = "1";
+    overlay.firstElementChild.style.transform = "scale(1)";
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  LESSON MASTERY BONUS — +200 for fully mastering a lesson
+// ═══════════════════════════════════════════════════════
+// Previously this was recalculated fresh from current state every time the
+// Scoreboard loaded, rather than logged as a one-time event like every other
+// bonus (Goodwill, Milestones, New Question, etc.). That meant it could
+// silently affect the total but never show up in Points History, since
+// Points History reads discrete logged events — there simply wasn't one to
+// show. This fixes it properly: the first time a lesson is BOTH marked
+// "complete" (by admin) AND has every question genuinely mastered, it's
+// logged exactly once, same as everything else.
+const LESSON_MASTERY_POINTS = 200;
+let _lessonMasteryAwardedCache = null; // {lessonId: true, ...} — loaded once per session
+
+async function loadLessonMasteryAwarded(){
+  if(_lessonMasteryAwardedCache) return _lessonMasteryAwardedCache;
+  if(!window._fb || !currentUserPhone){ _lessonMasteryAwardedCache = {}; return _lessonMasteryAwardedCache; }
+  try{
+    const { db, doc, getDoc } = window._fb;
+    const snap = await getDoc(doc(db,"sessions",currentUserPhone,"settings","lessonMasteryAwarded"));
+    _lessonMasteryAwardedCache = snap.exists() ? snap.data() : {};
+  }catch(e){ _lessonMasteryAwardedCache = {}; }
+  return _lessonMasteryAwardedCache;
+}
+
+// Checks ONE specific lesson (the one just touched, or just marked complete)
+// rather than re-scanning the whole syllabus every time — cheap enough to
+// call after every mastery update and every admin "mark complete" toggle.
+async function checkLessonMasteryBonus(lessonId){
+  // Note: unlike student-experience-only checks (New Try Bonus, spelling
+  // gate), this deliberately fires for admin too — marking a lesson
+  // "complete" is an admin-only action, so if that admin action is what
+  // completes the bonus (all questions already mastered beforehand), it
+  // needs to fire right there, not only from the student's own side.
+  if(!window._fb || !currentUserPhone || !lessonId) return;
+  const awarded = await loadLessonMasteryAwarded();
+  if(awarded[lessonId]) return; // already earned, ever
+  if(!_completeLessons[lessonId]) return; // admin hasn't marked it complete yet
+
+  // Find the actual lesson object AND which subject/part it lives under —
+  // this used to fall back to the global currentSubject/currentPart, which
+  // is only correct while actively inside that lesson's own session. When
+  // this check runs from a sweep (checking every lesson, not just the one
+  // just answered), that global state could belong to a completely
+  // different lesson, silently mislabeling the log entry.
+  let lesson = null, foundSubject = "", foundPart = "";
+  outer: for(const [subjName, subj] of Object.entries(DATA)){
+    for(const [partName, part] of Object.entries(subj.parts)){
+      const found = part.lessons.find(l=>l.id===lessonId);
+      if(found){ lesson = found; foundSubject = subjName; foundPart = partName; break outer; }
+    }
+  }
+  if(!lesson || !isLessonFullyMastered(lesson)) return;
+
+  awarded[lessonId] = true; // mark immediately so a rapid double-trigger can't double-award before Firestore round-trips
+  const { db, doc, setDoc } = window._fb;
+  try{ await setDoc(doc(db,"sessions",currentUserPhone,"settings","lessonMasteryAwarded"), awarded); }catch(e){}
+  await fbLogEntry("logs", {
+    subject: foundSubject, part: foundPart, lessonId:"lessonmastery",
+    lessonTitle: `${lesson.title}`, qtype:"lessonmastery", qIndex: Date.now(), pct:100, timeMs:0, marks: LESSON_MASTERY_POINTS
+  });
+  bumpGrowthPointsBadge(LESSON_MASTERY_POINTS);
+  showLessonMasteryCelebration(lesson);
+}
+
+// Catches anything that was ALREADY true but never got a live trigger to
+// check it — e.g. a lesson fully mastered and marked complete before this
+// feature existed, or between sessions with no new answer to fire the
+// per-question check. Safe to call as often as needed: both underlying
+// checks are already idempotent (a persisted "awarded" flag prevents any
+// double-payout), this just makes sure they're actually CALLED regularly,
+// not only from live events that might never happen again for an
+// already-finished lesson.
+async function sweepAllPendingBonuses(){
+  if(!window._fb || !currentUserPhone) return;
+  await checkMilestonesAfterMastery(); // already checks every milestone from scratch each time
+  for(const subj of Object.values(DATA)){
+    for(const part of Object.values(subj.parts)){
+      for(const lesson of part.lessons){
+        await checkLessonMasteryBonus(lesson.id);
+      }
+    }
+  }
+}
+
+function showLessonMasteryCelebration(lesson){
+  const overlayId = "lessonMasteryCelebration_"+Date.now();
+  const overlay = document.createElement("div");
+  overlay.id = overlayId;
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(26,39,68,.65);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .3s";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:22px;padding:32px 26px;max-width:370px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.35);transform:scale(.85);transition:transform .4s cubic-bezier(.34,1.56,.64,1)">
+      <div style="font-size:52px;margin-bottom:8px;animation:goodwillBounce 1s ease-in-out infinite">🏆</div>
+      <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Lesson Mastered!</div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:14px">${lesson.title}</div>
+      <div style="background:var(--green-light);color:var(--green);font-weight:900;font-size:24px;padding:11px 22px;border-radius:14px;display:inline-block;margin-bottom:18px">+${LESSON_MASTERY_POINTS} Growth Points 🎉</div>
+      <button onclick="document.getElementById('${overlayId}').remove()" style="width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">Great work! →</button>
     </div>`;
   document.body.appendChild(overlay);
   requestAnimationFrame(()=>{
@@ -7863,7 +8289,7 @@ function showAdminBar(){
   bar.id = "adminBar";
   bar.style.cssText = "position:fixed;top:0;left:0;right:0;background:#1a2744;color:#fff;padding:8px 14px;font-size:12px;font-weight:700;z-index:99999;display:flex;align-items:center;justify-content:space-between;gap:10px";
   bar.innerHTML = `
-    <span>👁 Admin Mode — mirroring ${STUDENT_NAME}</span>
+    <span>👁 Admin Mode — mirroring ${STUDENT_NAME} <span style="opacity:.55;font-weight:400">· v${APP_VERSION}</span></span>
     <button onclick="openAdminMirror()" style="background:#fff;color:#1a2744;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:12px;cursor:pointer">Open Live Report</button>`;
   document.body.appendChild(bar);
   document.body.style.paddingTop = "36px";
@@ -8147,7 +8573,7 @@ async function buildScoreboard(){
   }
 
   const { bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries } = aggregateScoreboardData(logsSnap, examSnap);
-  totalBox.innerHTML = renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
+  totalBox.innerHTML = await renderScoreboardTotalHTML(bySession, allUnique, grandAttempts, grandTimeMs, mockStats, allScoredEntries, totalTestPoints);
   sessBox.innerHTML = renderScoreboardSessionsHTML(bySession);
 }
 
@@ -9318,6 +9744,7 @@ async function toggleLessonComplete(lessonId){
       console.log("saved OK");
     }catch(e){ console.error("toggleLessonComplete save error:", e); }
   }
+  checkLessonMasteryBonus(lessonId); // fire-and-forget — in case every question was already mastered before this toggle
   renderAdminLessons();
 }
 
@@ -9374,34 +9801,6 @@ function renderAdminLessons(){
   });
   box.innerHTML = html;
 }
-
-// Calculate lesson mastery bonus — +200 for each complete lesson where all questions are mastered (80%+ twice)
-function calcLessonMasteryBonus(){
-  var totalBonus = 0;
-  var lessonStatus = []; // {lessonId, title, icon, totalQ, masteredQ, complete, bonusEarned}
-  Object.entries(DATA).forEach(function(subjEntry){
-    var subjName = subjEntry[0], subjData = subjEntry[1];
-    var icon = subjData.icon || "📚";
-    Object.values(subjData.parts).forEach(function(partData){
-      partData.lessons.forEach(function(lesson){
-        var totalQ = Object.values(lesson.questions).reduce(function(a,arr){return a+arr.length;},0);
-        var masteredQ = 0;
-        Object.entries(lesson.questions).forEach(function(pair){
-          var qt = pair[0], arr = pair[1];
-          for(var k=0;k<arr.length;k++){
-            if(_masteredQuestionKeys.has(lesson.id+"_"+qt+"_"+k)) masteredQ++;
-          }
-        });
-        var isComplete = !!_completeLessons[lesson.id];
-        var bonusEarned = (isComplete && totalQ > 0 && masteredQ >= totalQ) ? 200 : 0;
-        if(bonusEarned) totalBonus += bonusEarned;
-        lessonStatus.push({lessonId:lesson.id, title:lesson.title, icon:icon, totalQ:totalQ, masteredQ:masteredQ, complete:isComplete, bonusEarned:bonusEarned});
-      });
-    });
-  });
-  return { totalBonus: totalBonus, lessons: lessonStatus };
-}
-
 
 </script>
 </body>
