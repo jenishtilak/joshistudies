@@ -7923,11 +7923,10 @@ html{scrollbar-color:#cfae80 transparent}
 .quiz-overlay.sb-book #toggleRevise.active,.quiz-overlay.sb-book #togglePractice.active,.quiz-overlay.sb-book #toggleTest.active{position:relative;z-index:2;height:42px;line-height:42px!important;background:#fdfdfb!important;color:#0f172a!important;box-shadow:0 -3px 8px -3px rgba(80,50,20,.22)!important}
 .quiz-overlay.sb-book:not(.pb-scroll-mode) #togglePractice.active{background:#fbf3e2!important} /* Write: joins the cream strip of question types */
 .quiz-overlay.sb-book #fbStage{padding-top:0!important}
-/* Write: sticky rows sit under the new, shorter top */
-.quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar{top:48px!important} /* phone: only this row sticks */
+/* Write and Test: the one row under the tabs (🔖 Contents · Prev · dots · Next) sticks under them */
+.quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar{top:48px!important}
 @media(min-width:601px){
-  .quiz-overlay.sb-book:not(.pb-scroll-mode) .qtype-tabs-wrap{top:52px!important}
-  .quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar{top:91px!important}
+  .quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar{top:52px!important}
 }
 .q-nav-timer{display:none}
 .quiz-overlay.sb-book .q-nav-timer{display:inline-flex;align-items:center;flex:none;margin-left:auto;padding:0 2px 0 8px;font:800 13px var(--font-body);color:#64748b;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -8688,14 +8687,8 @@ html{scrollbar-color:#cfae80 transparent}
   .rd-top-act-btn i{display:none!important}
   .rd-top-act-btn{padding:4px 7px!important}
 }
-/* ── Write and Test: the 🔖 Contents tab instead of the row of section tabs ── */
-.sb-cbar{display:none}
-.quiz-overlay.sb-book:not(.pb-scroll-mode) #qtypeTabs{display:none!important}
-.quiz-overlay.sb-book:not(.pb-scroll-mode) .sb-cbar{display:flex;align-items:center;gap:10px;min-height:39px;padding:3px 12px 5px;box-sizing:border-box;min-width:0}
-.sb-cbar .rd-contents-bm-btn{flex:none;padding:4px 12px;font-size:12.5px}
-.sb-cbar-now{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:900 11.5px/1.2 var(--font-body);letter-spacing:.4px;text-transform:uppercase;color:var(--brand,#1d4ed8)}
-.sb-cbar-now b{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:var(--lime,#d9f99d);color:var(--lime-ink,#365314);font-size:10px;letter-spacing:0}
-.sb-cbar-add{flex:none;margin-left:auto;padding:4px 10px;border:1.5px dashed var(--gold,#d1983f);border-radius:8px;background:transparent;color:var(--gold,#b7791f);font:800 12px var(--font-body);cursor:pointer}
+/* ── Write and Test: the 🔖 Contents tab instead of the row of section tabs (it starts the question row) ── */
+.quiz-overlay.sb-book .qtype-tabs-wrap{display:none!important}
 .rd-pk-row.sb-pk-on{background:#eff6ff!important;box-shadow:inset 3px 0 0 #2563eb}
 </style>
 <style id="sbBootCss">
@@ -8720,6 +8713,42 @@ window.addEventListener('error', function(e){
 }, true);
 setTimeout(function(){ var b = document.getElementById('sbBoot'); if(b) b.remove(); }, 20000); // never leave the tile up for good
 </script>
+<style id="sbSpeedChip">
+/* the speed round is a chip in the question row, not a box on the page */
+#speedTimerWrap{display:none!important}
+.q-nav-bar.has-speed .q-nav-timer{display:none!important}
+.q-nav-speed{display:inline-flex;align-items:center;flex:none;margin-left:auto;padding:3px 9px;border-radius:999px;color:#fff;font:800 12.5px var(--font-body);font-variant-numeric:tabular-nums;white-space:nowrap;cursor:default}
+.q-nav-speed.fast{background:#4a9873}
+.q-nav-speed.good{background:#cf8f2e}
+</style>
+<style id="sbOneRow">
+/* ── Write and Test: one row under the Read · Write · Test tabs. The 🔖 Contents tab, named for the
+   section he is in, starts the question row (it had a row of its own); on a phone Prev and Next are
+   arrows, so the question starts higher up the screen. ── */
+.sb-nav-contents{display:none}
+.quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar .sb-nav-contents{display:inline-flex;flex:none;min-width:0;max-width:48%;margin-right:4px;padding:5px 12px;gap:5px;font-size:12.5px;white-space:nowrap}
+.sb-nav-contents .sbn-full,.sb-nav-contents .sbn-short{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sb-nav-contents .sbn-short{display:none}
+.sb-nav-contents .sbn-caret{flex:none;font-size:10px;opacity:.85}
+.sb-nav-contents:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.q-nav-dots-wrap.qn-fit{flex:0 1 auto;min-width:0}
+.quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar .q-nav-dots-wrap{min-width:30px}
+.quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar .q-nav-dots-wrap{margin:-2px 0} /* its 2px of room for the dots' rims doesn't make the row taller */
+.sb-pk-foot{flex:none;padding:10px 12px 14px;border-top:1px solid rgba(180,140,80,.25)}
+.sb-pk-add{display:block;width:100%;padding:10px 12px;border:1.5px dashed #d1983f;border-radius:10px;background:#fffbeb;color:#92400e;font:800 13.5px var(--font-body);cursor:pointer}
+.sb-pk-add:hover{background:#fef3c7}
+.sb-pk-add:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+@media(max-width:600px){
+  .quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar{gap:5px;padding-left:10px;padding-right:10px}
+  /* room for ← · one dot · → and the clock (or the speed chip): on the narrowest phones a long name is cut short */
+  .quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar .sb-nav-contents{max-width:calc(100% - 178px);margin-right:2px;padding:5px 9px!important;gap:4px!important;font-size:12px!important}
+  .quiz-overlay.sb-book:not(.pb-scroll-mode) .q-nav-bar.has-speed .sb-nav-contents{max-width:calc(100% - 214px)}
+  .sb-nav-contents .sbn-full{display:none}
+  .sb-nav-contents .sbn-short{display:inline}
+  .quiz-overlay.sb-book .q-nav-bar .qn-w{display:none}
+  .quiz-overlay.sb-book .q-nav-bar .q-nav-prev,.quiz-overlay.sb-book .q-nav-bar .q-nav-next{padding:5px 10px}
+}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -8983,7 +9012,6 @@ setTimeout(function(){ var b = document.getElementById('sbBoot'); if(b) b.remove
   <!-- Question-type tabs -->
   <div class="qtype-tabs-wrap">
     <div class="qtype-tabs" id="qtypeTabs"></div>
-    <div class="sb-cbar" id="sbContentsBar"></div>
   </div>
 
   <!-- Question navigation bar -->
@@ -9731,7 +9759,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.03-3";
+const APP_VERSION = "2026.11.04-1";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -12997,21 +13025,36 @@ function sbContentsSections(){
       sub: n ? `${n} question${n !== 1 ? "s" : ""} · ${m} mastered` : "No questions yet — add one", badge: n && m === n ? "🏆" : n ? `${m}/${n}` : "+", full: !!n && m === n, go: `sbWriteGo('${qt.id}')` };
   });
 }
-function sbRenderContentsBar(){
-  const bar = document.getElementById("sbContentsBar"); if(!bar) return;
+// The 🔖 Contents tab starts the question row (Contents · Prev · dots · Next) instead of having a row of
+// its own, so a phone shows one row under the Read · Write · Test tabs, not two. It names the section he
+// is in ("🔖 Choose ▾" on a phone, "🔖 Choose Correct ▾" on a bigger screen) and opens the list of them.
+function sbRenderContentsBar(){ sbNavContents(); }
+function sbNavContents(){
+  const bar = document.getElementById("qNavBar"); if(!bar) return false;
+  let b = document.getElementById("sbNavContents");
   const secs = sbContentsSections();
-  if(!secs || !secs.length){ bar.innerHTML = ""; return; }
+  if(!secs || !secs.length){ if(b) b.remove(); return false; }
   const cur = secs.find(x => x.on) || secs[0];
-  const canAdd = currentLesson && currentLesson.id !== "__mock__" && currentLesson.studentCanAddQuestions;
-  bar.innerHTML = `<button type="button" class="rd-contents-bm-btn" onclick="sbOpenContents()" title="All the sections of this lesson" aria-haspopup="dialog"><span class="rd-cbm-icon" aria-hidden="true">🔖</span><span>Contents</span></button>
-    <span class="sb-cbar-now">${cur.icon} ${pbEsc(cur.label)}<b>${cur.n || "+"}</b></span>
-    ${canAdd ? `<button type="button" class="sb-cbar-add" onclick="openStudentAddQuestion()">+ Add Question</button>` : ""}`;
+  const test = currentLesson && currentLesson.id === "__mock__";
+  if(!b){
+    b = document.createElement("button");
+    b.type = "button"; b.id = "sbNavContents"; b.className = "rd-contents-bm-btn sb-nav-contents";
+    b.setAttribute("aria-haspopup", "dialog");
+    b.onclick = () => sbOpenContents();
+  }
+  if(bar.firstChild !== b) bar.insertBefore(b, bar.firstChild);
+  b.innerHTML = `<span class="rd-cbm-icon" aria-hidden="true">🔖</span><span class="sbn-full">${pbEsc(cur.label)}</span><span class="sbn-short">${pbEsc(REVISE_NAV_LABELS[cur.id] || cur.label)}</span><span class="sbn-caret" aria-hidden="true">▾</span>`;
+  b.title = `Contents: all the sections of this ${test ? "test" : "lesson"}`;
+  b.setAttribute("aria-label", `Contents. You are in ${cur.label}.`);
+  return true;
 }
 function sbOpenContents(){
   try{ rdClosePickerModal(); }catch(e){}
   const secs = sbContentsSections(); if(!secs || !secs.length) return;
   const test = currentLesson && currentLesson.id === "__mock__";
   const L = (typeof sbTabLesson === "function" && sbTabLesson()) || currentLesson;
+  const cur = secs.find(x => x.on) || secs[0];
+  const canAdd = !test && !!(currentLesson && currentLesson.studentCanAddQuestions);
   const rows = secs.map(x => `<button type="button" class="rd-pk-row rd-pk-bm-row${x.on ? " sb-pk-on" : ""}" onclick="rdClosePickerModal(); ${x.go}"${x.on ? ' aria-current="true"' : ""}>
       <span class="rd-pk-icon">${x.icon}</span>
       <span class="rd-pk-main"><span class="rd-pk-title">${pbEsc(x.label)}</span><span class="rd-pk-sub">${x.on ? "You are here · " : ""}${x.sub}</span></span>
@@ -13025,6 +13068,7 @@ function sbOpenContents(){
         <button type="button" class="rd-picker-close" onclick="rdClosePickerModal()" aria-label="Close">✕</button>
       </div>
       <div class="rd-picker-list">${rows}</div>
+      ${canAdd ? `<div class="sb-pk-foot"><button type="button" class="sb-pk-add" onclick="rdClosePickerModal(); openStudentAddQuestion()">+ Add a question to ${pbEsc(cur.label)}</button></div>` : ""}
     </div>`;
   ov.addEventListener("click", e => { if(e.target === ov) rdClosePickerModal(); });
   document.body.appendChild(ov);
@@ -13361,13 +13405,27 @@ function startSpeedTimer(qtype){
   const nudge15x = Math.round(goodMs * 1.5);
   const nudge2x  = goodMs * 2;
   const nudge3x  = goodMs * 3;
+  let lastNudge = "";
+  // The speed round used to be a box on the notebook page (a heading, a bar, the bonus and a nudge line).
+  // It is now one chip at the end of the question row, in place of the ⏱ timer while a bonus is still
+  // on offer: "⚡ +5 · 3:39", then "🕐 +2 · 1:12", then the ⏱ timer comes back. The nudges show once
+  // each as a short message. (The box is still built, hidden, so nothing that reads it breaks.)
+  function chip(kind, txt, title){
+    const nav = document.getElementById("qNavBar");
+    let c = document.getElementById("qNavSpeed");
+    if(!kind || currentMode === "exam"){ if(c) c.remove(); if(nav) nav.classList.remove("has-speed"); return; } // a test gives no speed bonus
+    if(!nav) return;
+    if(!c || c.parentNode !== nav){ if(c) c.remove(); c = document.createElement("span"); c.id = "qNavSpeed"; nav.appendChild(c); }
+    c.className = "q-nav-speed " + kind; c.textContent = txt; c.title = title; c.setAttribute("aria-label", title);
+    nav.classList.add("has-speed");
+  }
 
   function tick(){
     const elapsed = Date.now() - startMs;
     const bar = document.getElementById("speedTimerBar");
     const pts = document.getElementById("speedTimerPts");
     const nudge = document.getElementById("speedNudge");
-    if(!bar) return;
+    if(!bar){ stopSpeedTimer(); return; } // its question has gone (he moved on): no chip left behind
 
     if(elapsed <= fastMs){
       const rem = fastMs - elapsed;
@@ -13375,16 +13433,19 @@ function startSpeedTimer(qtype){
       bar.style.background = "#4a9873";
       if(pts){ pts.style.background="#4a9873"; pts.textContent="⚡ +"+fastPts+" pts if done in "+fmtCountdown(rem); }
       if(nudge) nudge.textContent = "";
+      chip("fast", "⚡ +"+fastPts+" · "+fmtCountdown(rem), "Speed bonus: +"+fastPts+" points if you finish in "+fmtCountdown(rem));
     } else if(elapsed <= goodMs){
       const rem = goodMs - elapsed;
       bar.style.width = Math.max(0,(rem/(goodMs-fastMs))*100)+"%";
       bar.style.background = "#cf8f2e";
       if(pts){ pts.style.background="#cf8f2e"; pts.textContent="🕐 +"+goodPts+" pts if done in "+fmtCountdown(rem); }
       if(nudge) nudge.textContent = "";
+      chip("good", "🕐 +"+goodPts+" · "+fmtCountdown(rem), "Speed bonus: +"+goodPts+" points if you finish in "+fmtCountdown(rem));
     } else {
       bar.style.width = "0%";
       bar.style.background = "#ccc";
       if(pts){ pts.style.background="#aaa"; pts.textContent="No speed bonus"; }
+      chip(null);
       // Nudge messages — escalate over time
       if(nudge){
         if(elapsed >= nudge3x){
@@ -13397,6 +13458,8 @@ function startSpeedTimer(qtype){
           nudge.textContent = "💡 Write what you know — you can always retry!";
           nudge.style.color = "var(--muted)";
         }
+        const msg = nudge.textContent;
+        if(msg && msg !== lastNudge && currentMode !== "exam"){ lastNudge = msg; try{ showPointsToast(0, msg); }catch(e){} }
       }
     }
   }
@@ -13407,6 +13470,8 @@ function startSpeedTimer(qtype){
 
 function stopSpeedTimer(){
   if(_speedTimerInterval){ clearInterval(_speedTimerInterval); _speedTimerInterval=null; }
+  const c = document.getElementById("qNavSpeed"); if(c) c.remove();
+  document.getElementById("qNavBar")?.classList.remove("has-speed");
 }
 
 // Speed bonus thresholds (ms) per question type.
@@ -13523,19 +13588,23 @@ function saveStudyAnswer(pct){
 function renderNavBar(){
   const qs=currentLesson.questions[currentQType]||[];
   const bar=document.getElementById("qNavBar");
-  if(!qs.length){ bar.style.display="none"; return; }
+  // an empty heading keeps the row in the book, for its 🔖 Contents tab (the way to the other headings)
+  if(!qs.length){ bar.innerHTML=""; bar.style.display = sbNavContents() ? "flex" : "none"; return; }
   bar.style.display="flex";
+  const _spd=document.getElementById("qNavSpeed"); // the speed-round chip carries on across a redraw
   bar.innerHTML="";
-  if(!qs.length) { bar.style.display="none"; return; }
 
   // Prev button
   const prev=document.createElement("button");
-  prev.className="q-nav-prev"; prev.textContent="← Prev";
+  prev.className="q-nav-prev"; prev.innerHTML='<span aria-hidden="true">←</span><span class="qn-w"> Prev</span>';
+  prev.title="Previous question"; prev.setAttribute("aria-label","Previous question");
   prev.disabled=nextReachableIndex(currentQIndex-1, -1, qs.length)===-1;
   prev.onclick=()=>{ const t=nextReachableIndex(currentQIndex-1, -1, qs.length); if(t!==-1) jumpToQuestion(t); };
   bar.appendChild(prev);
 
   // Dot per question
+  const dotsWrap=document.createElement("div");
+  dotsWrap.className="q-nav-dots-wrap qn-fit";
   qs.forEach((_,i)=>{
     if(isQuestionHiddenByFocus(currentLesson?.id, currentQType, i)) return; // mastered, and Focus Mode is set to what's left
     const dot=document.createElement("div");
@@ -13554,12 +13623,14 @@ function renderNavBar(){
     } else if(questionStates[i]?.skipped) dot.classList.add("skipped");
     else if(isMastered) dot.classList.add("answered-good");
     dot.onclick=()=>jumpToQuestion(i);
-    bar.appendChild(dot);
+    dotsWrap.appendChild(dot);
   });
+  bar.appendChild(dotsWrap);
 
   // Next button
   const next=document.createElement("button");
-  next.className="q-nav-next"; next.textContent="Next →";
+  next.className="q-nav-next"; next.innerHTML='<span class="qn-w">Next </span><span aria-hidden="true">→</span>';
+  next.title="Next question"; next.setAttribute("aria-label","Next question");
   next.disabled=currentQIndex>=qs.length-1;
   next.onclick=()=>jumpToQuestion(currentQIndex+1);
   bar.appendChild(next);
@@ -13568,6 +13639,15 @@ function renderNavBar(){
   tick.className="q-nav-timer"; tick.id="qNavTimer"; tick.title="Time on this question";
   tick.textContent="⏱ "+fmtMs(Math.max(0, Date.now()-(_questionStart||Date.now())));
   bar.appendChild(tick);
+  if(_spd) bar.appendChild(_spd);
+  sbNavContents();
+  // the strip of dots opens with the question he is on in the middle of it
+  requestAnimationFrame(()=>{
+    const c=dotsWrap.querySelector(".q-nav-dot.current");
+    if(!c || !dotsWrap.isConnected || dotsWrap.scrollWidth<=dotsWrap.clientWidth) return;
+    const wr=dotsWrap.getBoundingClientRect(), cr=c.getBoundingClientRect();
+    dotsWrap.scrollLeft += (cr.left-wr.left) - (wr.width-cr.width)/2;
+  });
 }
 
 // Shown instead of leaving a stale, already-answered question frozen on
@@ -13591,6 +13671,7 @@ function showAllMasteredInHeadingState(){
 function jumpToQuestion(idx){
   const total=(currentLesson.questions[currentQType]||[]).length;
   if(total===0){
+    try{ stopSpeedTimer(); }catch(e){}
     // Nothing to jump to in this heading. Still render, or the previous
     // tab's question stays on screen forever -- this is what makes the
     // "+ Add the First Question" empty state (and button) actually show up
@@ -13601,6 +13682,9 @@ function jumpToQuestion(idx){
     return;
   }
   if(idx<0||idx>=total) return;
+  // the speed round was the last question's (a new one starts with its question; the bonus is worked out
+  // from the question's own clock, so scoring is unchanged)
+  try{ stopSpeedTimer(); }catch(e){}
   // Landing on a hidden question means step past it rather than filter it out
   if(isQuestionHiddenByFocus(currentLesson?.id, currentQType, idx)){
     const fwd = nextReachableIndex(idx, 1, total);
@@ -14322,6 +14406,19 @@ function checkFill(answers){
   showSimpleResult(pct,`${correct} / ${answers.length} correct${spelled ? ` · ✏️ ${spelled} spelling to fix` : ""} ${timeChip(fillElapsed)}`,
     spelled && correct + spelled === answers.length ? "Right word — check the spelling ✏️" : "");
   const _br=document.getElementById("btnRow"); if(_br) _br.style.display="flex";
+  // every blank right (and spelled right): on to the next question by itself, as Choose Correct does.
+  // A slip or a wrong blank stays on screen so he can see the correction.
+  if(correct === answers.length){
+    if(inMockRun){
+      const _snapIdx = mockQIndex;
+      setTimeout(()=>{ if(inMockRun && mockQIndex===_snapIdx) nextQuestion(); }, 1100);
+    } else if(currentMode==="study"){
+      const _snapLid = currentLesson?.id, _snapQt = currentQType, _snapQi = currentQIndex;
+      setTimeout(()=>{
+        if(!inMockRun && currentMode==="study" && currentLesson?.id===_snapLid && currentQType===_snapQt && currentQIndex===_snapQi) nextQuestion();
+      }, 1100);
+    }
+  }
 }
 
 function examNextFill(answers, isLast){
@@ -16557,6 +16654,7 @@ function buildMockQuestionsMap(){ return {}; } // legacy stub
 
 function renderMockQuestion(){
   try{ if(_sbPeek) sbPeekClose(); }catch(e){}
+  try{ stopSpeedTimer(); }catch(e){} // the last question's speed round
   if(mockQIndex>=mockQuestions.length){ showMockResults(); return; }
   const item=mockQuestions[mockQIndex];
   const total=mockQuestions.length;
@@ -16696,7 +16794,9 @@ function renderMockNavBar(){
   // Prev button
   const _book = !!(isLessonTest && document.getElementById("quizOverlay")?.classList.contains("sb-book"));
   const prev=document.createElement("button");
-  prev.className="q-nav-prev"; prev.textContent=_book ? "← Prev" : "‹";
+  prev.className="q-nav-prev";
+  if(_book){ prev.innerHTML='<span aria-hidden="true">←</span><span class="qn-w"> Prev</span>'; prev.setAttribute("aria-label","Previous question"); }
+  else prev.textContent="‹";
   prev.title="Previous";
   prev.disabled=mockQIndex===0;
   prev.onclick=()=>jumpMockQuestion(mockQIndex-1);
@@ -16743,7 +16843,9 @@ function renderMockNavBar(){
 
   // Next button
   const next=document.createElement("button");
-  next.className="q-nav-next"; next.textContent=_book ? "Next →" : "›";
+  next.className="q-nav-next";
+  if(_book){ next.innerHTML='<span class="qn-w">Next </span><span aria-hidden="true">→</span>'; next.setAttribute("aria-label","Next question"); }
+  else next.textContent="›";
   next.title="Next";
   next.disabled=mockQIndex>=total-1;
   next.onclick=()=>jumpMockQuestion(mockQIndex+1);
@@ -16754,6 +16856,7 @@ function renderMockNavBar(){
     tick.textContent="⏱ "+fmtMs(Math.max(0, Date.now()-(_sessionStart||Date.now())));
     bar.appendChild(tick);
   }
+  sbNavContents();
 }
 
 // Practice Mode (hints allowed) inside a mock/exam-practice run answers
