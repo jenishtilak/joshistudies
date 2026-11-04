@@ -8749,6 +8749,18 @@ setTimeout(function(){ var b = document.getElementById('sbBoot'); if(b) b.remove
   .quiz-overlay.sb-book .q-nav-bar .q-nav-prev,.quiz-overlay.sb-book .q-nav-bar .q-nav-next{padding:5px 10px}
 }
 </style>
+<style id="sbNoPlan">
+/* ── Lessons page without the ☀️ Start today card: the exam countdown on its own (when there is an exam),
+   and on a phone 🔥 streak · 🌱 points sit in the top bar instead of a row of their own ── */
+.sbf-examonly{margin:2px 0 12px}
+.sbf-examonly .sbf-exam{margin-top:0}
+.mh-stats{margin-left:auto;flex:none}
+.mh-stats:empty{display:none}
+.mobile-header .sbf-stats{margin:0;gap:8px;padding:4px 11px;border:1.5px solid rgba(255,255,255,.35);background:rgba(255,250,240,.96);box-shadow:0 2px 0 rgba(0,0,0,.18);font:800 13px var(--font-body)}
+.mobile-header .sbf-stats span{display:inline-flex;align-items:center;gap:4px;font:800 13px/1.2 var(--font-body);color:var(--navy)}
+.mobile-header .sbf-stats b{font:900 15px/1.2 var(--font-display);color:var(--navy)}
+@media(max-width:819px){#homeMotivate{display:none!important}} /* it only holds the strip of 🔥 · 🌱 now in the top bar */
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -8812,6 +8824,7 @@ setTimeout(function(){ var b = document.getElementById('sbBoot'); if(b) b.remove
   <div class="mobile-header">
     <span style="font-size:22px">📚</span>
     <div><h1>Study Buddy</h1><p id="mobileHeaderSub">Class 9</p></div>
+    <span class="mh-stats" id="mhStats"></span>
   </div>
   <div class="class-tabs" id="classTabs"></div>
   <div class="subject-tabs" id="subjectTabs"></div>
@@ -9759,7 +9772,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-1";
+const APP_VERSION = "2026.11.04-2";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -18006,6 +18019,8 @@ async function renderHomeMotivate(){
   box.innerHTML = `<div id="todayStrip"></div>`;
   const st = await pbStudyStats();
   document.querySelectorAll(".sbf-stats").forEach(el => { if(st) el.outerHTML = pbHomeStatsInner(st); });
+  // 🔥 · 🌱 in the phone's top bar (no row of its own); a bigger screen keeps the strip below
+  const mh = document.getElementById("mhStats"); if(mh) mh.innerHTML = st ? pbHomeStatsInner(st) : "";
   const ts = document.getElementById("todayStrip"); if(!ts || !st) return;
   ts.innerHTML = `<button type="button" class="today-strip" onclick="openScoreboardPanel()" aria-label="Open My Progress">
       <span class="ts-chip">🔥 <b>${st.streak}</b> day${st.streak !== 1 ? "s" : ""}${st.streak && !st.studiedToday ? " · study today to keep it!" : ""}</span>
@@ -21855,7 +21870,7 @@ function openAdminMirror(){
     </div>
 
     <div id="adminTabExams" style="display:none">
-      <details class="adm-help"><summary>ⓘ How this works</summary><p>Add each test or exam with its date and the chapters it covers. ${STUDENT_NAME} sees a countdown and how ready he is for every chapter, and his ☀️ Start today plan works on these chapters first.</p></details>
+      <details class="adm-help"><summary>ⓘ How this works</summary><p>Add each test or exam with its date and the chapters it covers. ${STUDENT_NAME} sees a countdown and how ready he is for every chapter${typeof sbfPlanOn === "function" && sbfPlanOn() ? ", and his ☀️ Start today plan works on these chapters first" : ""}.</p></details>
       <div id="adminClassBarExams" style="margin-bottom:14px"></div>
       <div id="sbfAdmExams"></div>
     </div>
@@ -33389,6 +33404,10 @@ const SBF_DIAG = {"dg-animal-cell":{"w":640,"h":520,"art":"<path d=\"M551.6 262C
 //    settings/dailyPlans     one line per day of the plan  (written by student)
 // ═══════════════════════════════════════════════════════════════════════
 const SBF = { exams: { list: [] }, sets: { custom: {}, attach: {}, hidden: [] }, prog: null, plans: { days: {} }, loaded: false, img: {} };
+// The day's plan (☀️ Start today: review · learn · quick game · maps) is switched off (Nov 2026): on a
+// phone its card filled the top of the lessons page. Its code is all still here; return true to bring
+// it back (the home card, the welcome card's "Start today's plan", the button on the exams screen).
+function sbfPlanOn(){ return false; }
 const SBF_INTERVALS = [0, 1, 3, 7, 16, 35];
 let _sbfPbReady = false, _sbfLoginAt = 0;
 
@@ -33614,7 +33633,7 @@ function sbfRenderExams(){
         ${sbfRingHTML(r.pct, true)}
       </div>
       ${rows || `<div class="sbf-muted">No chapters added to this exam.</div>`}
-      ${k === 0 ? `<button type="button" class="sbf-go" onclick="sbfExamClose();sbfPlanGo()">☀️ Today's plan works on these chapters first ▶</button>` : ""}
+      ${k === 0 && sbfPlanOn() ? `<button type="button" class="sbf-go" onclick="sbfExamClose();sbfPlanGo()">☀️ Today's plan works on these chapters first ▶</button>` : ""}
     </div>`;
   }).join("") + `<details class="sbf-help"><summary>ⓘ What does "ready" mean?</summary><p>A question counts as ready when you've mastered it in ✏️ Write (80% or more without peeking), or locked a written answer in with a review in the game. Map and diagram items count once you get them right on two different days.</p></details>`;
 }
@@ -33798,6 +33817,7 @@ function sbfPlan(){
   return _sbfPlan;
 }
 function sbfPlanMark(k){
+  if(!sbfPlanOn()) return;
   const p = sbfPlan(); if(!p) return;
   p.done = p.done || {};
   if(!p.done[k]){ p.done[k] = Date.now(); sbfLS(sbfPlanKey(), p); }
@@ -33869,6 +33889,12 @@ function sbfPlanSync(p, doneN){
 function sbfRenderHome(){
   const host = document.getElementById("sbfHome"); if(!host) return;
   if(!sbfPhone()){ host.innerHTML = ""; document.body.classList.remove("sbf-plan-on"); return; }
+  if(!sbfPlanOn()){
+    const ex = sbfExamLineHTML();
+    host.innerHTML = ex ? `<div class="sbf-examonly">${ex}</div>` : "";
+    document.body.classList.remove("sbf-plan-on");
+    return;
+  }
   const p = sbfPlan();
   if(!p){ host.innerHTML = sbfExamLineHTML() ? `<div class="sbf-today sbf-loading"><div class="sbf-th"><div class="sbf-tt">☀️ Today's plan</div><div class="sbf-tm">getting ready…</div></div>${sbfExamLineHTML()}</div>` : ""; return; }
   if(!p.steps.length){ host.innerHTML = sbfExamLineHTML() ? `<div class="sbf-today">${sbfExamLineHTML()}</div>` : ""; document.body.classList.remove("sbf-plan-on"); return; }
@@ -33902,6 +33928,7 @@ function sbfRenderHome(){
 // After logging in, the welcome card offers the plan straight away.
 // returns true when there is nothing (more) to do here
 function sbfDecorateWelcome(){
+  if(!sbfPlanOn()) return true; // the welcome card keeps its own "Start studying →"
   const card = document.querySelector("#welcomeBackPopup .wb-card"); if(!card || card.dataset.sbf) return true;
   const p = sbfPlan(); if(!p) return false; // not ready yet: try again shortly
   if(!p.steps.length) return true;
@@ -34842,7 +34869,7 @@ function sbfAttachHTML(setId){
   }).join("");
   return `<div class="adm-card sbf-form">
     <div class="adm-card-t">🔗 ${pbEsc(set.title)}</div>
-    <div class="sbf-muted" style="margin-bottom:10px">Tick the lessons this belongs to. It appears as a <b>Maps</b> page in those lessons, counts towards how ready he is for exams on them, and comes up in ☀️ Start today.</div>
+    <div class="sbf-muted" style="margin-bottom:10px">Tick the lessons this belongs to. It appears as a <b>Maps</b> page in those lessons, counts towards how ready he is for exams on them${sbfPlanOn() ? ", and comes up in ☀️ Start today" : ""}.</div>
     <div class="sbf-pickbox">${groups || `<div class="sbf-muted">No lessons in Class ${pbEsc(currentClass)}.</div>`}</div>
     <div class="sbf-row"><button type="button" class="sbf-go" onclick="sbfAdmAttachSave()">💾 Save</button><button type="button" class="sbf-btn" onclick="_sbfAttachFor=null;sbfAdmMaps()">Cancel</button></div>
   </div>`;
@@ -35161,11 +35188,11 @@ function sbfReportHTML(R){
         <div><b>${R.avg == null ? "—" : R.avg + "%"}</b><span>average score ${R.avg != null ? sbfDelta(R.avg, R.prevAvg, "%") : ""}</span></div>
         <div><b>${R.mastered}</b><span>newly mastered</span></div>
         <div><b>${R.played}</b><span>answers in games${R.locked ? ` · ${R.locked} locked in` : ""}</span></div>
-        <div><b>${R.planStarted ? R.planDays + "/7" : "—"}</b><span>daily plan finished</span></div>
+        ${R.planStarted ? `<div><b>${R.planDays}/7</b><span>daily plan finished</span></div>` : `<div><b>${R.fading}</b><span>answers due for review</span></div>`}
         <div><b>${R.mapItems}</b><span>map items practised</span></div>
       </div>
       <div class="sbf-bars">${bars}</div>
-      <div class="sbf-muted sbf-small">Bars: minutes per day. ✓ = daily plan finished.</div>
+      <div class="sbf-muted sbf-small">Bars: minutes per day.${R.planStarted ? " ✓ = daily plan finished." : ""}</div>
     </div>
     ${exCard}
     <div class="adm-card"><div class="adm-card-t">🔧 Needs work</div>${weak.length ? `<ul class="sbf-ul">${weak.join("")}</ul>` : `<div class="sbf-muted">Nothing stands out this week.</div>`}
