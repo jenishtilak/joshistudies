@@ -8773,6 +8773,22 @@ html.sb-kb .quiz-overlay .sb-newtry{display:none!important}
 /* the line he is writing stays clear of the question row, with room under it for Check Answer (or Next) */
 html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-padding-top:52px;scroll-padding-bottom:72px}
 </style>
+<style id="sbShooterRow">
+/* ── Write on a phone: 🚀 Revise · 🚀 Spelling · 👁 Answer in one row (the 👁 button had a row of its own) ── */
+@media(max-width:600px){
+  .quiz-overlay .quiz-body .wr-top-shooter-bar{flex-wrap:nowrap!important;gap:7px!important;margin:0 0 10px!important}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar>*{flex:0 1 auto;min-width:0}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-write-shooter{padding:6px 11px!important;gap:4px!important;font-size:12.5px!important;white-space:nowrap}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-peek[data-short]{position:relative;gap:0!important;padding:6px 11px!important;font-size:0!important;line-height:1.2!important;white-space:nowrap;overflow:visible!important}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-peek[data-short]::before{content:attr(data-short);font:800 12.5px/1.2 var(--font-body,'Nunito',sans-serif)}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-peek[data-left]::after{content:attr(data-left);position:absolute;top:-7px;right:-6px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#16a34a;color:#fff;font:900 10.5px/17px var(--font-body,'Nunito',sans-serif);text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+}
+@media(max-width:370px){ /* the narrowest phones: the words without the rockets */
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .wr-sh-i{display:none}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar{gap:6px!important}
+  .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-write-shooter,.quiz-overlay .quiz-body .wr-top-shooter-bar .btn-peek[data-short]{padding:6px 10px!important}
+}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -9784,7 +9800,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-3";
+const APP_VERSION = "2026.11.04-4";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -13924,8 +13940,8 @@ function renderCurrentQuestion(){
     if(_card && currentLesson && currentMode !== "exam" && !_card.querySelector(".wr-top-shooter-bar")){
       const _qLabel = _card.querySelector(".q-label");
       const _shooterHTML = `<div class="wr-top-shooter-bar" id="wrTopShooterBar">
-        <button type="button" class="btn-write-shooter btn-write-revise" onclick="openWriteQuestionShooter(false)">🚀 Revise</button>
-        <button type="button" class="btn-write-shooter btn-write-spelling" onclick="openWriteQuestionShooter(true)">🚀 Spelling</button>
+        <button type="button" class="btn-write-shooter btn-write-revise" onclick="openWriteQuestionShooter(false)"><span class="wr-sh-i" aria-hidden="true">🚀</span> Revise</button>
+        <button type="button" class="btn-write-shooter btn-write-spelling" onclick="openWriteQuestionShooter(true)"><span class="wr-sh-i" aria-hidden="true">🚀</span> Spelling</button>
       </div>`;
       if(_qLabel) _qLabel.insertAdjacentHTML("beforebegin", _shooterHTML);
       else _card.insertAdjacentHTML("afterbegin", _shooterHTML);
@@ -13933,10 +13949,38 @@ function renderCurrentQuestion(){
       const _peekBtn = document.querySelector("#quizBody > .btn-peek");
       if(_bar && _peekBtn){
         _bar.appendChild(_peekBtn);
+        sbPeekCompact(_peekBtn);
       }
     }
   }catch(e){}
   maybeShowNewTryBanner(currentQType, getOriginalQIndex(currentQIndex));
+}
+
+// On a phone the 👁 button sits in one row with 🚀 Revise and 🚀 Spelling (it used to take a row of its
+// own), so it shows a short label: "👁 Answer", with the peeks he has left as a small number on its
+// corner. The full words stay its name for screen readers, and every bit of code that sets or reads its
+// words carries on as before (the short label is drawn from them by CSS).
+function sbPeekShortLabel(t){
+  if(/^🙈/.test(t)) return "🙈 Close";
+  if(/^📕/.test(t)) return "📕 Hide poem";
+  if(/no peeks left/i.test(t)) return "👁 No peeks";
+  if(/poem/i.test(t)) return "📖 Poem";
+  if(/answers/i.test(t)) return "👁 Answers";
+  return "👁 Answer";
+}
+function sbPeekCompact(btn){
+  if(!btn || btn._sbShort) return;
+  btn._sbShort = true;
+  const sync = () => {
+    const t = (btn.textContent || "").replace(/\s+/g, " ").trim();
+    const m = /^🙈|^📕/.test(t) ? null : t.match(/(\d+)\s*left\)?\s*$/i);
+    btn.dataset.short = sbPeekShortLabel(t);
+    if(m) btn.dataset.left = m[1]; else delete btn.dataset.left;
+    if(btn.getAttribute("aria-label") !== t) btn.setAttribute("aria-label", t);
+    if(btn.title !== t) btn.title = t;
+  };
+  sync();
+  try{ new MutationObserver(sync).observe(btn, { childList:true, characterData:true, subtree:true }); }catch(e){}
 }
 
 function clearCurrentWriteInputs(){
