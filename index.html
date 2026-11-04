@@ -8804,6 +8804,12 @@ html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-pad
   .fb-run .fb-run-cards{margin-left:auto}
 }
 </style>
+<style id="sbQFlow">
+/* ── A question is written like a line in a book. Some questions came with the line breaks of the PDF
+   they were copied from ("Which are the voluntary / functions of the / local governments?"), and Write
+   and the tests kept them, so the question ran down the page in short lines; Read already lets it flow. ── */
+.quiz-overlay .quiz-body .q-text{white-space:normal}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -9815,7 +9821,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-5";
+const APP_VERSION = "2026.11.04-6";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
