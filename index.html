@@ -8810,6 +8810,63 @@ html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-pad
    and the tests kept them, so the question ran down the page in short lines; Read already lets it flow. ── */
 .quiz-overlay .quiz-body .q-text{white-space:normal}
 </style>
+<style id="sbTiles">
+/* ── 🧩 Tiles (v2026.11.04-7): the answer built from word tiles, on the page's own lines ── */
+.answer-area.sbt-on textarea.answer-textarea,.answer-area.sbt-on textarea.dist-textarea{display:none!important}
+.answer-area.sbt-on .dist-input-grid{grid-template-columns:minmax(0,1fr)!important}
+.answer-area.sbt-on .dist-input-col + .dist-input-col{box-shadow:none!important}
+.sbt-lines{box-sizing:border-box;min-height:calc(2 * var(--wg,36px));padding:0 4px;font-family:'Caveat','Comic Sans MS',cursive;font-size:25px;font-weight:600;line-height:var(--wg,36px);color:#1e3a8a;overflow-wrap:anywhere;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.sbt-w{cursor:pointer;border-radius:5px;padding:0 1px}
+.sbt-w.sbt-cur{background:rgba(253,230,138,.34)}
+.sbt-w.sbt-new{display:inline-block;animation:sbtIn .2s ease-out}
+@media (hover:hover){.sbt-w:hover{background:rgba(254,202,202,.6);text-decoration:line-through;text-decoration-color:rgba(185,28,28,.55)}}
+@keyframes sbtIn{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+.sbt-lbl{color:#64748b}
+.sbt-ph{color:#94a3b8}
+.sbt-caret{display:inline-block;width:2px;height:24px;margin:0 2px;vertical-align:-4px;border-radius:1px;background:#1d4ed8;animation:sbtBlink 1.1s steps(1) infinite}
+@keyframes sbtBlink{50%{opacity:0}}
+.sbt-tray{position:relative;margin:6px -2px 4px;padding:8px 8px 10px;border:1.5px solid #cbd5e1;border-radius:14px;background:#f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.08);font-family:var(--font-body,'Nunito',system-ui,sans-serif);-webkit-user-select:none;user-select:none}
+.sbt-tray[hidden]{display:none!important}
+.sbt-head{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;font-weight:800;line-height:1.3;color:#334155}
+.sbt-part{flex:1 1 auto;min-width:0}
+.sbt-part b{color:#1e3a8a}
+.sbt-nav{flex:none;min-height:32px;margin:0;padding:4px 12px;border:1.5px solid #cbd5e1;border-radius:9px;background:#fff;color:#1e3a8a;font:800 13px/1.2 var(--font-body,'Nunito',system-ui,sans-serif);cursor:pointer;touch-action:manipulation}
+.sbt-nav:disabled{opacity:.35;cursor:default}
+.sbt-nav.sbt-next{border-color:#1e3a8a;background:#1e3a8a;color:#fff}
+.sbt-nav.sbt-next.sbt-ready{animation:sbtGlow 1.6s ease-in-out infinite}
+@keyframes sbtGlow{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}50%{box-shadow:0 0 0 6px rgba(59,130,246,0)}}
+.quiz-overlay .quiz-body .btn-check.sbt-ready{outline:3px solid rgba(59,130,246,.45);outline-offset:2px;animation:sbtRing 1.6s ease-in-out infinite}
+@keyframes sbtRing{0%,100%{outline-color:rgba(59,130,246,.55)}50%{outline-color:rgba(59,130,246,.1)}}
+.sbt-tiles{display:flex;flex-wrap:wrap;gap:7px}
+.sbt-tile{min-height:40px;margin:0;padding:6px 11px;border:1.5px solid #cbd5e1;border-bottom-width:3.5px;border-radius:10px;background:#fff;color:#0f172a;font:700 16.5px/1.2 var(--font-body,'Nunito',system-ui,sans-serif);letter-spacing:.2px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .06s}
+.sbt-tile:active{transform:translateY(2px)}
+/* a used tile leaves its place behind, so the others never move under his finger */
+.sbt-tile.sbt-ghost{border-color:#e2e8f0;background:#e2e8f0;color:transparent;box-shadow:none;pointer-events:none;cursor:default}
+.sbt-spell{border-style:dashed;border-color:#93c5fd;background:#eff6ff;color:#1e3a8a}
+.sbt-blank{letter-spacing:2px;color:#64748b}
+.sbt-slots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:2px 0 12px}
+.sbt-slot{box-sizing:border-box;width:26px;height:36px;border-bottom:2.5px solid #94a3b8;font:800 22px/34px var(--font-body,'Nunito',system-ui,sans-serif);text-align:center;color:#1e3a8a}
+.sbt-slot.cur{border-bottom-color:#1d4ed8}
+.sbt-slot.sbt-given{color:#64748b}
+.sbt-lets{justify-content:center}
+.sbt-let{min-width:42px;padding:6px 0;text-align:center}
+.sbt-sp-row{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+.quiz-overlay .quiz-body .sbt-switch{flex:none;margin:0 0 0 auto;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e3a8a;font:800 13px/1.2 var(--font-body,'Nunito',system-ui,sans-serif);cursor:pointer;touch-action:manipulation;white-space:nowrap}
+@media (max-width:480px){.sbt-sw-t{display:none}.quiz-overlay .quiz-body .sbt-switch{min-width:42px;padding:8px 10px;font-size:16px}}
+/* a 360px phone: Check Answer gives up a little padding so the switch fits on its row */
+@media (max-width:374px){.quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode) .quiz-body .answer-actions:has(.sbt-switch) .btn-check{padding-left:14px!important;padding-right:14px!important}.quiz-overlay .quiz-body .sbt-switch{min-width:38px;padding:8px 8px}}
+/* the result: each tested word spelt right, its tricky part coloured */
+.sbt-strip .sbt-srow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-bottom:1px dashed #e2e8f0;font-size:13.5px;line-height:1.35}
+.sbt-sw{font:800 18px/1.3 var(--font-body,'Nunito',system-ui,sans-serif);color:#0f172a;letter-spacing:.4px}
+.sbt-hi{padding:0 1px;border-radius:3px;background:#fde68a;color:#b45309}
+.sbt-ok{color:#15803d;font-weight:800}
+.sbt-no{color:#b91c1c;font-weight:800}
+.sbt-no s{font-weight:700;text-decoration-thickness:2px}
+.sbt-skip{color:#94a3b8;font-weight:700}
+.sbt-dots{color:#16a34a;font-size:11px;letter-spacing:2px}
+.sbt-up{color:#1d4ed8;font-weight:800}
+.sbt-note{margin-top:6px;font-size:12px;line-height:1.4;color:#64748b}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -9821,7 +9878,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-6";
+const APP_VERSION = "2026.11.04-7";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -14809,6 +14866,559 @@ function renderTextAnswer(q, qnum, isLast, isParagraph){
     const db=document.getElementById("distInputB");
     if(db) db.disabled=false;
   }
+  try{ sbtMount(q); }catch(e){ console.warn("tiles:", e); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  🧩 TILES — build a written answer from word tiles (v2026.11.04-7)
+// ═══════════════════════════════════════════════════════
+// On a phone the keyboard's suggestions spell each word for him, so typing an
+// answer stopped teaching spelling. In Tiles the answer's words come jumbled
+// on cards, with a few words from other answers of the lesson that do not
+// belong, and for some key words a look-alike spelt with a slip students
+// really make: his own past slips first, else the tricky spot (a silent
+// letter, a double letter, ance/ence, ie/ei…). He taps the words in order onto
+// the lines, and taps a word on the lines to send it back. A word and its
+// look-alike leave the tray together, so what is left never tells him which
+// one was right. Nothing is marked until Check Answer, which grades the words
+// exactly as if he had typed them (same score, mastery, points and spelling
+// list); the result then shows each tested word spelt right with its tricky
+// part coloured. A word he has picked right three times in a row comes as
+// letters instead, and he spells it himself. Long answers come a part at a
+// time. Write only (the tests stay typed); "⌨️ Type" switches back, and the
+// choice is remembered on the device.
+const SBT_MODE_KEY = "sbt_mode_v1", SBT_STREAK_KEY = "sbt_twin_streak_v1";
+const SBT_MAX = 13;    // most words in one part
+const SBT_RETIRE = 3;  // right picks in a row before he spells the word himself
+const SBT_LEARNT = 5;  // right in a row (picked, then spelt) and the word is learnt: no longer tested, unless he slips on it again
+let _sbt = null;
+
+function sbtAllowed(){
+  try{ return currentMode === "study" && !inMockRun && !!currentLesson && currentLesson.id !== "__mock__" && ["brief","reasons","paragraph","distinguish"].includes(currentQType); }
+  catch(e){ return false; }
+}
+// his own choice if he has made one, else tiles on a touch screen
+function sbtWanted(){
+  let v = null; try{ v = localStorage.getItem(SBT_MODE_KEY); }catch(e){}
+  if(v === "tiles") return true;
+  if(v === "type") return false;
+  try{ return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }catch(e){ return false; }
+}
+function sbtRemember(on){ try{ localStorage.setItem(SBT_MODE_KEY, on ? "tiles" : "type"); }catch(e){} }
+function sbtStreaks(){ try{ return JSON.parse(localStorage.getItem(SBT_STREAK_KEY) || "{}") || {}; }catch(e){ return {}; } }
+function sbtSaveStreaks(m){ try{ localStorage.setItem(SBT_STREAK_KEY, JSON.stringify(m)); }catch(e){} }
+// the tiles on screen belong to the question on screen (a page that was replaced leaves a stale one)
+function sbtLive(){ const S = _sbt; return !!(S && S.area && S.area.isConnected && S.targets.every(tg => tg.ta.isConnected)); }
+function sbtGoLabel(d){ return sbtLive() ? "🧩 Hide it and build it" : d; }
+
+// the answer boxes of this question and the model text each one is checked against
+function sbtTargets(q){
+  const out = [];
+  const add = (id, text, label) => { const ta = document.getElementById(id); if(ta && /[A-Za-z0-9]/.test(String(text || ""))) out.push({ id, ta, text: String(text), label: String(label || "") }); };
+  if(currentQType === "distinguish"){ add("distInputA", q.answerA, q.termA); add("distInputB", q.answerB, q.termB); }
+  else { add("answerInput", q.answer, ""); if(isCombinedParagraph(q)){ add("distInputA", q.answerA, q.termA); add("distInputB", q.answerB, q.termB); } }
+  return out;
+}
+
+// ── parts: a point, a line or a sentence, cut at a comma or a joining word when it is long ──
+const SBT_CUT_BEFORE = /^(and|but|which|because|while|whereas|so|who|where|when|that|as|or|since|although|though|if|until|unless|after|before|to|for|by|in|with)$/i;
+function sbtSplitLong(words){
+  if(words.length <= SBT_MAX) return [words];
+  const mid = words.length / 2;
+  let best = Math.ceil(mid), bs = Infinity;
+  for(let j = 4; j <= words.length - 4; j++){
+    let s = Math.abs(j - mid);
+    if(/[;:,]$/.test(words[j - 1])) s -= 4;
+    else if(SBT_CUT_BEFORE.test(words[j])) s -= 2;
+    else s += 3;
+    if(/^(which|whom|whose)$/i.test(words[j]) && /^(to|in|of|by|for|from|with|on|at|under|through)$/i.test(words[j - 1])) s += 6; // "to which" stays together
+    if(s < bs){ bs = s; best = j; }
+  }
+  return [...sbtSplitLong(words.slice(0, best)), ...sbtSplitLong(words.slice(best))];
+}
+function sbtSteps(text){
+  let pts = null;
+  try{ pts = pbClean(text); }catch(e){ pts = null; }
+  if(!pts || !pts.length) pts = [{ label: "", text: String(text) }];
+  const steps = [];
+  pts.forEach(p => {
+    const sents = pbWords(p.text).length > SBT_MAX ? pbSentences(p.text) : [p.text];
+    sents.forEach((s, si) => sbtSplitLong(pbWords(s)).forEach((ws, k) => {
+      // nl: starts a new line, as the model answer does; head: starts a sentence
+      if(ws.length) steps.push({ label: si === 0 && k === 0 ? String(p.label || "") : "", nl: si === 0 && k === 0, head: k === 0, raw: ws });
+    }));
+  });
+  // a bit of two or three words joins its neighbour (a numbered point always stays its own)
+  for(let i = 0; i < steps.length && steps.length > 1; i++){
+    const s = steps[i];
+    if(s.raw.length >= 4) continue;
+    const nx = steps[i + 1], pv = steps[i - 1];
+    if(nx && !nx.label && s.raw.length + nx.raw.length <= SBT_MAX + 2){
+      nx.raw = s.raw.concat(nx.raw); nx.label = s.label; nx.nl = s.nl; nx.head = s.head; steps.splice(i, 1); i--;
+    } else if(pv && !s.label && pv.raw.length + s.raw.length <= SBT_MAX + 2){
+      pv.raw = pv.raw.concat(s.raw); steps.splice(i, 1); i--;
+    }
+  }
+  return steps;
+}
+// a tile shows a word as it is written mid-sentence: names keep their capital, "The" at a sentence start does not
+function sbtTileText(t, trueStart, caps){
+  const c = t.core;
+  if(t.acro || /[A-Z]/.test(c.slice(1))) return c;
+  if(t.cap && (!trueStart || caps.has(t.n))) return c;
+  return c.charAt(0).toLowerCase() + c.slice(1);
+}
+
+// the part of the right word that differs from w2, a double letter counted whole
+function sbtDiffRange(word, w2){
+  const w = String(word).toLowerCase(), x = String(w2 || "").toLowerCase();
+  let a = 0; while(a < w.length && a < x.length && w[a] === x[a]) a++;
+  let s = 0; while(s < w.length - a && s < x.length - a && w[w.length - 1 - s] === x[x.length - 1 - s]) s++;
+  let b = w.length - s;
+  if(b <= a){ // a letter was added: the letter it doubles, else the two letters it came between
+    const dbl = a > 0 && x[a] === w[a - 1];
+    b = Math.min(w.length, a + (dbl ? 0 : 1)); a = Math.max(0, a - 1);
+    if(b <= a) b = Math.min(w.length, a + 1);
+  }
+  while(a > 0 && w[a - 1] === w[a]) a--;
+  while(b < w.length && w[b] === w[b - 1]) b++;
+  return [a, b];
+}
+// ── the look-alike: one slip students really make. It keeps the first letter and stays within two
+// letters of the word, so the checker reads it as that word misspelt (never as some other word) ──
+const SBT_RULES = [
+  [/nm/, "m"],                 // government → goverment, environment → enviroment
+  [/iament$/, "iment"],        // parliament → parliment
+  [/dge/, "ge"],               // knowledge → knowlege
+  [/sc([ie])/, "s$1"],         // science → sience, discipline → disipline
+  [/ain$/, "ian"],             // Britain → Britian, certain → certian
+  [/gious$/, "gous"],          // religious → religous
+  [/ilege/, "ilage"],          // privilege → privilage
+  [/([^aeious])iness$/, "$1yness"], [/ies$/, "ys"], [/ied$/, "yed"], // happiness → happyness, countries → countrys
+  [/ei/, "ie"], [/ie/, "ei"],  // receive → recieve, believe → beleive, society → soceity
+  [/ance$/, "ence"], [/ence$/, "ance"], [/ancy$/, "ency"], [/ency$/, "ancy"],
+  [/([dtn])ent$/, "$1ant"],    // independent → independant
+  [/([^m])ant$/, "$1ent"],     // important → importent, peasant → peasent
+  [/ible$/, "able"], [/able$/, "ible"],
+  [/ful$/, "full"],            // careful → carefull
+  [/([^aeiou])ely$/, "$1ly"],  // completely → completly
+  [/opment$/, "opement"], [/gument$/, "guement"],
+  [/ph/, "f"],                 // geography → geografy
+  [/lar$/, "ler"],             // popular → populer
+  [/([^aeiou])or$/, "$1er"],   // governor → governer
+  [/([bcdfgklmnprstz])\1/, "$1"],    // committee → comittee, address → adress
+  [/([^aeiou])e(r[aeiou])/, "$1$2"], // general → genral, interest → intrest
+  [/para/, "pera"],            // separate → seperate
+  [/ite$/, "ate"],             // definite → definate
+  [/([aeiou])tion$/, "$1sion"],// population → populasion
+  [/cy$/, "sy"],               // democracy → democrasy
+  [/([aeiou])([bdgklmnprt])(ing|ed|er)$/, "$1$2$2$3"] // opening → openning, visited → visitted (7+ letters only, below)
+];
+// last resort: the vowel nearest the middle, swapped for the one it gets mixed up with
+function sbtVowelSlip(w){
+  const swap = { a: "e", e: "i", i: "e", o: "a", u: "o" };
+  const idx = [];
+  for(let i = 1; i < w.length - 2; i++) if(swap[w[i]]) idx.push(i);
+  if(!idx.length) return null;
+  const mid = (w.length - 1) / 2;
+  idx.sort((x, y) => Math.abs(x - mid) - Math.abs(y - mid));
+  const i = idx[0];
+  return w.slice(0, i) + swap[w[i]] + w.slice(i + 1);
+}
+// { w: the look-alike, a, b: the tricky part of the right word } or null
+function sbtTwinOf(word, past, avoid){
+  const w = String(word).toLowerCase();
+  const ok = x => !!x && x !== w && /^[a-z]+$/.test(x) && x[0] === w[0] && x.length > 3 && Math.abs(x.length - w.length) <= 2 && pbLev(x, w) <= 2 && !avoid.has(x);
+  let twin = null;
+  if(past && past.size){ // a slip he has really made, the one he makes most
+    const best = [...past.entries()].filter(([x]) => ok(x)).sort((p, q) => q[1] - p[1])[0];
+    if(best) twin = best[0];
+  }
+  if(!twin){
+    const tail = w.slice(1);
+    for(const [re, rep] of SBT_RULES){
+      let t = tail.replace(re, rep);
+      if(t === tail && /[^s]s$/.test(tail)){ const st = tail.slice(0, -1), t2 = st.replace(re, rep); if(t2 !== st) t = t2 + "s"; } // peasants → peasents
+      if(t !== tail && ok(w[0] + t) && (rep !== "$1$2$2$3" || w.length >= 7)){ twin = w[0] + t; break; }
+    }
+  }
+  if(!twin && w.length >= 7){ const t = sbtVowelSlip(w); if(ok(t)) twin = t; } // shorter words too often turn into another real word
+  if(!twin) return null;
+  const [a, b] = sbtDiffRange(w, twin);
+  const out = /^[A-Z]/.test(word) ? twin.charAt(0).toUpperCase() + twin.slice(1) : twin;
+  return { w: out, a, b };
+}
+// his past slips: right spelling → (what he wrote → how often). This device's copy of the log, no extra reads.
+function sbtPastSlips(){
+  const m = new Map();
+  const add = e => {
+    if(!e || !e.correct || !e.wrong) return;
+    const c = String(e.correct).toLowerCase().trim(), x = String(e.wrong).toLowerCase().trim();
+    if(!c || !x || c === x) return;
+    if(!m.has(c)) m.set(c, new Map());
+    m.get(c).set(x, (m.get(c).get(x) || 0) + 1);
+  };
+  try{ (typeof sessionSpellErrors !== "undefined" ? sessionSpellErrors : []).forEach(add); }catch(e){}
+  try{
+    const cache = (typeof _logsLocalCache !== "undefined" && _logsLocalCache) || (typeof loadLogsLocalCache === "function" ? loadLogsLocalCache() : null);
+    ((cache && cache.spellEntries) || []).forEach(add);
+  }catch(e){}
+  return m;
+}
+// words from the lesson's other answers that are not in this answer and do not look like any of its words
+function sbtDecoyPool(lesson, qKey, ansSet){
+  let pool = [];
+  try{ pool = pbPool(lesson).filter(c => c && c.qKey !== qKey); }catch(e){ pool = []; }
+  const ans = [...ansSet];
+  const near = n => ansSet.has(n) || ans.some(a => (a.length > 3 && n.length > 3 && a[0] === n[0] && Math.abs(a.length - n.length) <= 2 && pbLev(a, n) <= 2) || (a.length >= 4 && n.length >= 4 && pbStem(a) === pbStem(n)));
+  const seen = new Set(), out = [];
+  pbShuffle(pool.slice()).forEach(c => { if(c.n && c.n.length >= 3 && !seen.has(c.n) && !near(c.n)){ seen.add(c.n); out.push({ w: c.w, n: c.n, cls: c.cls }); } });
+  if(out.length < 12) pbShuffle(((typeof PB_FALLBACK !== "undefined" && PB_FALLBACK.WORD) || []).slice()).forEach(w => { const n = pbN(w); if(!seen.has(n) && !near(n)){ seen.add(n); out.push({ w, n, cls: "WORD" }); } });
+  return out;
+}
+function sbtShuffleTiles(ids){
+  if(ids.length < 3) return pbShuffle(ids.slice());
+  for(let k = 0; k < 8; k++){ const o = pbShuffle(ids.slice()); if(!(o[0] === ids[0] && o[1] === ids[1])) return o; }
+  return ids.slice().reverse();
+}
+
+// ── the model: parts, and the tiles of each part ──
+function sbtBuild(q, targets){
+  const L = currentLesson, oi = getOriginalQIndex(currentQIndex), qKey = L.id + "|" + currentQType + "|" + oi;
+  let caps = new Set(); try{ caps = new Set(pbCtx(L).capsMid || []); }catch(e){}
+  // a name is also one written with a capital in the question, the terms or the lesson's title ("French society…")
+  [q.q, q.termA, q.termB, L.title].forEach(x => String(x || "").split(/\s+/).forEach((w, i) => { const c = w.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, ""); if(i > 0 && /^[A-Z][a-z]/.test(c)) caps.add(pbN(c)); }));
+  let keyNs = new Set(); try{ const m = pbBuild(L, currentQType, oi); if(m && m.keys) keyNs = new Set(m.keys.map(k => k.n)); }catch(e){}
+  // words he can see in the question (or the terms) are not tested for spelling: he could copy them
+  const qNs = new Set([q.q, q.termA, q.termB].map(x => String(x || "")).join(" ").split(/\s+/).map(pbN).filter(Boolean));
+  const past = sbtPastSlips(), streaks = sbtStreaks();
+  const fresh = new Set(); try{ sessionSpellErrors.forEach(e => { if(e && e.correct) fresh.add(String(e.correct).toLowerCase()); }); }catch(e){}
+  const learnt = n => (streaks[n] || 0) >= SBT_LEARNT && !fresh.has(n);
+  const S = { qk: L.id + "|" + currentQType + "|" + currentQIndex, T: [], targets: [], flat: [], g: 0, locked: true, used: false, spell: null };
+  const tgs = targets.map(tg => Object.assign({}, tg, { steps: sbtSteps(tg.text) }));
+  const ansSet = new Set();
+  tgs.forEach(tg => tg.steps.forEach(st => { st.toks = pbTok(st.raw.join(" ")); st.toks.forEach(t => { if(t.n) ansSet.add(t.n); }); }));
+  const pool = sbtDecoyPool(L, qKey, ansSet);
+  const avoid = new Set([...ansSet, ...pool.map(c => c.n)]);
+  const twinned = new Set();
+  let twins = 0;
+  tgs.forEach((tg, ti) => tg.steps.forEach((st, si) => {
+    const ids = [];
+    const mk = o => { const t = Object.assign({ id: S.T.length, ti, si, mate: -1, out: false, hidden: false }, o); S.T.push(t); ids.push(t.id); return t; };
+    const real = [];
+    st.toks.forEach((t, i) => {
+      if(!t.core || !/[A-Za-z0-9]/.test(t.core)) return;
+      const trueStart = (i === 0 && st.head) || (i > 0 && /[.!?:]["”']?$/.test(st.raw[i - 1]));
+      real.push({ t, w: sbtTileText(t, trueStart, caps) });
+    });
+    // the words tested for spelling here: his past slips first, then the answer's key words, the longer the better
+    const K = real.length >= 9 ? 2 : 1;
+    const cands = real.filter(r => (/^[A-Za-z][a-z]{5,}$/.test(r.t.core) || (past.has(r.t.n) && /^[A-Za-z][a-z]{3,}$/.test(r.t.core)))
+        && !PB_STOP.has(r.t.n) && !qNs.has(r.t.n) && !twinned.has(r.t.n) && !learnt(r.t.n))
+      .map(r => ({ r, s: (past.has(r.t.n) ? 20 : 0) + (keyNs.has(r.t.n) ? 4 : 0) + Math.min(6, r.t.n.length - 4) + Math.random() }))
+      .sort((x, y) => y.s - x.s);
+    const picked = new Map();
+    for(const c of cands){
+      if(picked.size >= K || twins >= 5) break;
+      const tw = sbtTwinOf(c.r.w, past.get(c.r.t.n), avoid);
+      if(!tw) continue;
+      picked.set(c.r, tw); twinned.add(c.r.t.n); twins++;
+    }
+    real.forEach(r => {
+      const tw = picked.get(r);
+      if(tw && (streaks[r.t.n] || 0) >= SBT_RETIRE){ mk({ kind: "spell", w: r.w, word: r.w, n: r.t.n, a: tw.a, b: tw.b }); return; }
+      const rt = mk({ kind: "real", w: r.w, n: r.t.n });
+      if(tw){
+        const tt = mk({ kind: "twin", w: tw.w, n: pbN(tw.w), word: r.w, a: tw.a, b: tw.b });
+        rt.mate = tt.id; tt.mate = rt.id; rt.tested = true; rt.word = r.w; rt.a = tw.a; rt.b = tw.b;
+      }
+    });
+    // words that do not belong: a name only beside names, a number only beside numbers
+    const hasCap = real.some(r => /^[A-Z]/.test(r.w)), hasNum = real.some(r => r.t.num);
+    const nd = real.length <= 5 ? 2 : 3;
+    let n = 0, capN = 0;
+    for(const c of pool){
+      if(n >= nd) break;
+      if(c.used || (c.cls === "NUM" && !hasNum)) continue;
+      if(c.cls === "CAP"){ if(!hasCap || capN >= 1) continue; capN++; }
+      c.used = true; n++;
+      mk({ kind: "decoy", w: pbPillText(c.w, c.cls), n: c.n });
+    }
+    st.nReal = real.length;
+    st.tiles = sbtShuffleTiles(ids);
+    st.placed = [];
+    S.flat.push([ti, si]);
+  }));
+  S.targets = tgs;
+  return S;
+}
+
+// ── on the page ──
+function sbtMount(q){
+  if(_sbt) sbtStop();
+  if(!q || !sbtAllowed()) return;
+  const area = document.getElementById("answerArea");
+  if(!area || !sbtTargets(q).length) return;
+  const acts = area.querySelector(".answer-actions");
+  if(acts && !document.getElementById("sbtSwitch")) acts.insertAdjacentHTML("beforeend", `<button type="button" class="sbt-switch" id="sbtSwitch" onclick="sbtToggle()"></button>`);
+  if(sbtWanted()) sbtStart(q); else sbtLabel();
+}
+function sbtLabel(){
+  const b = document.getElementById("sbtSwitch"); if(!b) return;
+  delete b.dataset.sure;
+  const on = sbtLive();
+  b.innerHTML = on ? `<span aria-hidden="true">⌨️</span><span class="sbt-sw-t"> Type</span>` : `<span aria-hidden="true">🧩</span><span class="sbt-sw-t"> Tiles</span>`;
+  b.title = on ? "Type the answer instead" : "Build the answer from word tiles";
+  b.setAttribute("aria-label", b.title);
+}
+function sbtStart(q){
+  const area = document.getElementById("answerArea"), targets = sbtTargets(q);
+  if(!area || !targets.length) return;
+  let S; try{ S = sbtBuild(q, targets); }catch(e){ console.warn("tiles:", e); return; }
+  if(!S.flat.length) return;
+  S.area = area;
+  S.targets.forEach(tg => { const el = document.createElement("div"); el.className = "sbt-lines"; tg.ta.after(el); tg.el = el; });
+  S.tray = document.createElement("div"); S.tray.className = "sbt-tray";
+  area.classList.add("sbt-on");
+  const po = document.getElementById("partsOffer"); if(po) po.style.display = "none"; // tiles already come a part at a time
+  // the boxes' lock is the tiles' lock: closed until he has looked at the answer and hidden it, closed while it shows, closed once checked
+  S.locked = S.targets.some(tg => tg.ta.disabled);
+  S.mo = new MutationObserver(() => {
+    if(_sbt !== S) return;
+    const l = S.targets.some(tg => tg.ta.disabled);
+    if(l !== S.locked){ S.locked = l; S.spell = null; sbtRender(); }
+  });
+  S.targets.forEach(tg => S.mo.observe(tg.ta, { attributes: true, attributeFilter: ["disabled"] }));
+  S.onClick = e => sbtClick(e);
+  area.addEventListener("click", S.onClick);
+  _sbt = S;
+  sbtLabel(); sbtRender(); sbtSync(false);
+  try{ wrLayoutSoon(); }catch(e){}
+}
+function sbtStop(){
+  const S = _sbt; if(!S) return; _sbt = null;
+  try{ S.mo.disconnect(); }catch(e){}
+  try{ S.area.removeEventListener("click", S.onClick); }catch(e){}
+  S.targets.forEach(tg => { try{ tg.el.remove(); }catch(e){} });
+  try{ S.tray.remove(); }catch(e){}
+  try{ S.area.classList.remove("sbt-on"); }catch(e){}
+  if(S.area && S.area.isConnected){
+    const po = document.getElementById("partsOffer"); if(po) po.style.display = "";
+    try{ S.targets.forEach(tg => wrGrow(tg.ta)); wrLayoutSoon(); }catch(e){}
+  }
+  sbtLabel();
+}
+function sbtToggle(){
+  const L = currentLesson; if(!L) return;
+  const q = (L.questions[currentQType] || [])[getOriginalQIndex(currentQIndex)]; if(!q) return;
+  const b = document.getElementById("sbtSwitch");
+  if(sbtLive()){ // tiles → type, keeping what he has built
+    sbtStop(); sbtRemember(false);
+    const tg = sbtTargets(q)[0];
+    if(tg && !tg.ta.disabled){ try{ tg.ta.focus(); }catch(e){} }
+    return;
+  }
+  // type → tiles clears what he typed, so a second tap says yes
+  const typed = sbtTargets(q).some(tg => tg.ta.value.trim());
+  if(typed && b && !b.dataset.sure){
+    b.dataset.sure = "1"; b.textContent = "🧩 Clear it?";
+    setTimeout(() => { if(b.isConnected && b.dataset.sure) sbtLabel(); }, 4000);
+    return;
+  }
+  sbtTargets(q).forEach(tg => { tg.ta.value = ""; });
+  sbtRemember(true); sbtStart(q);
+  if(typed) sbtSync(true);
+}
+function sbtText(ti){
+  const tg = _sbt.targets[ti]; let out = "";
+  tg.steps.forEach(st => {
+    if(!st.placed.length) return;
+    const s = (st.label ? st.label + " " : "") + st.placed.map(p => p.text).join(" ");
+    out += out ? (st.nl ? "\n" : " ") + s : s;
+  });
+  return out;
+}
+// the boxes hold what the tiles say, so Check, Try Again and the parent's live view read it as typed
+function sbtSync(report){
+  const S = _sbt; if(!S) return;
+  S.targets.forEach((tg, ti) => { tg.ta.value = sbtText(ti); });
+  if(report){ try{ (currentQType === "distinguish" ? reportDistLiveState : reportTextLiveState)(); }catch(e){} }
+}
+function sbtScroller(el){
+  for(let p = el.parentElement; p; p = p.parentElement){
+    const oy = getComputedStyle(p).overflowY;
+    if((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return document.scrollingElement;
+}
+function sbtLinesHTML(ti){
+  const S = _sbt, tg = S.targets[ti], [ati, asi] = S.flat[S.g] || [-1, -1];
+  let h = "", any = false;
+  tg.steps.forEach((st, si) => {
+    const cur = !S.locked && ti === ati && si === asi;
+    if(!st.placed.length && !cur) return;
+    if(any && st.nl) h += "<br>";
+    if(st.label) h += `<span class="sbt-lbl">${pbEsc(st.label)}</span> `;
+    st.placed.forEach((p, k) => {
+      h += `<span class="sbt-w${cur ? " sbt-cur" : ""}${p.fresh ? " sbt-new" : ""}" data-p="${ti}.${si}.${k}" role="button" aria-label="${pbEsc(p.text)}: tap to take it back">${pbEsc(p.text)}</span> `;
+      p.fresh = false;
+    });
+    if(cur) h += `<span class="sbt-caret" aria-hidden="true"></span>` + (!st.placed.length && !any && S.g === 0 ? `<span class="sbt-ph">Tap the words in order</span>` : "");
+    any = true;
+  });
+  if(!any && S.locked && ti === 0) h = `<span class="sbt-ph">Tap 👁 above: look, then hide it and build it from word tiles…</span>`;
+  return h;
+}
+function sbtTrayHTML(){
+  const S = _sbt, [ti, si] = S.flat[S.g], tg = S.targets[ti], st = tg.steps[si], G = S.flat.length;
+  let head = "";
+  if(G > 1 || tg.label){
+    head = `<div class="sbt-head">${G > 1 ? `<button type="button" class="sbt-nav" data-nav="-1" ${S.g ? "" : "disabled"} aria-label="Back a part">‹</button>` : ""}`
+      + `<span class="sbt-part">${G > 1 ? `Part ${S.g + 1} of ${G}` : ""}${tg.label ? `${G > 1 ? " · " : ""}<b>${pbEsc(tg.label)}</b>` : ""}</span>`
+      + `${S.g < G - 1 ? `<button type="button" class="sbt-nav sbt-next${st.placed.length >= st.nReal ? " sbt-ready" : ""}" data-nav="1">Next part ›</button>` : ""}</div>`;
+  }
+  // a used tile keeps its place (hidden), so the others never move under his finger
+  const tiles = st.tiles.map(id => {
+    const t = S.T[id], gone = t.out || t.hidden;
+    const label = t.kind === "spell" ? `✏️ ${pbEsc(t.word.charAt(0))}<span class="sbt-blank">${"_".repeat(Math.max(1, t.word.length - 1))}</span>` : pbEsc(t.w);
+    return `<button type="button" class="sbt-tile${t.kind === "spell" ? " sbt-spell" : ""}${gone ? " sbt-ghost" : ""}" data-t="${t.id}"${gone ? ' tabindex="-1" aria-hidden="true"' : ""}${t.kind === "spell" ? ` aria-label="Spell the word starting with ${pbEsc(t.word.charAt(0))}"` : ""}>${label}</button>`;
+  }).join("");
+  return head + `<div class="sbt-tiles">${tiles}</div>`;
+}
+function sbtSpellHTML(){
+  const sp = _sbt.spell, n = sp.word.length;
+  let slots = `<span class="sbt-slot sbt-given">${pbEsc(sp.word.charAt(0))}</span>`;
+  for(let i = 0; i < n - 1; i++){ const k = sp.got[i]; slots += `<span class="sbt-slot${k != null ? " on" : (i === sp.got.length ? " cur" : "")}">${k != null ? pbEsc(sp.pool[k]) : ""}</span>`; }
+  const lets = sp.pool.map((ch, i) => `<button type="button" class="sbt-tile sbt-let${sp.got.includes(i) ? " sbt-ghost" : ""}" data-l="${i}">${pbEsc(ch)}</button>`).join("");
+  const full = sp.got.length === n - 1;
+  return `<div class="sbt-head"><span class="sbt-part">✏️ Spell it yourself</span><button type="button" class="sbt-nav" data-sp="x" aria-label="Back to the words">✕</button></div>`
+    + `<div class="sbt-slots">${slots}</div><div class="sbt-tiles sbt-lets">${lets}</div>`
+    + `<div class="sbt-sp-row"><button type="button" class="sbt-nav" data-sp="undo" ${sp.got.length ? "" : "disabled"}>⌫ Undo</button><button type="button" class="sbt-nav sbt-next" data-sp="ok" ${full ? "" : "disabled"}>✓ Put it in</button></div>`;
+}
+function sbtRender(steady){
+  const S = _sbt; if(!S) return;
+  const tray = S.tray, [ati] = S.flat[S.g] || [0], host = S.targets[ati].el;
+  const keep = !!steady && tray.isConnected && host.nextElementSibling === tray;
+  const y0 = keep ? tray.getBoundingClientRect().top : 0;
+  S.targets.forEach((tg, ti) => { tg.el.innerHTML = sbtLinesHTML(ti); });
+  if(host.nextElementSibling !== tray) host.after(tray);
+  tray.hidden = S.locked;
+  tray.innerHTML = S.locked ? "" : (S.spell ? sbtSpellHTML() : sbtTrayHTML());
+  // as many words down as the answer has, in every part: Check Answer lights up (it says nothing about which are right)
+  const cb = document.getElementById("checkBtn");
+  if(cb) cb.classList.toggle("sbt-ready", !S.locked && S.used && S.targets.every(tg => tg.steps.every(st => st.placed.length >= st.nReal)));
+  if(keep){ // the lines grew a row above the tray: scroll with it, so the tiles stay under his finger
+    const dy = tray.getBoundingClientRect().top - y0;
+    if(dy && Math.abs(dy) <= 120){ const sc = sbtScroller(tray); if(sc) sc.scrollTop += dy; }
+  }
+}
+function sbtClick(e){
+  const S = _sbt; if(!S || S.locked || !sbtLive()) return;
+  const el = e.target && e.target.closest ? e.target.closest("[data-t],[data-p],[data-nav],[data-l],[data-sp]") : null;
+  if(!el || !S.area.contains(el)) return;
+  e.preventDefault();
+  const d = el.dataset;
+  if(d.t != null) sbtPick(+d.t);
+  else if(d.p != null) sbtUnpick(d.p);
+  else if(d.nav != null) sbtGo(S.g + (+d.nav));
+  else if(d.l != null) sbtLetter(+d.l);
+  else if(d.sp) sbtSpellCmd(d.sp);
+}
+function sbtPick(id){
+  const S = _sbt, t = S.T[id]; if(!t || t.out || t.hidden) return;
+  const [ti, si] = S.flat[S.g]; if(t.ti !== ti || t.si !== si) return;
+  if(t.kind === "spell"){ S.spell = { id, word: t.word, pool: sbtSpellPool(t.word, t.a), got: [] }; sbtRender(); return; }
+  t.out = true; if(t.mate >= 0) S.T[t.mate].hidden = true; // its look-alike leaves with it
+  S.targets[ti].steps[si].placed.push({ id, text: t.w, fresh: true });
+  S.used = true;
+  sbtRender(true); sbtSync(true);
+}
+function sbtUnpick(key){
+  const S = _sbt, [ti, si, k] = String(key).split(".").map(Number);
+  const st = S.targets[ti] && S.targets[ti].steps[si], p = st && st.placed[k]; if(!p) return;
+  st.placed.splice(k, 1);
+  const t = S.T[p.id]; if(t){ t.out = false; if(t.mate >= 0) S.T[t.mate].hidden = false; }
+  const g = S.flat.findIndex(f => f[0] === ti && f[1] === si); if(g >= 0) S.g = g;
+  S.spell = null;
+  sbtRender(true); sbtSync(true);
+}
+function sbtGo(g){
+  const S = _sbt; if(g < 0 || g >= S.flat.length) return;
+  const moved = S.flat[g][0] !== S.flat[S.g][0];
+  S.g = g; S.spell = null; sbtRender();
+  if(moved){ try{ S.tray.scrollIntoView({ block: "nearest", behavior: "smooth" }); }catch(e){} }
+}
+// the word's letters after the first, and two that look or sound like the tricky ones
+function sbtSpellPool(word, a){
+  const rest = word.slice(1).toLowerCase().split(""), dec = [];
+  [Math.max(0, (a || 1) - 1), Math.floor(rest.length / 2)].forEach(p => {
+    const d = (slLetterDecoys(rest[p] || "e", rest.join(""), p, 4) || []).find(c => !dec.includes(c));
+    if(d) dec.push(d);
+  });
+  return pbShuffle(rest.concat(dec.slice(0, 2)));
+}
+function sbtLetter(i){
+  const sp = _sbt.spell; if(!sp || sp.got.includes(i) || sp.got.length >= sp.word.length - 1) return;
+  sp.got.push(i);
+  sbtRender();
+}
+function sbtSpellCmd(c){
+  const S = _sbt, sp = S.spell; if(!sp) return;
+  if(c === "undo"){ sp.got.pop(); sbtRender(); return; }
+  if(c === "x"){ S.spell = null; sbtRender(); return; }
+  if(c === "ok" && sp.got.length === sp.word.length - 1){
+    const t = S.T[sp.id], [ti, si] = S.flat[S.g];
+    const text = sp.word.charAt(0) + sp.got.map(k => sp.pool[k]).join("");
+    t.out = true; S.spell = null; S.used = true;
+    S.targets[ti].steps[si].placed.push({ id: t.id, text, fresh: true });
+    sbtRender(true); sbtSync(true);
+  }
+}
+
+// ── Check: how each tested word went (Check Answer then grades the boxes as typed) ──
+function sbtPlacedOf(id){ for(const tg of _sbt.targets) for(const st of tg.steps) for(const p of st.placed) if(p.id === id) return p; return null; }
+function sbtGradeStart(){
+  if(!sbtLive() || !_sbt.used) return null;
+  const S = _sbt, streaks = sbtStreaks(), items = [], spelt = new Set();
+  S.T.forEach(t => {
+    if(!(t.kind === "spell" || (t.kind === "real" && t.tested))) return;
+    const n = String(t.word).toLowerCase();
+    let res = "none", got = "";
+    if(t.kind === "spell"){
+      const p = t.out ? sbtPlacedOf(t.id) : null;
+      if(p){ got = p.text; res = got.toLowerCase() === n ? "right" : "wrong"; }
+    } else {
+      const tw = S.T[t.mate];
+      if(t.out) res = "right"; else if(tw && tw.out){ res = "wrong"; got = tw.w; }
+    }
+    if(res === "right"){ streaks[n] = (streaks[n] || 0) + 1; spelt.add(n); }
+    else if(res === "wrong") streaks[n] = 0; // the look-alike comes back until he picks right again
+    const [a, b] = res === "wrong" && got ? sbtDiffRange(t.word, got) : [t.a, t.b];
+    items.push({ word: t.word, a, b, kind: t.kind, res, got, streak: streaks[n] || 0 });
+  });
+  sbtSaveStreaks(streaks);
+  return { items, spelt };
+}
+// a picked or placed word only counts as "spelt right" if it was one of the tested words
+function sbtCountsSpelt(G, word){ return !G || G.spelt.has(String(word || "").toLowerCase()); }
+function sbtStripHTML(G){
+  if(!G || !G.items.length) return "";
+  const rows = G.items.map(it => {
+    const w = String(it.word), a = Math.max(0, Math.min(w.length, it.a || 0)), b = Math.max(a, Math.min(w.length, it.b || 0));
+    const word = pbEsc(w.slice(0, a)) + (b > a ? `<b class="sbt-hi">${pbEsc(w.slice(a, b))}</b>` : "") + pbEsc(w.slice(b));
+    const spell = it.kind === "spell";
+    let st;
+    if(it.res === "right"){
+      st = `<span class="sbt-ok">✓ ${spell ? "you spelt it" : "you picked it"}</span>`;
+      if(spell && it.streak >= SBT_LEARNT) st += `<span class="sbt-up">🏅 learnt!</span>`;
+      if(!spell) st += it.streak >= SBT_RETIRE ? `<span class="sbt-up">✏️ next time you spell it</span>` : `<span class="sbt-dots" title="${it.streak} of ${SBT_RETIRE} in a row">${"●".repeat(it.streak)}${"○".repeat(SBT_RETIRE - it.streak)}</span>`;
+    } else if(it.res === "wrong") st = `<span class="sbt-no">✗ you ${spell ? "spelt" : "picked"} <s>${pbEsc(it.got)}</s></span>`;
+    else st = `<span class="sbt-skip">not used</span>`;
+    return `<div class="sbt-srow"><span class="sbt-sw">${word}</span>${st}</div>`;
+  }).join("");
+  const twins = G.items.some(it => it.kind !== "spell");
+  return `<div class="result-section sbt-strip"><div class="result-section-title">🔤 Spellings in this answer</div>${rows}`
+    + `${twins ? `<div class="sbt-note">Pick the right spelling ${SBT_RETIRE} times in a row, and the next time you spell it yourself.</div>` : ""}</div>`;
 }
 
 // ── WRITE IT IN PARTS — breaks a long answer into guided steps ──
@@ -15257,7 +15867,7 @@ function sbPeekContent(name){
   if(name === "togglePeekDist"){
     const qd = q.q || `Distinguish between ${q.termA} and ${q.termB}`;
     const tryHTML = prev && prev.type === "distinguish" ? sub(q.termA) + sbPeekTry(prev.userTextA, q.answerA) + sub(q.termB) + sbPeekTry(prev.userTextB, q.answerB) : "";
-    return { title: "👁 Model answer — look, then hide it", go: "✍️ Hide it and write",
+    return { title: "👁 Model answer — look, then hide it", go: sbtGoLabel("✍️ Hide it and write"),
       html: label("DISTINGUISH BETWEEN") + qText(qd) + yours(tryHTML) + `<div class="rd-ans">${buildDistTable(q)}</div>`,
       say: [qd, `${q.termA || ""}. ${q.answerA || ""}`, `${q.termB || ""}. ${q.answerB || ""}`] };
   }
@@ -15266,7 +15876,7 @@ function sbPeekContent(name){
   let tryHTML = "";
   if(prev && prev.type === "both" && hasDiff) tryHTML = sbPeekTry(prev.userText, q.answer) + sub(q.termA) + sbPeekTry(prev.userTextA, q.answerA) + sub(q.termB) + sbPeekTry(prev.userTextB, q.answerB);
   else if(prev && prev.type === "text") tryHTML = sbPeekTry(prev.userText, q.answer);
-  return { title: "👁 Model answer — look, then hide it", go: "✍️ Hide it and write",
+  return { title: "👁 Model answer — look, then hide it", go: sbtGoLabel("✍️ Hide it and write"),
     html: label(typeLabel) + qText(q.q) + yours(tryHTML) + `<div class="rd-ans"><div class="scroll-answer-parchment">${rdKeyAnswerHTML(L, qt, oi, q.answer || "")}</div>${hasDiff ? `<div style="margin-top:10px">${buildDistTable(q)}</div>` : ""}</div>`,
     say: [qSay(), q.answer || ""].concat(hasDiff ? [`${q.termA || ""}. ${q.answerA || ""}`, `${q.termB || ""}. ${q.answerB || ""}`] : []) };
 }
@@ -15453,6 +16063,7 @@ function checkTextAnswer(){
   const userA=hasDiff?(document.getElementById("distInputA")?.value||"").trim():"";
   const userB=hasDiff?(document.getElementById("distInputB")?.value||"").trim():"";
   if(hasDiff ? (!userText && !userA && !userB) : !userText) return;
+  const _sbtG = sbtGradeStart(); // built from tiles: which spellings were tested, and how they went
   document.getElementById("answerInput").disabled=true;
   if(hasDiff){
     ["distInputA","distInputB"].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=true; });
@@ -15498,7 +16109,7 @@ function checkTextAnswer(){
     if(d.type==="misspelled"){
       recordWordSpellStat(d.correct, false);
       sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType, subject:currentSubject, class:currentClass});
-    } else if(d.type==="ok" && d.word && d.word.length>=3 && !SPELL_STOPWORDS.has(d.word.toLowerCase())){
+    } else if(d.type==="ok" && d.word && d.word.length>=3 && !SPELL_STOPWORDS.has(d.word.toLowerCase()) && sbtCountsSpelt(_sbtG, d.word)){
       recordWordSpellStat(d.word, true);
     }
   });
@@ -15523,10 +16134,11 @@ function checkTextAnswer(){
       <div class="score-circle ${cls}">${pct}%</div>
       <div><div class="score-label">${lbl} ${timeChip(txtElapsed)}${speedChip}</div>
       <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong/extra</span> · <span style="color:#8a651b">[bracketed] = missing</span></div>
-      ${hintNote}</div>
+      ${hintNote}${_sbtG ? `<div class="score-detail sbt-made">🧩 Built with word tiles</div>` : ""}</div>
     </div>
     ${buildAnnotatedDiff(userText, q.answer)}
-    ${distResultHTML}`;
+    ${distResultHTML}
+    ${_sbtG ? sbtStripHTML(_sbtG) : ""}`;
 
   logQuestion(pct, txtElapsed, feedbackHTML, pct>=80);
   maybeAwardNewTryBonus(currentQType, getOriginalQIndex(currentQIndex), pct);
@@ -15630,6 +16242,7 @@ function renderDistinguish(q, qnum, isLast){
       <button class="btn-next" onclick="nextQuestion()">${isLast?"See Results 🎯":"Next Question →"}</button>
     </div>`:""}`;
   setTimeout(()=>startSpeedTimer("distinguish"), 50);
+  try{ sbtMount(q); }catch(e){ console.warn("tiles:", e); }
 }
 
 // Toggle peek for distinguish — disables BOTH textareas. Free to view before
@@ -16088,6 +16701,7 @@ function checkDistinguish(){
   const userA=(document.getElementById("distInputA")?.value||"").trim();
   const userB=(document.getElementById("distInputB")?.value||"").trim();
   if(!userA && !userB) return;
+  const _sbtG = sbtGradeStart();
 
   // Disable both textareas
   ["distInputA","distInputB"].forEach(id=>{
@@ -16122,7 +16736,7 @@ function checkDistinguish(){
     if(d.type==="misspelled"){
       recordWordSpellStat(d.correct, false);
       sessionSpellErrors.push({wrong:d.word, correct:d.correct, lessonTitle:currentLesson.title, qtype:currentQType, subject:currentSubject, class:currentClass});
-    } else if(d.type==="ok" && d.word && d.word.length>=3 && !SPELL_STOPWORDS.has(d.word.toLowerCase())){
+    } else if(d.type==="ok" && d.word && d.word.length>=3 && !SPELL_STOPWORDS.has(d.word.toLowerCase()) && sbtCountsSpelt(_sbtG, d.word)){
       recordWordSpellStat(d.word, true);
     }
   });
@@ -16144,7 +16758,7 @@ function checkDistinguish(){
       <div>
         <div class="score-label">${pct>=80?"Excellent!":pct>=50?"Good effort!":"Keep practising!"} ${timeChip(distElapsed)}</div>
         <div class="score-detail">green = correct · <span style="color:var(--red)">red = wrong</span> · <span style="color:#8a651b">[bracketed] = missing</span></div>
-        ${hintNote}
+        ${hintNote}${_sbtG ? `<div class="score-detail sbt-made">🧩 Built with word tiles</div>` : ""}
       </div>
     </div>
     <div class="result-section-title" style="margin-bottom:6px">Your Answer</div>
@@ -16159,7 +16773,8 @@ function checkDistinguish(){
       </div>
     </div>
     <div class="result-section-title correct" style="margin:10px 0 4px">✅ Model Answer</div>
-    ${buildDistTable(q)}`;
+    ${buildDistTable(q)}
+    ${_sbtG ? sbtStripHTML(_sbtG) : ""}`;
 
   logQuestion(pct, distElapsed, feedbackHTML, pct>=80);
   maybeAwardNewTryBonus(currentQType, getOriginalQIndex(currentQIndex), pct);
