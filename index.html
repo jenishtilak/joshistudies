@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>Study Buddy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -8761,6 +8761,18 @@ setTimeout(function(){ var b = document.getElementById('sbBoot'); if(b) b.remove
 .mobile-header .sbf-stats b{font:900 15px/1.2 var(--font-display);color:var(--navy)}
 @media(max-width:819px){#homeMotivate{display:none!important}} /* it only holds the strip of 🔥 · 🌱 now in the top bar */
 </style>
+<style id="sbKeyboard">
+/* ── Typing on a phone (html.sb-kb while the on-screen keyboard is up) ── */
+/* the bars pinned to the bottom of the screen step aside instead of riding on the keyboard */
+html.sb-kb .bottom-nav,html.sb-kb .rd-float-nav,html.sb-kb .rd-dock,html.sb-kb .mock-submit-bar{display:none!important}
+/* a question (Write, Test, Exam Practice): the question row is the top of the screen */
+html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode) .quiz-header{display:none!important}
+html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode) .q-nav-bar{top:0!important}
+/* the "first try" note has been read by now: the question above the answer stays in view instead */
+html.sb-kb .quiz-overlay .sb-newtry{display:none!important}
+/* the line he is writing stays clear of the question row, with room under it for Check Answer (or Next) */
+html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-padding-top:52px;scroll-padding-bottom:72px}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -9772,7 +9784,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-2";
+const APP_VERSION = "2026.11.04-3";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -21722,6 +21734,7 @@ function maybeShowNewTryBanner(qtype, qIndex){
   const card = document.querySelector("#quizBody .question-card");
   if(!card || !card.parentNode) return;
   const banner = document.createElement("div");
+  banner.className = "sb-newtry"; // (steps aside while he types on a phone, so the question stays in view)
   banner.style.cssText = "margin:0 0 12px;padding:10px 14px;background:#eef4ff;border:1.5px dashed #7fa8e0;border-radius:10px;font-size:12.5px;color:#2a4a7a;line-height:1.5";
   banner.textContent = "🌱 " + pickRandom(NEW_TRY_MESSAGES_BEFORE);
   card.parentNode.insertBefore(banner, card.nextSibling);
@@ -33376,6 +33389,70 @@ document.addEventListener("keydown", ev=>{
   window.addEventListener("orientationchange", queue);
   document.addEventListener("fullscreenchange", queue);
   if(window.visualViewport) visualViewport.addEventListener("resize", queue);
+})();
+
+// ── Typing on a phone ──
+// The viewport tag (interactive-widget=resizes-content) has Android fit the page above the keyboard,
+// as an app does, instead of sliding the whole page up (which took the top bar off the screen and cut
+// the question in half). While the keyboard is up, <html> carries "sb-kb": the bars pinned to the bottom
+// of the screen (the Lessons · Progress · Spelling tabs, Read's docks, a test's Submit bar) step aside
+// so they don't ride on the keyboard over the answer, and on a question (Write, Test, Exam Practice) the
+// top bar steps aside too, so the question row is the top of the screen and the question and the answer
+// get the room. The keyboard counts as up when a text box has focus and the page is much shorter than it
+// was without it. An iPhone doesn't fit the page (it slides it), so there nothing changes.
+(function(){
+  if(!window.matchMedia || !matchMedia("(pointer: coarse)").matches) return; // no keyboard on a laptop's screen
+  const root = document.documentElement;
+  let full = 0, wAt = 0, raf = 0;
+  const typing = el => !!el && (el.tagName === "TEXTAREA" || el.isContentEditable ||
+    (el.tagName === "INPUT" && /^(text|search|email|url|tel|number|password)$/i.test(el.getAttribute("type") || "text")));
+  // What he sees when the keyboard comes up, most important first: the line he is writing (the end of
+  // the answer when he is adding to it, the usual case), the whole question above it, then Check Answer
+  // (or Next) under it. A line of the question is never left cut in half under the question row.
+  function reveal(el){
+    if(!el || !el.isConnected || !el.closest || !el.closest("#quizBody")) return;
+    const ov = document.getElementById("quizOverlay"); if(!ov) return;
+    const atEnd = el.tagName === "TEXTAREA" && el.selectionEnd >= el.value.length;
+    try{ el.scrollIntoView({ block: atEnd ? "end" : "nearest" }); }catch(e){ return; }
+    const R = x => x && x.getClientRects().length ? x.getBoundingClientRect() : null;
+    const bar = R(document.getElementById("qNavBar")), top = bar ? bar.bottom : 0, bottom = ov.clientHeight - 4;
+    const q = document.querySelector("#quizBody .q-text") || document.querySelector("#quizBody .fill-sentence");
+    const btns = document.querySelector("#quizBody .answer-actions");
+    let qr = R(q), er = R(el); if(!er) return;
+    const end = () => { const r = R(el); return atEnd ? r.bottom : Math.min(r.bottom, r.top + 48); };
+    // the whole question, when it fits with the line he is writing
+    if(qr && qr.top < top - 1 && end() - qr.top <= bottom - top - 8) ov.scrollTop -= top - qr.top;
+    // the buttons, when that keeps the question's top and the box he is typing in on the screen
+    const br = R(btns);
+    if(br && br.bottom > bottom){
+      qr = R(q); er = R(el);
+      const keep = Math.min(qr && qr.top >= top - 1 ? qr.top : Infinity, er.top) - top;
+      const d = Math.min(br.bottom - bottom, keep);
+      if(d > 0) ov.scrollTop += d;
+    }
+    // a line of the question cut in half under the row: rather the whole line out of view
+    qr = R(q);
+    if(qr && qr.top < top - 1 && qr.bottom > top){
+      const lh = parseFloat(getComputedStyle(q).lineHeight) || 36, cut = (top - qr.top) % lh;
+      if(cut > 1 && cut < lh - 1) ov.scrollTop += lh - cut;
+    }
+  }
+  function check(){
+    raf = 0;
+    const h = window.innerHeight;
+    if(window.innerWidth !== wAt){ wAt = window.innerWidth; full = 0; } // turned round: measure again
+    full = Math.max(full, h);
+    const el = document.activeElement, on = typing(el) && full - h > 120, was = root.classList.contains("sb-kb");
+    root.classList.toggle("sb-kb", on);
+    // when the keyboard comes up (it may take a few steps), or he moves to another box
+    if(on && (!was || el !== check.el || h !== check.h)) requestAnimationFrame(() => reveal(el));
+    check.el = on ? el : null; check.h = on ? h : 0;
+  }
+  const queue = () => { if(!raf) raf = requestAnimationFrame(check); };
+  window.addEventListener("resize", queue);
+  document.addEventListener("focusin", queue, true);
+  document.addEventListener("focusout", () => setTimeout(queue, 60), true);
+  queue();
 })();
 
 </script>
