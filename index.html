@@ -8789,6 +8789,21 @@ html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-pad
   .quiz-overlay .quiz-body .wr-top-shooter-bar .btn-write-shooter,.quiz-overlay .quiz-body .wr-top-shooter-bar .btn-peek[data-short]{padding:6px 10px!important}
 }
 </style>
+<style id="sbFlashcards">
+/* ── Read: 📇 Flashcards (was "One at a time") on every page. A page that carries on a section has it at the
+   end of its running head, small, after the section's name (on a phone, the section's name only) ── */
+.fb-run{align-items:center}
+.fb-run .fb-run-s{margin-left:auto}
+#rdWrap .fb-run .fb-run-cards{pointer-events:auto;flex:none;padding:0 9px!important;font-size:15px!important;line-height:20px!important;letter-spacing:0!important;text-transform:none!important;transform:rotate(.8deg)!important;box-shadow:none!important}
+/* Viva: "👀 Reveal Model Answer" was white on the white card (a game-screen button style), so it couldn't be seen */
+#rdVivaRevealBtn{color:#5b21b6!important;background:#f5f3ff!important;border:1.5px dashed #c4b5fd!important;opacity:1!important}
+#rdVivaRevealBtn:hover{background:#ede9fe!important}
+@media(max-width:600px){
+  .fb-run .fb-run-t{display:none}
+  .fb-run .fb-run-s{margin-left:0;min-width:0}
+  .fb-run .fb-run-cards{margin-left:auto}
+}
+</style>
 </head>
 <body>
 <div id="sbBoot" aria-live="polite" aria-label="Loading Study Buddy">
@@ -9800,7 +9815,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.04-4";
+const APP_VERSION = "2026.11.04-5";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -11522,7 +11537,7 @@ function renderScholarLesson(lesson){
         <div class="fb-sheet fb-sheet-a fb-paper" id="fbSheetA"></div><div class="fb-sheet fb-sheet-b fb-paper" id="fbSheetB"></div>
         <div class="fb-edge fb-edge-r" aria-hidden="true"></div>
         <div class="fb-view" id="fbView"><div class="fb-flow" id="fbFlow">${fbCoverHTML}${pages.map((pg, n) => `<div class="rd-page${n === cur ? " on" : ""}" data-p="${n}">
-          <div class="rd-page-head"><span class="rd-ph-t">${pbEsc(lesson.title || "")}</span><span class="rd-ph-r"><button type="button" class="rd-ph-focus" onclick="rdFocusPage(this)" aria-label="Study this chapter one question at a time">⤢ One at a time</button></span></div>
+          <div class="rd-page-head"><span class="rd-ph-t">${pbEsc(lesson.title || "")}</span><span class="rd-ph-r"><button type="button" class="rd-ph-focus" onclick="rdFocusPage(this)" aria-label="Flashcards: this section's questions one at a time">📇 Flashcards</button></span></div>
           ${pg.html}${n === N - 1 ? finaleHTML : ""}</div>`).join("")}<div class="fb-end" aria-hidden="true"></div></div></div>
         <div class="fb-spine" aria-hidden="true"></div>
       </div>
@@ -11548,7 +11563,7 @@ function renderScholarLesson(lesson){
       </div>
     </div><div class="rd-book" id="rdBook">` + pages.map((pg, n) => `<div class="rd-page${n === cur ? " on" : ""}" data-p="${n}">
       ${N > 1 ? `<div class="rd-page-rings" aria-hidden="true"></div>` : ""}
-      <div class="rd-page-head"><span>${pg.icon} ${pg.label}</span><span class="rd-ph-r">${N > 1 ? `<span class="rd-ph-n">Page ${n + 1} / ${N}</span>` : ""}<button type="button" class="rd-ph-focus" onclick="rdFocusPage(this)" aria-label="Study this page one question at a time">⤢ One at a time</button></span></div>
+      <div class="rd-page-head"><span>${pg.icon} ${pg.label}</span><span class="rd-ph-r">${N > 1 ? `<span class="rd-ph-n">Page ${n + 1} / ${N}</span>` : ""}<button type="button" class="rd-ph-focus" onclick="rdFocusPage(this)" aria-label="Flashcards: this page's questions one at a time">📇 Flashcards</button></span></div>
       ${pg.html}${n === N - 1 ? finaleHTML : ""}${pagerNav(n)}</div>`).join("") + `</div>`;
   }
 
@@ -11814,8 +11829,21 @@ function fbChapterAt(c){ let ch = 0; if(_bk) _bk.starts.forEach((s0, i) => { if(
 function fbRunHTML(c){
   const F = _bk; if(!F || c < 0 || c >= F.total) return "";
   const ch = fbChapterAt(c), meta = _rdPageMeta[ch] || {};
-  const head = (F.starts[ch] === c || c < (F.starts[0] || 0)) ? "" : `<div class="fb-run"><span>${pbEsc(currentLesson ? currentLesson.title || "" : "")}</span><span>${pbEsc(((meta.icon || "") + " " + (meta.label || "")).trim())}</span></div>`;
+  // a page that carries on a section: its name, and 📇 Flashcards from the first question on this page
+  const sec = document.querySelectorAll("#fbFlow > .rd-page")[ch];
+  const cards = sec && sec.querySelector(".scroll-entry") ? `<button type="button" class="rd-ph-focus fb-run-cards" onclick="rdFocusSheet(${c})" aria-label="Flashcards: the questions on this page one at a time">📇 Flashcards</button>` : "";
+  const head = (F.starts[ch] === c || c < (F.starts[0] || 0)) ? "" : `<div class="fb-run"><span class="fb-run-t">${pbEsc(currentLesson ? currentLesson.title || "" : "")}</span><span class="fb-run-s">${pbEsc(((meta.icon || "") + " " + (meta.label || "")).trim())}</span>${cards}</div>`;
   return head + `<div class="fb-folio">${c + 1}</div>`;
+}
+// 📇 Flashcards on a page that carries on a section: start at the first question that begins on the page
+// (or, on a page that is all one long answer, the question it belongs to)
+function rdFocusSheet(c){
+  const F = _bk, flow = document.getElementById("fbFlow"); if(!F || !flow) return;
+  const fr = flow.getBoundingClientRect();
+  const col = el => Math.floor((el.getBoundingClientRect().left - fr.left + 2) / F.w);
+  const all = [...flow.querySelectorAll(".scroll-entry")];
+  const el = all.find(e => col(e) === c) || all.filter(e => col(e) < c).pop();
+  if(el) rdFocus(el);
 }
 function fbSet(n){
   const F = _bk, flow = document.getElementById("fbFlow"); if(!F || !flow) return;
@@ -12655,6 +12683,25 @@ function rdVivaToggleMic(){
   }
 }
 
+// What is not an "unnecessary word" in a Viva answer: the little joining words of speech ("the",
+// "and", "is"…), sounds like "um", words of the question (starting by saying the question back is good
+// exam practice), and words of the model answer said out of place or twice (or a near-miss of one).
+const RD_VIVA_GLUE = new Set("a an the and or but so also then is are was were be been being am of to in into on at for by with from as it its this that these those they them their there here which who whom what when where how um umm uh uhh er erm ah hmm mm okay ok".split(" "));
+function rdVivaUnnecessary(words, info){
+  if(!info || !Array.isArray(words) || !words.length) return words || [];
+  if(!info._known){
+    const all = [info.answerText, info.qSpeech, info.qDisplay].map(x => String(x || "")).join(" ").toLowerCase();
+    info._known = new Set((all.match(/[a-z0-9]+(?:['\u2019-][a-z0-9]+)*/g) || []).map(w => w.replace(/['\u2019-]/g, "")));
+  }
+  const known = info._known;
+  return words.filter(w => {
+    const k = String(w).toLowerCase().replace(/['\u2019-]/g, "");
+    if(k.length < 2 || RD_VIVA_GLUE.has(k) || known.has(k)) return false;
+    for(const v of known) if(v.length >= 4 && rdVivaWordMatch(k, v)) return false;
+    return true;
+  });
+}
+
 function rdVivaComputeAlignment(){
   const V = _rdViva;
   if(!V || !V.info) return;
@@ -12664,6 +12711,7 @@ function rdVivaComputeAlignment(){
   let best = { lit: new Set(), missed: new Set(), ptr: 0, extraWords: [] };
   candidates.forEach(txt => {
     const res = rdVivaAlignWords(txt, V.info.wordTokens);
+    res.extraWords = rdVivaUnnecessary(res.extraWords, V.info);
     if(res.lit.size > best.lit.size || (res.lit.size === best.lit.size && (res.extraWords||[]).length < (best.extraWords||[]).length)){
       best = res;
     }
@@ -15726,6 +15774,22 @@ function enhanceTranscriptWithTextbookVocab(rawText){
   }).join("");
 }
 
+// The words of a phrase put after the words so far, without the part that repeats their end:
+// "the French" + "the French Revolution began" → "the French Revolution began".
+function sbWordsOf(t){ return String(t || "").trim().split(/\s+/).filter(Boolean); }
+function sbWordKey(w){ return String(w).toLowerCase().replace(/[^a-z0-9]/g, ""); }
+function sbMergeWords(list, text){
+  const add = sbWordsOf(text); if(!add.length) return list;
+  let k = 0;
+  for(let n = Math.min(list.length, add.length); n > 0 && !k; n--){
+    let same = true;
+    for(let j = 0; j < n; j++) if(sbWordKey(list[list.length - n + j]) !== sbWordKey(add[j])){ same = false; break; }
+    if(same) k = n;
+  }
+  for(let j = k; j < add.length; j++) list.push(add[j]);
+  return list;
+}
+
 // ── Path 1: native browser speech recognition + Dual-Engine Textbook Alignment (Chrome/Edge/Laptop/Android/iOS) ──
 function startNativeVoiceInput(targetId, btn, SR){
   const ta = document.getElementById(targetId);
@@ -15747,28 +15811,21 @@ function startNativeVoiceInput(targetId, btn, SR){
   rec.onresult = (e)=>{
     gotAnyResult = true;
     lastResultTime = Date.now();
-    let interim = "";
-    const interimAlts = ["", "", "", ""];
-    for(let i=e.resultIndex; i<e.results.length; i++){
-      const r = e.results[i], t = r[0].transcript;
-      if(r.isFinal){
-        currentSessionFinal += t + " ";
-        for(let k=0;k<3;k++) interimAlts[k] += ((r[k] || r[0]).transcript || "") + " ";
-        interimAlts[3] += enhanceTranscriptWithTextbookVocab(t) + " ";
-      } else {
-        interim += t;
-        for(let k=0;k<3;k++) interimAlts[k] += ((r[k] || r[0]).transcript || "");
-        interimAlts[3] += enhanceTranscriptWithTextbookVocab(t);
-      }
+    // Built again from all of this session's results every time, and each phrase joined on without the
+    // part that repeats what came before. Android's Chrome hands a phrase back again — longer ("the
+    // French", then "the French Revolution began"), or the whole list again from the start — and adding
+    // every copy on put words in his answer twice (Viva then listed them as "unnecessary words").
+    const fin = [[], [], [], []], tail = [[], [], [], []]; // the best guess, the 2nd and 3rd, and the textbook-word one
+    for(let i = 0; i < e.results.length; i++){
+      const r = e.results[i];
+      const alts = [0, 1, 2].map(k => ((r[k] || r[0]).transcript || ""));
+      alts.push(enhanceTranscriptWithTextbookVocab(alts[0]));
+      alts.forEach((t, k) => sbMergeWords(r.isFinal ? fin[k] : tail[k], t));
     }
-    const fullText = (accumulatedText + currentSessionFinal + interim).trim();
-    const finalBase = (accumulatedText + currentSessionFinal).trim();
-    ta._sbAlts = [
-      fullText,
-      (finalBase + " " + interimAlts[1]).trim(),
-      (finalBase + " " + interimAlts[2]).trim(),
-      (finalBase + " " + interimAlts[3]).trim()
-    ].filter(Boolean);
+    currentSessionFinal = fin[0].join(" ");
+    const whole = k => sbMergeWords(sbMergeWords(sbWordsOf(accumulatedText), fin[k].join(" ")), tail[k].join(" ")).join(" ");
+    const fullText = whole(0);
+    ta._sbAlts = [fullText, whole(1), whole(2), whole(3)].filter(Boolean);
     const enhanced = enhanceTranscriptWithTextbookVocab(fullText);
     if(enhanced && !ta._sbAlts.includes(enhanced)) ta._sbAlts.push(enhanced);
     ta.value = fullText;
@@ -15795,7 +15852,7 @@ function startNativeVoiceInput(targetId, btn, SR){
       setMicUI(btn, "idle");
       return;
     }
-    accumulatedText = (accumulatedText + currentSessionFinal).trim();
+    accumulatedText = sbMergeWords(sbWordsOf(accumulatedText), currentSessionFinal).join(" ");
     if(accumulatedText) accumulatedText += " ";
     currentSessionFinal = "";
     if(restartCount++ < 35 && (Date.now() - lastResultTime < 30000)){
