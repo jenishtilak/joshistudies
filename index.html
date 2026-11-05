@@ -8832,8 +8832,7 @@ html.sb-kb .quiz-overlay:not(.pb-scroll-mode):not(.pb-adventure-mode){scroll-pad
 .sbt-nav{flex:none;min-height:32px;margin:0;padding:4px 12px;border:1.5px solid #cbd5e1;border-radius:9px;background:#fff;color:#1e3a8a;font:800 13px/1.2 var(--font-body,'Nunito',system-ui,sans-serif);cursor:pointer;touch-action:manipulation}
 .sbt-nav:disabled{opacity:.35;cursor:default}
 .sbt-nav.sbt-next{border-color:#1e3a8a;background:#1e3a8a;color:#fff}
-.sbt-nav.sbt-next.sbt-ready{animation:sbtGlow 1.6s ease-in-out infinite}
-@keyframes sbtGlow{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}50%{box-shadow:0 0 0 6px rgba(59,130,246,0)}}
+.sbt-nav.sbt-skip-part{border-color:transparent;background:transparent;color:#64748b}
 .quiz-overlay .quiz-body .btn-check.sbt-ready{outline:3px solid rgba(59,130,246,.45);outline-offset:2px;animation:sbtRing 1.6s ease-in-out infinite}
 @keyframes sbtRing{0%,100%{outline-color:rgba(59,130,246,.55)}50%{outline-color:rgba(59,130,246,.1)}}
 .sbt-tiles{display:flex;flex-wrap:wrap;gap:7px}
@@ -9880,7 +9879,7 @@ const STUDENT_NAME   = "Joshin";
 // always possible to confirm which build is actually live, rather than
 // guessing from behavior. This exact confusion (comparing a live file
 // against what was actually just fixed) has come up multiple times.
-const APP_VERSION = "2026.11.05-1";
+const APP_VERSION = "2026.11.05-2";
 function isCombinedParagraph(q){
   return !!(q && q.answer && (q.termA || q.termB) && (q.answerA || q.answerB));
 }
@@ -15033,6 +15032,10 @@ const SBT_RULES = [
   [/ite$/, "ate"],             // definite → definate
   [/([aeiou])tion$/, "$1sion"],// population → populasion
   [/cy$/, "sy"],               // democracy → democrasy
+  [/ician$/, "ican"],          // politician → politican, physician → physican
+  [/rel$/, "ral"],             // scoundrel → scoundral, quarrel → quarral
+  [/([aeiou])([lmnprst])(ity|ical|ic)$/, "$1$2$2$3"], // nobility → nobillity, political → polittical
+  [/([bdgmnptv])el$/, "$1le"], // channel → channle, label → lable
   [/([aeiou])([bdgklmnprt])(ing|ed|er)$/, "$1$2$2$3"] // opening → openning, visited → visitted (7+ letters only, below)
 ];
 // last resort: the vowel nearest the middle, swapped for the one it gets mixed up with
@@ -15046,28 +15049,36 @@ function sbtVowelSlip(w){
   const i = idx[0];
   return w.slice(0, i) + swap[w[i]] + w.slice(i + 1);
 }
-// { w: the look-alike, a, b: the tricky part of the right word } or null
-function sbtTwinOf(word, past, avoid){
-  const w = String(word).toLowerCase();
-  const ok = x => !!x && x !== w && /^[a-z]+$/.test(x) && x[0] === w[0] && x.length > 3 && Math.abs(x.length - w.length) <= 2 && pbLev(x, w) <= 2 && !avoid.has(x);
-  let twin = null;
-  if(past && past.size){ // a slip he has really made, the one he makes most
-    const best = [...past.entries()].filter(([x]) => ok(x)).sort((p, q) => q[1] - p[1])[0];
-    if(best) twin = best[0];
+// a common slip for a long word, as a second look-alike: a quiet e or i in the middle left out (political →
+// politcal, privileges → privilges). Not swapped letters: those look like typing mistakes, easy to rule out.
+function sbtSlips(w){
+  const out = [], n = w.length, V = c => "aeiou".includes(c);
+  for(let i = n - 4; i >= Math.ceil(n / 2); i--){
+    if("ei".includes(w[i]) && !V(w[i - 1]) && !V(w[i + 1]) && V(w[i + 2]) && w[i + 1] !== "v" && !/^.(tion|sion)/.test(w.slice(i))) out.push(w.slice(0, i) + w.slice(i + 1));
   }
-  if(!twin){
-    const tail = w.slice(1);
-    for(const [re, rep] of SBT_RULES){
-      let t = tail.replace(re, rep);
-      if(t === tail && /[^s]s$/.test(tail)){ const st = tail.slice(0, -1), t2 = st.replace(re, rep); if(t2 !== st) t = t2 + "s"; } // peasants → peasents
-      if(t !== tail && ok(w[0] + t) && (rep !== "$1$2$2$3" || w.length >= 7)){ twin = w[0] + t; break; }
-    }
+  return out;
+}
+// up to two look-alikes, the most believable first: slips he has really made, then the word's tricky spots (a
+// silent letter, a double letter, ance/ence…), then a common slip. A plain vowel swap only when nothing else
+// fits a long word: an odd-looking spelling is easy to rule out, and these are meant to be picked right only by
+// someone who knows the spelling. Each keeps the first letter and stays within two letters of the word, so the
+// checker reads it as that word misspelt. [{ w, a, b: the tricky part of the right word, q }]
+function sbtTwinsOf(word, past, avoid, max){
+  const w = String(word).toLowerCase(), out = [], seen = new Set([w]);
+  const ok = x => !!x && !seen.has(x) && /^[a-z]+$/.test(x) && x[0] === w[0] && x.length > 3 && Math.abs(x.length - w.length) <= 2 && pbLev(x, w) <= 2 && !avoid.has(x);
+  const add = (x, q) => { if(out.length < max && ok(x)){ seen.add(x); out.push({ x, q }); } };
+  if(past && past.size) [...past.entries()].sort((p, q) => q[1] - p[1]).forEach(([x]) => add(x, "past"));
+  const tail = w.slice(1);
+  for(const [re, rep] of SBT_RULES){
+    if(out.length >= max) break;
+    let t = tail.replace(re, rep);
+    if(t === tail && /[^s]s$/.test(tail)){ const st = tail.slice(0, -1), t2 = st.replace(re, rep); if(t2 !== st) t = t2 + "s"; } // peasants → peasents
+    if(t !== tail && (rep !== "$1$2$2$3" || w.length >= 7)) add(w[0] + t, "rule");
   }
-  if(!twin && w.length >= 7){ const t = sbtVowelSlip(w); if(ok(t)) twin = t; } // shorter words too often turn into another real word
-  if(!twin) return null;
-  const [a, b] = sbtDiffRange(w, twin);
-  const out = /^[A-Z]/.test(word) ? twin.charAt(0).toUpperCase() + twin.slice(1) : twin;
-  return { w: out, a, b };
+  if(w.length >= 7) sbtSlips(w).forEach(x => add(x, "slip"));
+  if(!out.length && w.length >= 9) add(sbtVowelSlip(w), "vowel");
+  const cap = /^[A-Z]/.test(word);
+  return out.map(({ x, q }) => { const [a, b] = sbtDiffRange(w, x); return { w: cap ? x.charAt(0).toUpperCase() + x.slice(1) : x, a, b, q }; });
 }
 // his past slips: right spelling → (what he wrote → how often). This device's copy of the log, no extra reads.
 function sbtPastSlips(){
@@ -15103,8 +15114,8 @@ function sbtShuffleTiles(ids, T){
   ids.forEach(id => {
     if(seen.has(id)) return;
     seen.add(id);
-    const m = T[id].mate;
-    if(m >= 0 && ids.includes(m) && !seen.has(m)){ seen.add(m); units.push(Math.random() < 0.5 ? [id, m] : [m, id]); }
+    const g = T[id].grp;
+    if(g){ g.forEach(x => seen.add(x)); units.push(pbShuffle(g.filter(x => ids.includes(x)))); }
     else units.push([id]);
   });
   if(units.length < 3) return pbShuffle(units).flat();
@@ -15135,38 +15146,45 @@ function sbtBuild(q, targets){
   let twins = 0;
   tgs.forEach((tg, ti) => tg.steps.forEach((st, si) => {
     const ids = [];
-    const mk = o => { const t = Object.assign({ id: S.T.length, ti, si, mate: -1, out: false, hidden: false }, o); S.T.push(t); ids.push(t.id); return t; };
+    const mk = o => { const t = Object.assign({ id: S.T.length, ti, si, grp: null, out: false, hidden: false }, o); S.T.push(t); ids.push(t.id); return t; };
     const real = [];
     st.toks.forEach((t, i) => {
       if(!t.core || !/[A-Za-z0-9]/.test(t.core)) return;
       const trueStart = (i === 0 && st.head) || (i > 0 && /[.!?:]["”']?$/.test(st.raw[i - 1]));
       real.push({ t, w: sbtTileText(t, trueStart, caps, lowers) });
     });
-    // the words tested for spelling here: his past slips first, then names and the answer's key words, the longer the better
-    const K = real.length >= 11 ? 3 : real.length >= 6 ? 2 : 1;
-    const cands = real.filter(r => (/^[A-Za-z][a-z]{5,}$/.test(r.t.core) || (past.has(r.t.n) && /^[A-Za-z][a-z]{3,}$/.test(r.t.core)))
-        && !PB_STOP.has(r.t.n) && !twinned.has(r.t.n) && !learnt(r.t.n))
-      .map(r => ({ r, s: (past.has(r.t.n) ? 20 : 0) + (/^[A-Z]/.test(r.w) ? 3 : 0) + (keyNs.has(r.t.n) ? 4 : 0) - (qNs.has(r.t.n) ? 3 : 0) + Math.min(6, r.t.n.length - 4) + Math.random() }))
+    // the words tested for spelling here: hard ones only (a slip he has made, else a word of 7+ letters with a
+    // believable slip), never one he can see in the question (he could copy it); names and key words first
+    const K = real.length >= 8 ? 2 : 1;
+    const cands = real.filter(r => /^[A-Za-z][a-z]{3,}$/.test(r.t.core) && (past.has(r.t.n) || r.t.core.length >= 7)
+        && !PB_STOP.has(r.t.n) && !qNs.has(r.t.n) && !twinned.has(r.t.n) && !learnt(r.t.n))
+      .map(r => {
+        const tws = sbtTwinsOf(r.w, past.get(r.t.n), avoid, 2);
+        const s = tws.length ? (tws[0].q === "past" ? 20 : tws[0].q === "rule" ? 6 : tws[0].q === "slip" ? 3 : 0) + (/^[A-Z]/.test(r.w) ? 3 : 0) + (keyNs.has(r.t.n) ? 4 : 0) + Math.min(6, r.t.n.length - 4) + Math.random() : -1;
+        return { r, tws, s };
+      })
+      .filter(c => c.s >= 0)
       .sort((x, y) => y.s - x.s);
     const picked = new Map();
     for(const c of cands){
-      if(picked.size >= K || twins >= 8) break;
-      const tw = sbtTwinOf(c.r.w, past.get(c.r.t.n), avoid);
-      if(!tw) continue;
-      picked.set(c.r, tw); twinned.add(c.r.t.n); twins++;
+      if(picked.size >= K || twins >= 6) break;
+      picked.set(c.r, c.tws); twinned.add(c.r.t.n); twins++;
     }
     real.forEach(r => {
-      const tw = picked.get(r);
-      if(tw && (streaks[r.t.n] || 0) >= SBT_RETIRE){ mk({ kind: "spell", w: r.w, word: r.w, n: r.t.n, a: tw.a, b: tw.b }); return; }
+      const tws = picked.get(r);
+      if(tws && (streaks[r.t.n] || 0) >= SBT_RETIRE){ mk({ kind: "spell", w: r.w, word: r.w, n: r.t.n, a: tws[0].a, b: tws[0].b }); return; }
       const rt = mk({ kind: "real", w: r.w, n: r.t.n });
-      if(tw){
-        const tt = mk({ kind: "twin", w: tw.w, n: pbN(tw.w), word: r.w, a: tw.a, b: tw.b });
-        rt.mate = tt.id; tt.mate = rt.id; rt.tested = true; rt.word = r.w; rt.a = tw.a; rt.b = tw.b;
+      if(tws){ // the word and its look-alikes: one choice, side by side in the tray
+        const grp = [rt.id];
+        tws.forEach(tw => grp.push(mk({ kind: "twin", w: tw.w, n: pbN(tw.w), word: r.w, a: tw.a, b: tw.b }).id));
+        grp.forEach(id => { S.T[id].grp = grp; });
+        rt.tested = true; rt.word = r.w; rt.a = tws[0].a; rt.b = tws[0].b;
       }
     });
     // words that do not belong: a name only beside names, a number only beside numbers
     const hasCap = real.some(r => /^[A-Z]/.test(r.w)), hasNum = real.some(r => r.t.num);
-    const nd = real.length <= 5 || picked.size >= 3 ? 2 : 3;
+    const extra = [...picked.values()].reduce((m, tws) => m + tws.length, 0);
+    const nd = real.length <= 5 || extra >= 3 ? 2 : 3;
     let n = 0, capN = 0;
     for(const c of pool){
       if(n >= nd) break;
@@ -15306,7 +15324,7 @@ function sbtTrayHTML(){
   if(G > 1 || tg.label){
     head = `<div class="sbt-head">${G > 1 ? `<button type="button" class="sbt-nav" data-nav="-1" ${S.g ? "" : "disabled"} aria-label="Back a part">‹</button>` : ""}`
       + `<span class="sbt-part">${G > 1 ? `Part ${S.g + 1} of ${G}` : ""}${tg.label ? `${G > 1 ? " · " : ""}<b>${pbEsc(tg.label)}</b>` : ""}</span>`
-      + `${S.g < G - 1 ? `<button type="button" class="sbt-nav sbt-next${st.placed.length >= st.nReal ? " sbt-ready" : ""}" data-nav="1">Next part ›</button>` : ""}</div>`;
+      + `${S.g < G - 1 ? (st.placed.length >= st.nReal ? `<button type="button" class="sbt-nav" data-nav="1" aria-label="Next part">›</button>` : `<button type="button" class="sbt-nav sbt-skip-part" data-nav="1" title="Leave this part and go on">Skip part ›</button>`) : ""}</div>`;
   }
   // a used tile keeps its place (hidden), so the others never move under his finger
   const tiles = st.tiles.map(id => {
@@ -15371,16 +15389,31 @@ function sbtPick(id){
   const S = _sbt, t = S.T[id]; if(!t || t.out || t.hidden) return;
   const [ti, si] = S.flat[S.g]; if(t.ti !== ti || t.si !== si) return;
   if(t.kind === "spell"){ S.spell = { id, word: t.word, pool: sbtSpellPool(t.word, t.a), got: [] }; sbtRender(); return; }
-  t.out = true; if(t.mate >= 0) S.T[t.mate].hidden = true; // its look-alike leaves with it
+  t.out = true; (t.grp || []).forEach(x => { if(x !== t.id) S.T[x].hidden = true; }); // its look-alikes leave with it
   S.targets[ti].steps[si].placed.push({ id, text: t.w, fresh: true });
   S.used = true;
-  sbtRender(true); sbtSync(true);
+  sbtRender(true); sbtSync(true); sbtAutoNext();
+}
+// a part with as many words down as it needs moves on by itself, to the next part still to do; when every part
+// is done, on to Check Answer. (It goes by the count only: it never tells him whether the words are right.)
+function sbtAutoNext(){
+  const S = _sbt; if(!S) return;
+  const g0 = S.g, [ti, si] = S.flat[g0], st = S.targets[ti].steps[si];
+  if(st.placed.length < st.nReal) return;
+  clearTimeout(S.autoT);
+  S.autoT = setTimeout(() => {
+    if(_sbt !== S || !sbtLive() || S.locked || S.spell || S.g !== g0 || st.placed.length < st.nReal) return;
+    const done = g => { const [a, b] = S.flat[g], x = S.targets[a].steps[b]; return x.placed.length >= x.nReal; };
+    for(let k = 1; k < S.flat.length; k++){ const g = (g0 + k) % S.flat.length; if(!done(g)){ sbtGo(g); return; } }
+    const acts = S.area.querySelector(".answer-actions");
+    if(acts) try{ acts.scrollIntoView({ block: "nearest", behavior: "smooth" }); }catch(e){}
+  }, 450);
 }
 function sbtUnpick(key){
   const S = _sbt, [ti, si, k] = String(key).split(".").map(Number);
   const st = S.targets[ti] && S.targets[ti].steps[si], p = st && st.placed[k]; if(!p) return;
   st.placed.splice(k, 1);
-  const t = S.T[p.id]; if(t){ t.out = false; if(t.mate >= 0) S.T[t.mate].hidden = false; }
+  const t = S.T[p.id]; if(t){ t.out = false; (t.grp || []).forEach(x => { if(x !== t.id) S.T[x].hidden = false; }); }
   const g = S.flat.findIndex(f => f[0] === ti && f[1] === si); if(g >= 0) S.g = g;
   S.spell = null;
   sbtRender(true); sbtSync(true);
@@ -15414,7 +15447,7 @@ function sbtSpellCmd(c){
     const text = sp.word.charAt(0) + sp.got.map(k => sp.pool[k]).join("");
     t.out = true; S.spell = null; S.used = true;
     S.targets[ti].steps[si].placed.push({ id: t.id, text, fresh: true });
-    sbtRender(true); sbtSync(true);
+    sbtRender(true); sbtSync(true); sbtAutoNext();
   }
 }
 
@@ -15426,19 +15459,20 @@ function sbtGradeStart(){
   S.T.forEach(t => {
     if(!(t.kind === "spell" || (t.kind === "real" && t.tested))) return;
     const n = String(t.word).toLowerCase();
-    let res = "none", got = "", twin = "";
+    let res = "none", got = "", twins = [];
     if(t.kind === "spell"){
       const p = t.out ? sbtPlacedOf(t.id) : null;
       if(p){ got = p.text; res = got.toLowerCase() === n ? "right" : "wrong"; }
     } else {
-      const tw = S.T[t.mate];
-      twin = tw ? tw.w : "";
-      if(t.out) res = "right"; else if(tw && tw.out){ res = "wrong"; got = tw.w; }
+      const tws = (t.grp || []).filter(x => x !== t.id).map(x => S.T[x]);
+      twins = tws.map(x => x.w);
+      const tw = tws.find(x => x.out);
+      if(t.out) res = "right"; else if(tw){ res = "wrong"; got = tw.w; }
     }
     if(res === "right"){ streaks[n] = (streaks[n] || 0) + 1; spelt.add(n); }
     else if(res === "wrong") streaks[n] = 0; // the look-alike comes back until he picks right again
     const [a, b] = res === "wrong" && got ? sbtDiffRange(t.word, got) : [t.a, t.b];
-    items.push({ word: t.word, a, b, kind: t.kind, res, got, twin, streak: streaks[n] || 0 });
+    items.push({ word: t.word, a, b, kind: t.kind, res, got, twins, streak: streaks[n] || 0 });
   });
   sbtSaveStreaks(streaks);
   return { items, spelt };
@@ -15453,11 +15487,12 @@ function sbtStripHTML(G){
     const spell = it.kind === "spell";
     let st;
     if(it.res === "right"){
-      st = `<span class="sbt-ok">✓ ${spell ? "you spelt it" : it.twin ? `not <s>${pbEsc(it.twin)}</s>` : "you picked it"}</span>`;
+      const nots = (it.twins || []).map(x => `<s>${pbEsc(x)}</s>`).join(" ");
+      st = `<span class="sbt-ok">✓ ${spell ? "you spelt it" : nots ? `not ${nots}` : "you picked it"}</span>`;
       if(spell && it.streak >= SBT_LEARNT) st += `<span class="sbt-up">🏅 learnt!</span>`;
       if(!spell) st += it.streak >= SBT_RETIRE ? `<span class="sbt-up">✏️ next time you spell it</span>` : `<span class="sbt-dots" title="${it.streak} of ${SBT_RETIRE} in a row">${"●".repeat(it.streak)}${"○".repeat(SBT_RETIRE - it.streak)}</span>`;
     } else if(it.res === "wrong") st = `<span class="sbt-no">✗ you ${spell ? "spelt" : "picked"} <s>${pbEsc(it.got)}</s></span>`;
-    else st = `<span class="sbt-skip">not used${it.twin ? ` · not <s>${pbEsc(it.twin)}</s>` : ""}</span>`;
+    else st = `<span class="sbt-skip">not used${(it.twins || []).length ? ` · not ${it.twins.map(x => `<s>${pbEsc(x)}</s>`).join(" ")}` : ""}</span>`;
     return `<div class="sbt-srow"><span class="sbt-sw">${word}</span>${st}</div>`;
   }).join("");
   const twins = G.items.some(it => it.kind !== "spell");
